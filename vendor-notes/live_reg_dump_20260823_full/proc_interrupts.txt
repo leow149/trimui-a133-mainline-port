@@ -1,0 +1,43 @@
+           CPU0       CPU1       CPU2       CPU3       
+  4:     118330     150548     188883     199036     GIC-0  27 Level     arch_timer
+  6:       5758          0          0          0  wakeupgen 119 Level     ppu_interrupt
+  7:       8897          0          0          0  wakeupgen  66 Level     30f0000.iommu
+ 15:       4688          0          0          0  sunxi_pio_edge   6 Edge      xradio_irq
+184:          1          0          0          0  sunxi_pio_edge 134 Edge      sdc0 cd
+338:      13562          0          0          0  wakeupgen  45 Level     3002000.dma-controller
+344:          0          0          0          0  wakeupgen 108 Level     rtc
+346:          0          0          0          0  wakeupgen  94 Level     cedar_dev
+348:         15          0          0          0  wakeupgen   0 Level     uart0
+349:      11023          0          0          0  wakeupgen   1 Level   
+350:      14243          0          0          0  wakeupgen   3 Level     uart3
+351:      14284          0          0          0  wakeupgen   4 Level     uart4
+352:     249028          0          0          0  wakeupgen 113 Level     twi6
+353:          0          0          0          0  wakeupgen   7 Level     twi0
+354:          0          0          0          0  wakeupgen   9 Level     twi2
+355:       4802          0          0          0  wakeupgen  32 Level     sunxi_usb_udc
+358:          0          0          0          0  wakeupgen  33 Level     ehci_hcd:usb1
+359:          0          0          0          0  wakeupgen  34 Level     ohci_hcd:usb2
+360:          0          0          0          0  wakeupgen  25 Level     audio jack irq
+361:      12164          0          0          0  wakeupgen  35 Level     ledcirq
+364:       8859          0          0          0  wakeupgen  41 Level     sunxi-mmc2
+365:          0          0          0          0  wakeupgen  39 Level     sunxi-mmc0
+366:      20281          0          0          0  wakeupgen  40 Level     sunxi-mmc1
+369:      17696          0          0          0  wakeupgen  68 Level     dispaly
+371:       2882          0          0          0  wakeupgen  91 Level     6480000.g2d
+374:          0          0          0          0  wakeupgen  22 Edge      sunxikbd
+380:       5860          0          0          0  wakeupgen  97 Level     pvrsrvkm
+381:          0          0          0          0  sunxi-8i-nmi   0 Level     axp2202_irq_chip
+389:          0          0          0          0  axp2202_irq_chip   7 Edge      vbus_insert
+390:          0          0          0          0  axp2202_irq_chip   8 Edge      vbus_remove
+391:          0          0          0          0  axp2202_irq_chip   9 Edge      battery_insert
+392:          0          0          0          0  axp2202_irq_chip  10 Edge      battery_remove
+395:          0          0          0          0  axp2202_irq_chip  13 Edge      axp20x-pek-dbf
+396:          0          0          0          0  axp2202_irq_chip  14 Edge      axp20x-pek-dbr
+404:          0          0          0          0  axp2202_irq_chip  22 Edge      battery_over_voltage
+IPI0:     23528      61301      60195      53221       Rescheduling interrupts
+IPI1:        88        415        413        417       Function call interrupts
+IPI2:         0          0          0          0       CPU stop interrupts
+IPI3:        84        813        664        711       Timer broadcast interrupts
+IPI4:        33         29         41         48       IRQ work interrupts
+IPI5:         0          0          0          0       CPU wake-up interrupts
+Err:          0

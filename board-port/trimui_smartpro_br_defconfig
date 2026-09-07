@@ -1,0 +1,26 @@
+# TrimUI Smart Pro — minimal Buildroot rootfs, first bring-up milestone.
+# Kernel and bootloader are built separately (mainline u-boot/linux trees in
+# this project), so this only needs to produce a rootfs image. Kept as small
+# as possible on purpose: goal is a UART login prompt, nothing more yet.
+BR2_aarch64=y
+BR2_cortex_a53=y
+BR2_TOOLCHAIN_BUILDROOT=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+BR2_TARGET_GENERIC_GETTY=y
+BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+BR2_TARGET_GENERIC_GETTY_BAUDRATE_115200=y
+
+BR2_TARGET_GENERIC_ROOT_PASSWD="trimui"
+BR2_TARGET_GENERIC_HOSTNAME="trimui-mainline"
+BR2_TARGET_GENERIC_ISSUE="TrimUI Smart Pro - mainline bring-up\n"
+
+BR2_PACKAGE_KMOD=y
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_I2C_TOOLS=y
+
+BR2_TARGET_ROOTFS_EXT2=y
+BR2_TARGET_ROOTFS_EXT2_4=y
+BR2_TARGET_ROOTFS_EXT2_SIZE="256M"
+# BR2_TARGET_ROOTFS_TAR is not set

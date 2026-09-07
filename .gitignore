@@ -1,0 +1,34 @@
+# Deny-by-default: this working directory contains a lot of large vendored
+# source trees, build output, and raw data pulled off the physical device
+# (firmware blobs, eMMC/RAM dumps, decompiled vendor kernel source) that
+# must never be committed here -- see README.md "What's NOT in this repo
+# and why" for the reasoning. Rather than trying to enumerate every such
+# path (new ones get created constantly during active investigation),
+# everything is ignored by default and only the specific, reviewed files
+# below are allowed back in.
+*
+
+!.gitignore
+!README.md
+!LICENSE
+!COMMUNITY_HELP_REQUEST.md
+!BUTTON_PROBING_PLAN.md
+
+!patches/
+!patches/**
+!board-port/
+!board-port/assemble_image.sh
+!board-port/extlinux.conf
+!board-port/future_features_notes.md
+!board-port/sun50i-a133-trimui-smartpro.dts
+!board-port/trimui-smartpro_defconfig
+!board-port/trimui_smartpro_br_defconfig
+!board-port/trimui-smartpro_kernel_defconfig
+!board-port/update_sd_kernel.sh
+!tools/
+!tools/devmem.c
+!tools/drmtest.c
+!tools/backup_restore/
+!tools/backup_restore/**
+!vendor-notes/
+!vendor-notes/**

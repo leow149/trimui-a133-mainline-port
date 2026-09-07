@@ -1,0 +1,10 @@
+screen 0:
+de_rate 300000000 hz, ref_fps:59
+mgr0: 720x1280 fmt[rgb] cs[0x204] range[full] eotf[0x4] bits[8bits] err[0] force_sync[0] unblank direct_show[false] iommu[1]
+dmabuf: cache[0] cache max[0] umap skip[0] umap skip max[8]
+	lcd output	backlight(133)	fps:60.0	 720x1280
+	err:1	skip:58	irq:31486	vsync:0	vsync_skip:0	
+   BUF    enable ch[1] lyr[0] z[4] prem[N] a[globl 255] fmt[  0] fb[ 720,1280; 720,1280; 720,1280] crop[   0,   0, 720,1280] frame[   0,   0, 720,1280] addr[fbb84000,       0,       0] flags[0x       0] trd[0,0]
+depth[ 0]    BUF    enable ch[2] lyr[0] z[8] prem[N] a[globl   0] fmt[  0] fb[ 720,1280; 720,1280; 720,1280] crop[   0,   0, 720,1280] frame[   0,   0, 720,1280] addr[fc708000,       0,       0] flags[0x       0] trd[0,0]
+depth[ 0]    BUF    enable ch[3] lyr[0] z[12] prem[N] a[globl   0] fmt[  0] fb[ 720,1280; 720,1280; 720,1280] crop[   0,   0, 720,1280] frame[   0,   0, 720,1280] addr[fcb08000,       0,       0] flags[0x       0] trd[0,0]
+depth[ 0] 

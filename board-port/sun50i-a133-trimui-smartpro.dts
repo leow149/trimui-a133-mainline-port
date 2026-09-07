@@ -1,0 +1,691 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2026 (out-of-tree hobbyist port, not yet upstream)
+ *
+ * Board: TrimUI Smart Pro (Allwinner A133 Plus / sun50iw10p1)
+ *
+ * Sourced from:
+ *  - vendor DTB extracted from Knulli image (dtb_86065152.dts, offset
+ *    86065152 in knulli-a133-trimui-smart-pro-scarab-20260511.img)
+ *  - sun50i-a133-liontron-h-a133l.dts (mainline reference board, same SoC)
+ *  - sun50i-h700-anbernic-rg35xx-2024.dts (mainline handheld reference for
+ *    AXP717 regulator/battery wiring style)
+ *  - LIVE data pulled directly off the running unit over UART (root shell +
+ *    /sys/firmware/fdt, the kernel's own resolved device tree — not a guess):
+ *    real regulator voltages (confirmed via U-Boot's PMIC init console log),
+ *    real DRAM timing table (see trimui-smartpro_defconfig), real panel
+ *    timings (see the lcd0 comment block below).
+ *
+ * TODO markers below are places nothing above could resolve: buttons/
+ * joystick are NOT GPIO at all (confirmed: read over a UART-attached
+ * co-microcontroller, see BUTTON_PROBING_PLAN.md — needs a from-scratch
+ * serdev driver, not a DT gpio-keys node), and the panel's DSI init
+ * command sequence (register writes for the otm1289a controller) is
+ * not yet captured.
+ */
+
+/dts-v1/;
+
+#include "sun50i-a100.dtsi"
+#include "sun50i-a100-cpu-opp.dtsi"
+
+#include <dt-bindings/clock/sun8i-tcon-top.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	model = "TrimUI Smart Pro";
+	chassis-type = "handset";
+	/* "trimui" is not a registered vendor prefix in dt-bindings yet;
+	 * fine for an out-of-tree hobbyist build, would need registering
+	 * (vendor-prefixes.yaml) before any upstream submission. */
+	compatible = "trimui,smart-pro", "allwinner,sun50i-a100";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		/* confirmed from the vendor boot.img kernel cmdline */
+		stdout-path = "serial0:115200n8";
+	};
+
+	battery: battery {
+		compatible = "simple-battery";
+		/* vendor DTB: pmu_battery_rdc = 0x93, pmu_battery_cap = 0x1388 (5000mAh) */
+		voltage-max-design-microvolt = <4200000>;
+	};
+
+	reg_vcc5v: regulator-vcc5v {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	de: display-engine {
+		/*
+		 * The fallback compatible string matters: sun4i_drv.c's
+		 * of_match_table has no A133 entry, and matches here are what
+		 * probes the aggregate "sun4i-drm" platform driver that calls
+		 * component_bind_all() to wire the already-individually-probed
+		 * mixer/tcon/dsi devices together into one DRM device. Without
+		 * a match, this node binds no driver at all and the pipeline
+		 * sits in permanent -EPROBE_DEFER. sun4i_drv.c's probe function
+		 * isn't SoC-specific (it just walks the DT ports graph), so
+		 * reusing an existing entry here is safe -- same pattern used
+		 * on tcon_lcd0 below.
+		 */
+		compatible = "allwinner,sun50i-a133-display-engine",
+			     "allwinner,sun50i-a64-display-engine";
+		allwinner,pipelines = <&mixer0>;
+		status = "okay";
+	};
+
+	/*
+	 * Real values from the vendor live DTB's power_sply block:
+	 * lcd_pwm_used=1, lcd_pwm_ch=0 (PWM channel 0 — wired above),
+	 * lcd_pwm_freq=0xc350=50000Hz (period_ns = 1e9/50000 = 20000),
+	 * lcd_pwm_pol=0 (normal polarity), lcd_pwm_max_limit=0xc8=200.
+	 * NOT included: a real backlight-enable GPIO. The vendor DTB has
+	 * a separate lcd_bl_en packed property (bank=7/pin=18, decoding to
+	 * PH18 by cross-checking the pinctrl driver's own bank-numbering
+	 * against an already-confirmed-real pin elsewhere in this file) —
+	 * tried driving it directly via a raw register poke on live
+	 * hardware (no kernel involved, just to test the hypothesis) and
+	 * it had no visible effect, so this pin guess is unconfirmed/likely
+	 * wrong (the vendor property has 8 packed fields where a plain
+	 * 6-cell gpio-spec would only have 7 — there's a piece of that
+	 * encoding not accounted for). Left out entirely rather than wire
+	 * up a pin that's an unverified guess.
+	 */
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm 0 20000 0>;
+		default-brightness-level = <200>;
+		power-supply = <&reg_cldo4>;
+	};
+
+	/* TODO: face buttons (A/B/X/Y, D-pad, L1/L2/R1/R2, start/select,
+	 * joystick clicks). The vendor DTB has NO gpio-keys node and no
+	 * "trimui_keypad"-style driver string was found in the firmware —
+	 * only a 3-key ADC "allwinner,keyboard_1350mv" node exists (that's
+	 * volume/fastboot-combo, not the face buttons). Real GPIO/ADC
+	 * assignments need to come from live probing on the actual unit
+	 * (pinctrl debugfs, evtest against the stock kernel, or a UART
+	 * dmesg capture during boot) — not guessed from another device.
+	 */
+};
+
+&cpu0 {
+	/* TODO: verify against A133 PLUS-rated OPP ceiling, not just A100's */
+	cpu-supply = <&reg_dcdc1>;
+};
+
+&mmc0 {
+	/* SD card slot. cd-gpios still unconfirmed — no hotplug detection, but
+	 * that's fine for a card already inserted at boot (proven live: this is
+	 * literally how SPL/BROM read this same card to boot in the first
+	 * place). Pin/clock wiring already provided by sun50i-a100.dtsi.
+	 * vmmc-supply guessed as the same general IO rail as mmc2 — unconfirmed,
+	 * first thing to revisit if this doesn't come up cleanly. */
+	bus-width = <4>;
+	vmmc-supply = <&reg_cldo3>;
+	status = "okay";
+};
+
+&mmc2 {
+	/* eMMC — pin group/clocks/etc. already wired by sun50i-a100.dtsi, this
+	 * board file only needs the board-specific bits. bus mode confirmed
+	 * from the live boot log: negotiated DDR52, NOT HS200/HS400 — the
+	 * vendor kernel actively strips those capability flags at runtime
+	 * ("delete mmc-hs200-1_8v from dtb" / "delete mmc-hs400-1_8v from dtb"
+	 * in dmesg), so we don't claim them here either. vmmc-supply is a
+	 * reasonable inference (cldo3/vcc-io, the general 3.3V IO rail) but
+	 * NOT directly confirmed — no capture explicitly tied cldo3 to mmc2.
+	 */
+	bus-width = <8>;
+	non-removable;
+	cap-mmc-hw-reset;
+	mmc-ddr-1_8v;
+	vmmc-supply = <&reg_cldo3>; /* inferred, not directly confirmed */
+	status = "okay";
+};
+
+&r_i2c0 {
+	status = "okay";
+
+	axp717: pmic@34 {
+		compatible = "x-powers,axp717";
+		reg = <0x34>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		interrupt-parent = <&r_intc>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+
+		vin1-supply = <&reg_vcc5v>;
+		vin2-supply = <&reg_vcc5v>;
+		vin3-supply = <&reg_vcc5v>;
+		vin4-supply = <&reg_vcc5v>;
+
+		axp_adc: adc {
+			compatible = "x-powers,axp717-adc";
+			#io-channel-cells = <1>;
+		};
+
+		battery_power: battery-power {
+			compatible = "x-powers,axp717-battery-power-supply";
+			monitored-battery = <&battery>;
+			x-powers,no-thermistor;
+		};
+
+		usb_power: usb-power {
+			compatible = "x-powers,axp717-usb-power-supply";
+		};
+
+		/*
+		 * Regulator names carried over from the vendor DTB's "axp2202-*"
+		 * node names (AXP2202 == AXP717, confirmed: Allwinner's BSP driver
+		 * for "axp2202" has been shown driving a chip physically marked
+		 * AXP717). Voltages below are REAL, read directly from U-Boot's own
+		 * PMIC-init console log on the live unit (not decoded/guessed) —
+		 * each line printed "<rail>_vol = <mV>, onoff=<0|1>" at boot. dcdc2
+		 * (GPU/sys) wasn't printed at that boot stage (probably brought up
+		 * later by the kernel) — left undocumented rather than guessed.
+		 * dcdc1 (vdd-cpu) was 940mV at that instant but is DVFS-scaled by
+		 * cpufreq, so it's intentionally NOT hardcoded to a fixed value here.
+		 */
+		regulators {
+			reg_dcdc1: dcdc1 {
+				/*
+				 * regulator-always-on, not regulator-boot-on:
+				 * drivers/regulator/core.c's regulator_late_cleanup()
+				 * (the late-boot "disable unused regulators" sweep)
+				 * checks constraints->always_on, not ->boot_on --
+				 * boot-on only means "was already on at boot," it
+				 * does nothing to stop this cleanup pass from
+				 * turning it back off. This board has no cpufreq/OPP
+				 * consumer wired up yet, so dcdc1 would otherwise
+				 * have zero regulator-API reference count despite
+				 * being the CPU's own supply -- disabling it hard
+				 * hangs the board.
+				 */
+				regulator-always-on;
+				regulator-name = "vdd-cpu";
+				/* boot-time value was 940mV; real range needs the OPP table, not hardcoded here */
+			};
+			reg_dcdc2: dcdc2 {
+				/*
+				 * Same reasoning as dcdc1 above: no GPU driver
+				 * claims this rail yet, and nothing rules out
+				 * shared PLL/bias circuitry with the display
+				 * path, so it's kept on rather than left to the
+				 * late-boot unused-regulator cleanup.
+				 */
+				regulator-always-on;
+				regulator-name = "vdd-gpu-sys";
+			};
+			reg_dcdc3: dcdc3 {
+				/* confirmed real: matches boot0's "DRAM_VCC set to 1100 mv" exactly */
+				regulator-always-on;
+				regulator-min-microvolt = <1100000>;
+				regulator-max-microvolt = <1100000>;
+				regulator-name = "vdd-dram";
+			};
+			/*
+			 * aldo1/aldo2/aldo4/bldo2/bldo3/bldo4 all got
+			 * regulator-always-on added after real, reproducible
+			 * hard hangs: fixing vdd-cpu/vdd-gpu-sys (the first two
+			 * rails caught by the kernel's late-boot "disable
+			 * unused regulators" sweep) didn't stop the hang, it
+			 * just moved it — the very next boot hung identically
+			 * but with "aldo4: disabling" this time. Whack-a-mole:
+			 * every rail the vendor bootloader left on (onoff=1 in
+			 * the real U-Boot PMIC log) that we don't have a
+			 * confirmed real consumer/purpose for is exactly this
+			 * same landmine, since nothing in our still-incomplete
+			 * DT claims them through the regulator API. Rather than
+			 * keep discovering these one hang at a time, all of
+			 * them get always-on now — matches the vendor's own
+			 * actual default behavior anyway (leave them on).
+			 * bldo1 is the one confirmed exception: real U-Boot log
+			 * shows onoff=0 at boot (WiFi/BT driver switches it on
+			 * dynamically later), so it's deliberately left off here.
+			 */
+			reg_aldo1: aldo1 {
+				/* real: 1800mV, onoff=1 at boot */
+				regulator-always-on;
+			};
+			reg_aldo2: aldo2 {
+				/* real: 3300mV, onoff=1 */
+				regulator-always-on;
+			};
+			reg_aldo3: aldo3 {
+				/* confirmed: WiFi/BT IO rail (wlan_io_regulator), real: 3300mV */
+				regulator-always-on;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "vcc-wifi-io";
+			};
+			reg_aldo4: aldo4 {
+				/* real: 1800mV, onoff=1 */
+				regulator-always-on;
+			};
+			reg_bldo1: bldo1 {
+				/* confirmed: WiFi/BT power rail (wlan_power1), real: 3300mV.
+				 * NOT always-on: U-Boot log shows onoff=0 at boot — the
+				 * wifi/bt driver switches it on dynamically at runtime. */
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "vcc-wifi";
+			};
+			reg_bldo2: bldo2 {
+				/* real: 1800mV, onoff=1 */
+				regulator-always-on;
+			};
+			reg_bldo3: bldo3 {
+				/* real: 3300mV, onoff=1 */
+				regulator-always-on;
+			};
+			reg_bldo4: bldo4 {
+				/* real: 1800mV at boot, onoff=1 */
+				regulator-always-on;
+			};
+			reg_cldo1: cldo1 {
+				/* confirmed: LCD panel power0 (lcd_power0="cldo1"), real: 1800mV */
+				regulator-always-on;
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-name = "vcc-lcd-1";
+			};
+			reg_cldo2: cldo2 { };
+			reg_cldo3: cldo3 {
+				/* real: 3300mV */
+				regulator-always-on;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "vcc-io";
+			};
+			reg_cldo4: cldo4 {
+				/* confirmed: LCD panel power1 (lcd_power1="cldo4"), real: 3300mV */
+				regulator-always-on;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "vcc-lcd-2";
+			};
+			reg_cpusldo: cpusldo {
+				/* real: 900mV, onoff=1 */
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <900000>;
+			};
+		};
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb_pins>; /* only pin group this SoC's dtsi defines; matches vendor cmdline's ttyS0 */
+	status = "okay";
+};
+
+&{/soc} {
+	/*
+	 * A133 (sun50iw10) has no public DE/mixer register documentation
+	 * (A133 User Manual rev 1.1, chapter 4.1 "DE" is 2 pages of feature
+	 * bullets + a block diagram, no register list — unlike every other
+	 * chapter in that manual). Addresses/topology below are cross-
+	 * checked two ways instead: the manual's own top-level physical
+	 * memory map (DE0/DSI0/DPSS_TOP0/TCON_LCD0 base addresses + GIC IRQ
+	 * numbers, chapter 3) and Allwinner's own GPL disp2 driver source
+	 * for this exact SoC (lowlevel_v2x/sun50iw10 tree — public on
+	 * GitHub from several vendor BSP forks, e.g. chainsx/kernel-sun50iw10,
+	 * engSinteck/A133_Image): de_feat.c gives the real channel/layer
+	 * topology (DISP0 = 2 VI + 2 UI channels, DISP1 = 1 VI + 2 UI, all
+	 * scaler-capable) that drives the sun8i_mixer.c cfg structs, and
+	 * de_rtmx_init()'s reg_base + 0x100000 / + 0x200000 offsets for
+	 * mixer0/mixer1 match the addresses used below (and match the
+	 * existing convention already used for every other DE2.0 SoC in
+	 * this driver — A64, H3, R40).
+	 *
+	 * DPSS_TOP0 (0x06510000) is a real hardware crossbar between the
+	 * mixers and TCON_LCD0 -- CCU exposes its own bus clock/reset gate
+	 * (CLK_BUS_DPSS_TOP0/RST_BUS_DPSS_TOP0), and the vendor implementation
+	 * explicitly routes through it. Leaving it out of the ports graph
+	 * entirely is not survivable: mixer0/tcon_lcd0/dsi0 all probe and
+	 * bind fine without it, but every DRM atomic commit then times out
+	 * waiting for vblank -- the pixel path never physically reaches the
+	 * panel, because nothing keeps DPSS_TOP0's own bus clock enabled
+	 * once Linux's "disable unused clocks" cleanup runs. Modeled here by
+	 * reusing mainline's existing sun8i_tcon_top.c driver with an added
+	 * A133 compatible + quirks entry: the vendor's own register layout
+	 * for this block is bit-for-bit identical to what that driver
+	 * already assumes for R40/D1/H6 -- genuinely the same IP block, just
+	 * undocumented for this particular SoC.
+	 */
+	dpss_top0: dpss-top@6510000 {
+		compatible = "allwinner,sun50i-a133-tcon-top";
+		reg = <0x06510000 0x1000>;
+		/*
+		 * "tcon-tv0" is a required clock-name in sun8i_tcon_top_bind()
+		 * regardless of quirks (it unconditionally registers a TV0
+		 * gate clock) even though this board has no TCON_TV/HDMI
+		 * output at all. Pointing it at CLK_TCON_LCD is a harmless
+		 * filler — that gate output is never consumed by anything in
+		 * this DT, it just needs to exist so probe doesn't fail
+		 * resolving the clock-name. "dsi" is real and load-bearing
+		 * though (has_dsi=true pulls it in): CLK_MIPI_DSI from CCU is
+		 * the actual upstream parent feeding DSI's gated clock inside
+		 * this block. Missed this the first time around — dpss_top0's
+		 * own probe failed outright without it (of_property_match_string
+		 * couldn't find "dsi" in clock-names), which cascaded into
+		 * dsi0's own "mod" clock lookup failing too, since it points
+		 * at dpss_top0's now-never-registered clock provider.
+		 */
+		clocks = <&ccu CLK_BUS_DPSS_TOP0>,
+			 <&ccu CLK_TCON_LCD>,
+			 <&ccu CLK_MIPI_DSI>;
+		clock-names = "bus", "tcon-tv0", "dsi";
+		clock-output-names = "tcon-top-tv0", "tcon-top-dsi";
+		resets = <&ccu RST_BUS_DPSS_TOP0>;
+		#clock-cells = <1>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			dpss_top0_mixer0_in: port@0 {
+				reg = <0>;
+
+				dpss_top0_in_mixer0: endpoint {
+					remote-endpoint = <&mixer0_out_dpss_top0>;
+				};
+			};
+
+			dpss_top0_mixer0_out: port@1 {
+				reg = <1>;
+
+				dpss_top0_out_tcon_lcd0: endpoint {
+					remote-endpoint = <&tcon_lcd0_in_dpss_top0>;
+				};
+			};
+		};
+	};
+
+	mixer0: mixer@6100000 {
+		compatible = "allwinner,sun50i-a133-de2-mixer-0";
+		reg = <0x06100000 0x100000>;
+		clocks = <&ccu CLK_BUS_DE>, <&ccu CLK_DE>;
+		clock-names = "bus", "mod";
+		resets = <&ccu RST_BUS_DE>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			mixer0_out: port@1 {
+				reg = <1>;
+
+				mixer0_out_dpss_top0: endpoint {
+					remote-endpoint = <&dpss_top0_in_mixer0>;
+				};
+			};
+		};
+	};
+
+	tcon_lcd0: lcd-controller@6511000 {
+		/*
+		 * No A100/A133-specific compatible exists upstream (the
+		 * binding's compatible enum only lists SoCs someone has
+		 * already wired up). The generic a83t-tcon-lcd fallback
+		 * matches the driver purely on this string, so it still
+		 * binds correctly even without an A133-specific entry.
+		 */
+		compatible = "allwinner,sun8i-a83t-tcon-lcd";
+		reg = <0x06511000 0x1000>;
+		/*
+		 * Was GIC_SPI 101 (copied from a mismatched reference DTS) --
+		 * the interrupt handler was silently never firing. Confirmed
+		 * correct via the live vendor DT + /proc/interrupts: vendor's
+		 * combined disp@06000000 node's third interrupt cell is raw
+		 * SPI 0x44 = 68, and that is the ONLY display-related
+		 * interrupt actively counting (~60Hz) on real hardware --
+		 * cross-checked against dma0's SPI 0x2d=45, which matches
+		 * exactly between the vendor DT and its own /proc/interrupts
+		 * with no offset, confirming the raw-cell-value convention.
+		 */
+		interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&ccu CLK_BUS_TCON_LCD>, <&ccu CLK_TCON_LCD>;
+		clock-names = "ahb", "tcon-ch0";
+		clock-output-names = "tcon-pixel-clock";
+		resets = <&ccu RST_BUS_TCON_LCD>;
+		reset-names = "lcd";
+		#clock-cells = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			tcon_lcd0_in: port@0 {
+				reg = <0>;
+
+				tcon_lcd0_in_dpss_top0: endpoint {
+					remote-endpoint = <&dpss_top0_out_tcon_lcd0>;
+				};
+			};
+
+			tcon_lcd0_out: port@1 {
+				reg = <1>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				/*
+				 * reg = <1> here (not 0) is load-bearing, not
+				 * cosmetic: sun4i_drv.c's component-matching
+				 * walk (sun4i_drv_traverse_endpoints()) treats
+				 * a channel-0 TCON's port@1 endpoint 0 as "our
+				 * directly-connected panel" and deliberately
+				 * skips adding it to the component match list.
+				 * Confirmed live on real hardware: with this
+				 * endpoint unaddressed (defaulting to reg=0),
+				 * the DSI encoder got silently treated as a
+				 * bare panel and never added to the component
+				 * list, so component_bind_all() never bound
+				 * it, dsi->drm never got set, and the panel's
+				 * mipi_dsi_attach() spun in EPROBE_DEFER
+				 * forever — screen stayed black even though
+				 * mixer0 probed fine standalone. Matches the
+				 * real D1 reference DTS's own convention:
+				 * sunxi-d1s-t113.dtsi's tcon_lcd0_out_dsi is
+				 * also "endpoint@1 { reg = <1>; ... }", same
+				 * as here, not endpoint 0 — this was a real
+				 * detail I should have carried over the first
+				 * time instead of dropping it.
+				 */
+				tcon_lcd0_out_dsi0: endpoint@1 {
+					reg = <1>;
+					remote-endpoint = <&dsi0_in_tcon_lcd0>;
+				};
+			};
+		};
+	};
+
+	dsi0: dsi@6504000 {
+		compatible = "allwinner,sun50i-a100-mipi-dsi";
+		reg = <0x06504000 0x1000>;
+		interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+		/*
+		 * REVERTED: tried sourcing "mod" from dpss_top0's gated DSI
+		 * output (matching the vendor's de_lcd.c, which gates
+		 * tcon_clk_gate.bits.dsi_clk_gate as part of enabling DSI, and
+		 * the real D1 reference DTS's identical convention) — but this
+		 * creates a genuine circular dependency, not just an ordering
+		 * race: dpss_top0 only registers its clock-provider inside its
+		 * component .bind() callback, which only runs once every
+		 * matched component (including dsi0 itself) has *already*
+		 * succeeded its own individual .probe(). dsi0's probe() can't
+		 * succeed without this clock, so it can never reach
+		 * component_add(), so dpss_top0's bind() never fires, forever
+		 * — confirmed live: "Couldn't get the DSI mod clock" repeated
+		 * on every deferred-probe retry with no path to resolution.
+		 * Back to sourcing directly from CCU, which is what actually
+		 * got the panel to attach successfully a few iterations ago.
+		 * dpss_top0 stays modeled in the ports graph regardless (for
+		 * its own bus-clock-keepalive purpose, now fully decoupled
+		 * from dsi0's clock lookup) — whether A133 genuinely needs
+		 * this specific gate toggled for DSI to output correctly, as
+		 * opposed to just needing DPSS_TOP0 clocked/reset for its
+		 * routing mux to be live, is still an open question; CCU's
+		 * own CLK_MIPI_DSI already has its own independent gate bit,
+		 * so it's plausible this DPSS_TOP0 gate is a separate/optional
+		 * clock domain rather than something on the primary pixel path.
+		 */
+		clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
+		clock-names = "bus", "mod";
+		resets = <&ccu RST_BUS_MIPI_DSI>;
+		phys = <&dphy0>;
+		phy-names = "dphy";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port {
+			dsi0_in_tcon_lcd0: endpoint {
+				remote-endpoint = <&tcon_lcd0_out_dsi0>;
+			};
+		};
+
+		panel@0 {
+			/*
+			 * reset-gpios pin is a placeholder (PD0) — the real
+			 * reset line hasn't been probed on hardware yet.
+			 * power-supply maps to the driver's
+			 * devm_regulator_get(dev, "power") lookup. backlight
+			 * maps to drm_panel_of_backlight()'s lookup, wired to
+			 * the pwm-backlight node above (real PWM channel 0 /
+			 * 50kHz values, but backlight-enable GPIO not included
+			 * — see the comment on that node for why).
+			 *
+			 * No ports/endpoint graph needed here: sun6i_dsi_attach()
+			 * (drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c) finds the
+			 * panel via of_drm_find_panel() on this node directly,
+			 * not through of_graph — the DSI parent/child
+			 * relationship (reg = virtual channel) is the only
+			 * link needed.
+			 */
+			compatible = "orisetech,otm1289a";
+			reg = <0>;
+			reset-gpios = <&pio 3 0 GPIO_ACTIVE_LOW>; /* TODO: unconfirmed pin, revisit on real hw */
+			power-supply = <&reg_cldo1>;
+			backlight = <&backlight>;
+		};
+	};
+
+	dphy0: phy@6505000 {
+		compatible = "allwinner,sun50i-a100-mipi-dphy";
+		reg = <0x06505000 0x1000>;
+		interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
+		clock-names = "bus", "mod";
+		resets = <&ccu RST_BUS_MIPI_DSI>;
+		#phy-cells = <0>;
+	};
+
+	/*
+	 * No mainline driver or A100/A133-specific binding exists upstream
+	 * for this IP (see drivers/pwm/pwm-sun50i-a133.c and its binding
+	 * doc) -- it's a newer, richer generation than allwinner,sun4i-a10-pwm.
+	 * Base address and register layout are from the A133 User Manual,
+	 * chapter 10.11 (fully documented down to bit level). Only
+	 * CLK_BUS_PWM (register-access gate) is needed -- the PWM output
+	 * clock source itself is internal to this IP, confirmed by
+	 * CLK_PWM's absence from the A100 CCU headers.
+	 */
+	pwm: pwm@300a000 {
+		compatible = "allwinner,sun50i-a133-pwm";
+		reg = <0x0300a000 0x400>;
+		clocks = <&ccu CLK_BUS_PWM>;
+		clock-names = "bus";
+		resets = <&ccu RST_BUS_PWM>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm0_pins>;
+		#pwm-cells = <3>;
+	};
+};
+
+&pio {
+	/*
+	 * PD23/pwm0, muxsel 0x2 — confirmed real from the vendor live DTB's
+	 * lcd_pwm_ch = 0 (PWM channel 0 drives the panel backlight) cross-
+	 * checked against drivers/pinctrl/sunxi/pinctrl-sun50i-a100.c's own
+	 * SUNXI_PIN(D, 23) table, which already lists "pwm0" at the exact
+	 * same function value (0x2) the vendor DTB used — mainline's
+	 * pinctrl driver already fully supports this pin/function, only
+	 * the PWM controller driving it needed writing.
+	 */
+	pwm0_pins: pwm0-pins {
+		pins = "PD23";
+		function = "pwm0";
+	};
+};
+
+/*
+ * TODO: WiFi/BT (XR829 on SDIO bus 1 / &mmc1, confirmed from strings:
+ * boot_xr829.bin, fw_xr829.bin, fw_xr829_bt.bin, sdd_xr829.bin — and
+ * confirmed live via the running kernel's "XRADIO WIFI OPEN" driver log,
+ * MAC dc:44:60:xx:xx:xx (redacted)). Power rails: bldo1 (3300mV, switched on
+ * dynamically, not always-on) + aldo3 (3300mV, always-on) — both wired
+ * above. GPIO wiring is REAL, read directly off the live unit's
+ * /sys/kernel/debug/gpio (not decoded from packed vendor fields):
+ *   bt_rst         = r_pio 0 2  (PL2)  output, active low
+ *   bt_hostwake    = r_pio 0 3  (PL3)  input
+ *   bt_wake        = r_pio 0 4  (PL4)  output
+ *   wlan_regon     = r_pio 0 5  (PL5)  output
+ *   wlan_hostwake  = r_pio 0 6  (PL6)  input
+ * Mainline equivalent is an mmc1 node + mmc-pwrseq-simple (using
+ * wlan_regon as the reset-gpios line) + whatever XR829 driver ends up
+ * used (no mainline driver exists yet — see project notes for the
+ * out-of-tree candidates). Not wired into an actual mmc1 node yet.
+ */
+
+/*
+ * Display: mixer0/tcon_lcd0/dsi0/dphy0/panel@0 are all wired above
+ * (&soc block + dsi0's panel@0 child). Status:
+ *  - Panel driver (panel-orisetech-otm1289a.c) written: real timings
+ *    (720x1280, 69MHz dclk, ht=880/hbp=88/hspw=4, vt=1320/vbp=9/vspw=4)
+ *    plus a DSI init command sequence transcribed from a MediaTek LCM
+ *    driver for the same panel controller IC found via GitHub code
+ *    search (OrangePi4G-iot_kernel's otm1289a_hd720_dsi_vdo_auo.c) —
+ *    NOT from Allwinner's own disp2 tree, which was checked for this
+ *    board's exact panel and doesn't have it (its bundled lcd/ panel
+ *    library has ~90 entries but none named otm1289a; ours is probably
+ *    a TrimUI-added file in a downstream fork that isn't public). The
+ *    reference driver uses 3 DSI lanes; ours is set to the confirmed
+ *    real 4-lane value, so timing-sensitive parts of the init sequence
+ *    may need retuning once there's real hardware feedback.
+ *  - Mixer (sun8i_mixer.c): A133 cfg added, ported from the same vendor
+ *    tree's de_feat.c topology data (see &soc comment above the mixer0
+ *    node for the full provenance/reasoning).
+ *  - TCON_LCD0/DSI0/D-PHY: real register addresses from the A133 User
+ *    Manual (chapter 6, which — unlike the DE chapter — is fully
+ *    documented down to bit level); DSI host + D-PHY already had
+ *    mainline driver support for A100 before this port touched anything.
+ * Backlight: working. The `backlight` pwm-backlight node above (PWM
+ * channel 0, 50kHz) is wired via `backlight = <&backlight>` on the panel
+ * node and confirmed on real hardware.
+ *
+ * The remaining open item is display output itself: the panel attaches
+ * and the backlight lights, but TCON0's CPU/8080-interface TRIGGER_START
+ * bit never self-clears, so no pixel data reaches the panel -- see the
+ * project's investigation log for the current status. reset-gpios is
+ * still an unverified placeholder, and the DPSS_TOP0 routing-register
+ * risk noted above the mixer0 node is still unconfirmed.
+ */
+
+/*
+ * TODO: GPU (img,gpu / PowerVR GE8300) — no mainline binding to reference
+ * yet.
+ */

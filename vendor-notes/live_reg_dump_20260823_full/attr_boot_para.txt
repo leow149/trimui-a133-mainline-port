@@ -1,0 +1,1 @@
+disp_para=104 init_disp=0 tv_vdid=0 fb_base=0x0 disp_config0=1,4 - 0,0,260,4 disp_config1=1,0 - 0,0,257,4

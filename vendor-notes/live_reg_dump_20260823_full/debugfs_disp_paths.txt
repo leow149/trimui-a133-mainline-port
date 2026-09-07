@@ -1,0 +1,8 @@
+/sys/kernel/debug/pvr/apphint/CacheOpUMKMThresholdSize
+/sys/kernel/debug/clk/display_top
+/sys/kernel/debug/clk/tcon_lcd0
+/sys/kernel/debug/clk/tcon_lcd1
+/sys/kernel/debug/iommu/tests/6000000.disp
+/sys/kernel/debug/iommu/tests/soc@03000000:disp1@1
+/sys/kernel/debug/dispdbg
+/sys/kernel/debug/ion/clients/ion_disp2-0

@@ -1,0 +1,64 @@
+# TrimUI Smart Pro (Allwinner A133 Plus, sun50iw10p1) — out-of-tree hobbyist port
+#
+# DRAM_* values below are REAL, pulled directly from the live device's own
+# /sys/firmware/fdt (the "/dram" node's dram_para[00..31] array — the actual
+# resolved config the vendor kernel booted with, not a guess). Cross-checked
+# against the boot0 UART console log (CLK=792MHz, para1=0x30fa, para2=0x4000000,
+# tpr13=0x7521 all matched exactly). Several of these differ from the
+# liontron-h-a133l placeholder values previously here (TPR6/TPR11/TPR12 were
+# wrong; TPR10/TPR13/TPR14 happened to already be correct).
+CONFIG_ARM=y
+CONFIG_ARCH_SUNXI=y
+CONFIG_DEFAULT_DEVICE_TREE="allwinner/sun50i-a133-trimui-smartpro"
+CONFIG_DRAM_CLK=792
+CONFIG_SPL=y
+CONFIG_DRAM_SUNXI_DX_ODT=0x7070707
+CONFIG_DRAM_SUNXI_DX_DRI=0xd0d0d0d
+CONFIG_DRAM_SUNXI_CA_DRI=0xe0e
+CONFIG_DRAM_SUNXI_PARA0=0xd0a050c
+CONFIG_DRAM_SUNXI_MR11=0x4
+CONFIG_DRAM_SUNXI_MR12=0x72
+CONFIG_DRAM_SUNXI_MR14=0x7
+CONFIG_DRAM_SUNXI_MR22=0x26
+CONFIG_DRAM_SUNXI_TPR0=0x6060606
+CONFIG_DRAM_SUNXI_TPR1=0x84040404
+CONFIG_DRAM_SUNXI_TPR6=0x48010101
+CONFIG_DRAM_SUNXI_TPR10=0x273333
+CONFIG_DRAM_SUNXI_TPR11=0x211b151e
+CONFIG_DRAM_SUNXI_TPR12=0x14141312
+CONFIG_DRAM_SUNXI_TPR13=0x7521
+CONFIG_DRAM_SUNXI_TPR14=0x2023211f
+CONFIG_MACH_SUN50I_A133=y
+# Real bug found via hardware testing: MACH_SUN50I_A133 `select`s
+# SUN50I_GEN_H6 (shared peripheral IP with the H6 generation, correct), but
+# arch/arm/mach-sunxi/Kconfig's SUNXI_BL31_BASE default table had no case
+# for A133 specifically, so it silently fell through to the H6 default of
+# 0x00104000 (SRAM). TF-A's own plat/allwinner/sun50i_a133/platform.mk sets
+# SUNXI_BL31_IN_DRAM := 1, meaning BL31 for THIS chip is actually linked to
+# run from DRAM (SUNXI_DRAM_BASE = 0x40000000), not SRAM. The address
+# mismatch made BL31 crash instantly on real hardware (jumped to garbage
+# near 0x40000000 within its first few instructions, confirmed via a
+# DEBUG=1 TF-A build's exception dump) — same root cause for both the FEL
+# and SD-card boot paths, since both load BL31 wherever this config says.
+# SUNXI_BL31_BASE has no Kconfig `prompt`, so it can't be overridden here —
+# fixed properly at the source: arch/arm/mach-sunxi/Kconfig now has an
+# explicit `default 0x40000000 if MACH_SUN50I_A133` case added.
+CONFIG_SUNXI_DRAM_A133_LPDDR4=y
+CONFIG_MMC_SUNXI_SLOT_EXTRA=2
+CONFIG_R_I2C_ENABLE=y
+# CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
+CONFIG_SPL_I2C=y
+CONFIG_SPL_SYS_I2C_LEGACY=y
+CONFIG_SYS_I2C_MVTWSI=y
+CONFIG_SYS_I2C_SLAVE=0x7f
+CONFIG_SYS_I2C_SPEED=400000
+CONFIG_SUPPORT_EMMC_BOOT=y
+CONFIG_AXP717_POWER=y
+CONFIG_AXP_I2C_ADDRESS=0x34
+# AXP_DCDC2_VOLT has a Kconfig default (1000mV) under AXP717_POWER, but
+# AXP_DCDC3_VOLT does NOT — leaving it unset makes syncconfig block on an
+# interactive prompt forever (found the hard way). 1100mV confirmed REAL:
+# matches the boot0 console log's "DRAM_VCC set to 1100 mv" exactly.
+CONFIG_AXP_DCDC3_VOLT=1100
+CONFIG_USB_EHCI_HCD=y
+CONFIG_USB_OHCI_HCD=y
