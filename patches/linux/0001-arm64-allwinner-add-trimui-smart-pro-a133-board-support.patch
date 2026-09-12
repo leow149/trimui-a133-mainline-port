@@ -72,54 +72,100 @@ would have permanently disabled vblank for other boards sharing this
 TCON code, a spurious-vblank issue from treating bare FSYNC_INT as a
 frame event, a clock-gate write getting silently undone by "disable
 unused clocks", a PWM register race across channels, a PWM 100%-duty
-truncation bug, a divide-by-zero guard, and a DT schema gap. Did not
-resolve the core TRIGGER_START bug.
+truncation bug, a divide-by-zero guard, and a DT schema gap. Hardware
+testing after all of the above showed the regmap fix, while real, did
+NOT resolve the core TRIGGER_START symptom. That same testing turned
+up two more real, hardware-confirmed bugs, also fixed here: TCON0's
+own interrupt line storming at tens of thousands of firings/sec,
+tripping genirq's "nobody cared" protection and permanently killing
+the IRQ handler's own retrigger backstop -- fixed by treating every
+firing as handled unconditionally in DSI/CPU mode, since this driver
+is the line's only legitimate consumer in that mode; and
+sun6i_dsi_encoder_enable() enabling both VIDEO_VBLK and VIDEO_LINE on
+DSI's own interrupt register when a live vendor register dump on a
+working reference system shows only VIDEO_VBLK enabled -- matched
+vendor exactly. Neither of these, nor the regmap fix, resolved the
+core bug.
 
 v2 -> v3: Fixed the retrigger timer racing sun6i_dsi_encoder_enable()
 on a guessed 1000ms wall-clock delay instead of sequencing on real
 completion (added a tcon back-reference so encoder_enable() arms the
-timer itself once actually done). Fixed missing fast_io on two
-regmaps (sun4i_tcon_handler() is a genuine hardirq handler; without
-fast_io, regmap's default mutex-based locking is a sleep-in-hardirq
-hazard), missing EXPORT_SYMBOL on three DSI helpers (a real modular
-build failure, not just a modpost nag), and a non-DSI enable_irq()
-call living in the wrong function (left vblank permanently disabled
-after one DPMS cycle on other boards). Rejected two atomic-context
-sleeping claims as false positives, checked directly against
-drm_atomic_helper.c and the PWM core's own pwm_apply_might_sleep()
-naming.
+timer itself once actually done, via a new
+sun4i_tcon_dsi_start_retrigger()). Rejected two atomic-context
+sleeping claims (disable_irq()/mutex_lock()/msleep()) as false
+positives, checked directly against drm_atomic_helper_commit_tail()'s
+own wait_for_vblanks() call chain and the PWM core's own
+pwm_apply_might_sleep() naming. Answered a question about whether
+TRI_FINISH_ENABLE being unset blocks the retrigger backstop, using
+data already on hand: a working vendor system's live GINT0 dump
+(0x00000a00) shows TRI_FINISH_INT's status bit asserting without its
+own enable too, same as FSYNC -- not an untested assumption.
 
-v3 -> v4: Fixed a bus-fault race between sun6i_dsi_encoder_disable()
-gating DSI clocks/reset and this driver's own retrigger
-timer/IRQ teardown running later, by moving the teardown into
+v3 -> v4: Fixed both sun4i_tcon_regmap_config and
+sun6i_dsi_regmap_config missing fast_io -- without it, regmap defaults
+to mutex-based locking, a sleep-in-hardirq hazard given
+sun4i_tcon_handler() is a genuine non-threaded hardirq handler
+concurrently accessed by the retrigger hrtimer. Fixed by adding
+fast_io and switching to spinlock-based locking (verified against
+regmap_lock_spinlock()'s spin_lock_irqsave() usage), and switching the
+retrigger timer to HRTIMER_MODE_REL_SOFT while here, moving its
+frequent callback out of genuine hardirq context. Fixed
+sun6i_dsi_tri_start()/read_int_status()/clear_int_status() missing
+EXPORT_SYMBOL -- a real modular-build failure (CONFIG_DRM_SUN4I=m
+would fail to resolve these across the sun4i_tcon.c/sun6i_mipi_dsi.c
+module boundary), not just a modpost nag. Fixed a non-DSI enable_irq()
+call living in sun4i_tcon_mode_set(), which a plain DPMS off/on cycle
+never calls again -- moved to sun4i_tcon_set_status()'s enable=true
+branch, symmetric with the existing disable=false branch. Swapped
+CLK_IS_CRITICAL for CLK_IGNORE_UNUSED on the TCON-TOP DSI gate (the
+former forces the clock, and its parent PLL, permanently on -- an
+unintended power regression; the latter exempts the same
+disable_unused sweep without forcing anything on). Rejected the same
+atomic-context claim reapplied to otm1289a's msleep() and
+sun4i_tcon_set_status()'s disable_irq(), and a CPU-hog concern about
+unconditionally treating every DSI/CPU-mode IRQ firing as handled --
+accepted as a real, documented trade-off (the alternative, letting
+genirq disable the line, is empirically worse), not fixed.
+
+v4 -> v5: Fixed a bus-fault race between sun6i_dsi_encoder_disable()
+gating DSI clocks/reset and this driver's own retrigger timer/IRQ
+teardown running later, by moving the teardown into
 sun6i_dsi_encoder_disable() itself (closing the window at its actual
-source). Fixed the GINT0 acknowledge write missing TRI_COUNTER_INT
-(a potential hard lockup if it were ever the bit driving the level
-line). Hardened (not fully fixed -- it's a narrower, pre-existing
-TOCTOU shared with the pristine hdmi_src/de_config functions) the
-sun8i_tcon_top raw of_find_device_by_node()/dev_get_drvdata() lookup
-with a NULL guard. Found and fixed a real quirks-scoping gap: this
-board's TCON0 DT node reused sun8i_a83t_lcd_quirks verbatim with real
-A83T hardware, so several of this series' changes applied to every
-DSI board sharing that struct (including Pinephone/Pinetab on A64).
-Fixed via a new "allwinner,sun50i-a133-tcon-lcd" compatible string and
-a new dsi_cpu_needs_retrigger quirk field gating every one of this
-series' additions to sun4i_tcon0_mode_set_cpu(), verified against
+source, via a new sun4i_tcon_dsi_stop_retrigger()). Fixed the GINT0
+acknowledge write missing TRI_COUNTER_INT (a potential hard lockup if
+it were ever the bit driving the level line). Hardened (not fully
+fixed -- it's a narrower, pre-existing TOCTOU shared with the pristine
+hdmi_src/de_config functions) the sun8i_tcon_top raw
+of_find_device_by_node()/dev_get_drvdata() lookup with a NULL guard;
+this driver's .remove() (pristine, unmodified here) was confirmed to
+correctly tear down the whole DRM aggregate first, contradicting an
+earlier, incorrect claim that it had no .remove() at all. Found and
+fixed a real quirks-scoping gap: this board's TCON0 DT node reused
+sun8i_a83t_lcd_quirks verbatim with real A83T hardware, so several of
+this series' changes applied to every DSI board sharing that struct
+(including Pinephone/Pinetab on A64). Fixed via a new
+"allwinner,sun50i-a133-tcon-lcd" compatible string and a new
+dsi_cpu_needs_retrigger quirk field gating every one of this series'
+additions to sun4i_tcon0_mode_set_cpu(), verified against
 drivers/of/base.c's actual DT compatible-matching algorithm. (TBS-A711
 on A83T, cited earlier as another affected board, turned out to be
 LVDS on checking its DTS, not DSI -- corrected.)
 
-v4 -> v5: Fixed a PWM clock-gate leak (pwm_a133_apply()'s disable path
-cleared PER_EN but never PCGR_GATING, leaving a disabled channel's
-clock running indefinitely) and a DT binding schema gap
-(allwinner,sun8i-r40-tcon-top.yaml required port@4/port@5
-unconditionally, which this board's HDMI-less tcon-top node can't
-satisfy) -- restructured the schema so those ports are required
-per-variant instead, verified with dt-validate against real compiled
-DTBs (this board's own, and a real upstream H6 one). Rejected the same
-atomic-context claims again, and a retrigger-timer TOCTOU claim (not
-reachable: it requires TRI_FINISH_INT pending before TRIGGER_START has
-ever been written even once).
+v5 -> v6: Fixed a PWM clock-gate leak: pwm_a133_apply()'s disable path
+cleared PWM_A133_PER_REG's channel enable bit but never cleared the
+matching PWM_A133_PCGR_REG channel clock-gate bit, leaving a disabled
+channel's clock running indefinitely. Fixed a DT binding schema gap:
+allwinner,sun8i-r40-tcon-top.yaml required port@4/port@5
+unconditionally across every compatible in the file, which this
+board's HDMI-less tcon-top node can't satisfy -- restructured the
+schema so those ports are required per-variant instead, checked
+against R40/D1/H6's real in-tree dtsi and verified with dt-validate
+against real compiled DTBs (this board's own, and a real upstream H6
+one): the old schema genuinely rejects this board's DTB, the fixed one
+accepts both. Rejected the same atomic-context claims again, and a
+retrigger-timer TOCTOU claim (not reachable: it requires
+TRI_FINISH_INT pending before TRIGGER_START has ever been written even
+once).
 
 v6 -> v7: Fixed a real IRQ re-enable race: a DPMS off/on cycle's
 sun4i_tcon_dsi_stop_retrigger() masks the IRQ but never acks GINT0, so
