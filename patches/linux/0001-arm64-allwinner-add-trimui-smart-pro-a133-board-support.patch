@@ -1,7 +1,7 @@
-From 39d62d5bc681cf61b57718652eacb187098d89c5 Mon Sep 17 00:00:00 2001
+From 7e5b90363855cd7507d264fdea84c188889fb2f7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:15 +0200
-Subject: [RFC PATCH] arm64: allwinner: add TrimUI Smart Pro (A133) board
+Subject: [RFC PATCH v5] arm64: allwinner: add TrimUI Smart Pro (A133) board
  support
 
 Board bring-up for the TrimUI Smart Pro handheld (Allwinner A133 Plus):
@@ -210,33 +210,86 @@ TRI_COUNTER_INT asserting in any testing, but added it to the
 acknowledge mask since clearing it is free and closes the gap.
 
 One proportionate hardening, not a full fix: sun8i_tcon_top_set_dsi_gate()/
-set_de0_port() (both added by this series) can NULL-deref if
-sun8i_tcon_top is unbound via sysfs, since that driver has no .remove()
-and DRM never learns the component is gone. The missing .remove() is a
-real, pre-existing gap in this shared driver, affecting every board
-using it, not something this series introduced -- properly fixing it
-needs a component-aware teardown I can't safely design or test blind
+set_de0_port() (both added by this series) reach sun8i_tcon_top via a raw
+of_find_device_by_node() + dev_get_drvdata() lookup -- the same
+pre-existing pattern sun8i_r40_tcon_tv_set_mux() already uses for the TV
+path, entirely outside the component framework's own bind/unbind
+synchronization. this driver's .remove() (pristine, unmodified here)
+does correctly tear down the whole DRM aggregate before its own unbind
+runs (verified against take_down_aggregate_device() in
+drivers/base/component.c), so an orderly sysfs unbind is not itself the
+hazard, contrary to what an earlier version of this same fix claimed.
+What isn't covered is an in-flight atomic-commit worker calling in
+through that raw lookup concurrently with this device's own unbind
+clearing drvdata -- a narrow, pre-existing TOCTOU race in this shared
+driver's own lifecycle handling, affecting every board using it (the
+pristine hdmi_src/de_config functions have the identical gap), not
+something this series introduced. Properly fixing it needs real
+synchronization between the two drivers, or moving off the raw
+reach-around entirely, which I can't safely design or test blind
 against boards I don't have. Added a NULL guard at both of this
 series' own call sites instead, which stops these two functions from
 being what actually crashes on it, without claiming to fix the
-underlying gap.
+underlying race.
 
-Two findings are real but I'm not attempting a fix for, and I want to
-be explicit about that rather than either ignore them or guess at a
-fix I can't verify: this board's TCON0 DT node reuses the exact same
-sun8i_a83t_lcd_quirks struct instance as real A83T hardware (same
-compatible string), so sun4i_tcon0_mode_set_cpu()'s dsi_cpu_mode flag
-and this series' changed START_DELAY formula constant (300, replacing
-pristine's unconditional 149) apply to every existing DSI board reaching
-that function, not just this one -- including real, currently-shipping
-Pinephone/Pinetab (A64) and TBS-A711 (A83T) users. I have no A64/A83T
-hardware to test whether 149 was even correct for them, whether 300
-regresses them, or whether the new dsi_cpu_mode-gated vblank/retrigger
-behavior is neutral or harmful on their TCON generation, which this
-driver's own existing comments already suggest doesn't need per-frame
-software retriggering at all. Flagged prominently in-code at both
-locations for whoever maintains or tests those boards to weigh in on,
-rather than silently shipped or hidden.
+Two findings from v4 were flagged as real but not fixed at the time:
+this board's TCON0 DT node reused the exact same sun8i_a83t_lcd_quirks
+struct instance as real A83T hardware (same compatible string), so
+sun4i_tcon0_mode_set_cpu()'s dsi_cpu_mode flag and this series' changed
+START_DELAY formula constant applied to every existing DSI board
+reaching that function, not just this one -- including Pinephone/Pinetab
+(A64), a real, currently-shipping user of this exact shared function
+(confirmed: its video-mode DSI panel still routes through the TCON's
+CPU/8080 register interface here, same as this board's command-mode
+one). TBS-A711 was also cited alongside it at the time as an A83T
+example; checking its actual DTS while answering a question about this
+later turned up that citation as wrong -- TBS-A711 is an LVDS panel and
+never reaches this function at all, and no currently-shipping A83T
+board in mainline has a real DSI panel. Noted here rather than quietly
+dropped; the underlying concern was still legitimate on the strength of
+the A64 example alone.
+
+That turned out to be fixable after all -- quirks can scope this, just
+not by trying to distinguish boards that share a compatible string.
+Added "allwinner,sun50i-a133-tcon-lcd" as a new, more specific
+compatible string for this board's tcon_lcd0 node (kept alongside the
+existing "allwinner,sun8i-a83t-tcon-lcd" as a fallback for drivers that
+don't know the new string yet), the same precedent already used for
+allwinner,sun50i-a64-tcon-lcd in this same binding. Verified directly
+against this tree's own drivers/of/base.c that DT match priority is
+scored by position in the *node's* own compatible list
+(__of_device_is_compatible()'s score = INT_MAX/2 - (index << 2)) and
+__of_match_node() picks the highest score across the whole table --
+so listing the new string first deterministically wins the match
+regardless of table order, not just in theory.
+
+Added a new sun4i_tcon_quirks entry (sun50i_a133_tcon_lcd_quirks) with
+a new dsi_cpu_needs_retrigger field, and gated every one of this
+series' previously-unconditional additions to sun4i_tcon0_mode_set_cpu()
+behind it: the GCTL_IOMAP write, the dsi_cpu_mode/tcon->dsi assignment
+(and everything it in turn gates -- sun4i_tcon_enable_vblank()'s early
+return, the retrigger timer, sun4i_tcon_handler()'s
+unconditional-IRQ_HANDLED behavior), CLK_DELAY/DCLK_OUT_EN, the
+BLOCK_SPACE +1 correction, the START_DELAY formula (restored to
+pristine's exact N=11/149MHz for any board not opting in),
+SAFE_PERIOD_NUM, and IO_TRI_REG. Every other existing DSI board using
+this shared function (Pinephone/Pinetab on A64; no currently-shipping
+A83T board actually reaches it, see above) now gets byte-identical
+behavior to pristine mainline, since none of their DT nodes list the
+new compatible string. Updated
+Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+to add the new string to the existing A64 items/enum block.
+
+Hardware-tested repeatedly after this change: a register peek confirms
+the new quirk path actually activates on this board (TCON0_CPU_IF_REG
+shows TRIGGER_START/TRI_EN/TRI_FIFO_EN set, bits only ever written by
+the newly-gated retrigger code), and two separate full 120-second boots
+reached a stable interactive shell with the exact same
+TRIGGER_START-stuck symptom as every prior round -- no regression. One
+earlier capture on this same build showed a full hang past driver init
+that did not reproduce on retest; most likely a transient unrelated to
+this change, not a deterministic regression, but noted here rather than
+silently discarded.
 
 Cc: Chen-Yu Tsai <wens@kernel.org>
 Cc: Jernej Skrabec <jernej.skrabec@gmail.com>
@@ -244,32 +297,48 @@ Cc: Samuel Holland <samuel@sholland.org>
 Cc: Maxime Ripard <mripard@kernel.org>
 Cc: Paul Kocialkowski <paulk@sys-base.io>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NWb9hjTUX7y78UsRvVs8m7
 ---
+ .../display/allwinner,sun4i-a10-tcon.yaml     |   1 +
  .../allwinner,sun8i-a83t-de2-mixer.yaml       |   2 +
  .../display/allwinner,sun8i-r40-tcon-top.yaml |  43 ++
  .../pwm/allwinner,sun50i-a133-pwm.yaml        |  67 ++
  arch/arm64/boot/dts/allwinner/Makefile        |   1 +
- .../allwinner/sun50i-a133-trimui-smartpro.dts | 691 ++++++++++++++++++
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 697 ++++++++++++++++++
  drivers/clk/sunxi-ng/ccu-sun50i-a100.c        |  16 +-
  drivers/gpu/drm/panel/Kconfig                 |   8 +
  drivers/gpu/drm/panel/Makefile                |   1 +
  .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 424 +++++++++++
- drivers/gpu/drm/sun4i/sun4i_tcon.c            | 588 ++++++++++++++-
- drivers/gpu/drm/sun4i/sun4i_tcon.h            |  97 +++
+ drivers/gpu/drm/sun4i/sun4i_tcon.c            | 633 +++++++++++++++-
+ drivers/gpu/drm/sun4i/sun4i_tcon.h            | 109 +++
  drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c        | 227 +++++-
  drivers/gpu/drm/sun4i/sun6i_mipi_dsi.h        |  23 +
  drivers/gpu/drm/sun4i/sun8i_mixer.c           |  48 ++
- drivers/gpu/drm/sun4i/sun8i_tcon_top.c        | 140 +++-
+ drivers/gpu/drm/sun4i/sun8i_tcon_top.c        | 152 +++-
  drivers/gpu/drm/sun4i/sun8i_tcon_top.h        |   2 +
  drivers/pwm/Kconfig                           |  14 +
  drivers/pwm/Makefile                          |   1 +
  drivers/pwm/pwm-sun50i-a133.c                 | 322 ++++++++
- 19 files changed, 2668 insertions(+), 47 deletions(-)
+ 20 files changed, 2745 insertions(+), 46 deletions(-)
  create mode 100644 Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
  create mode 100644 arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
  create mode 100644 drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
  create mode 100644 drivers/pwm/pwm-sun50i-a133.c
 
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+index 724d93b91..c01a444cd 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+@@ -45,6 +45,7 @@ properties:
+       - items:
+           - enum:
+               - allwinner,sun50i-a64-tcon-lcd
++              - allwinner,sun50i-a133-tcon-lcd
+           - const: allwinner,sun8i-a83t-tcon-lcd
+ 
+       - items:
 diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
 index cbd18fd83..ce72c1ba7 100644
 --- a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
@@ -431,10 +500,10 @@ index aa21f58a4..6132fda32 100644
  dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h5-emlid-neutis-n5-devboard.dtb
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 new file mode 100644
-index 000000000..531be1d90
+index 000000000..91adc18ab
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-@@ -0,0 +1,691 @@
+@@ -0,0 +1,697 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2026 (out-of-tree hobbyist port, not yet upstream)
@@ -875,13 +944,19 @@ index 000000000..531be1d90
 +
 +	tcon_lcd0: lcd-controller@6511000 {
 +		/*
-+		 * No A100/A133-specific compatible exists upstream (the
-+		 * binding's compatible enum only lists SoCs someone has
-+		 * already wired up). The generic a83t-tcon-lcd fallback
-+		 * matches the driver purely on this string, so it still
-+		 * binds correctly even without an A133-specific entry.
++		 * allwinner,sun50i-a133-tcon-lcd is this series' own addition
++		 * (same physical IP block as A83T's TCON0, but this board's
++		 * DSI/CPU-mode panel needs the driver's dsi_cpu_needs_retrigger
++		 * quirk, which real A83T boards using the bare
++		 * "allwinner,sun8i-a83t-tcon-lcd" compatible do not opt into
++		 * -- see the comment on that quirks field in sun4i_tcon.h).
++		 * The a83t-tcon-lcd fallback is kept, matching the existing
++		 * sun50i-a64-tcon-lcd precedent in this binding, so this node
++		 * would still bind (without the new quirk) even against an
++		 * older driver that doesn't know the new compatible yet.
 +		 */
-+		compatible = "allwinner,sun8i-a83t-tcon-lcd";
++		compatible = "allwinner,sun50i-a133-tcon-lcd",
++			     "allwinner,sun8i-a83t-tcon-lcd";
 +		reg = <0x06511000 0x1000>;
 +		/*
 +		 * Was GIC_SPI 101 (copied from a mismatched reference DTS) --
@@ -1621,7 +1696,7 @@ index 000000000..57de8bf94
 +MODULE_DESCRIPTION("DRM driver for Orise Tech OTM1289A MIPI DSI panel (TrimUI Smart Pro)");
 +MODULE_LICENSE("GPL v2");
 diff --git a/drivers/gpu/drm/sun4i/sun4i_tcon.c b/drivers/gpu/drm/sun4i/sun4i_tcon.c
-index bf405a2aa..a01010f39 100644
+index bf405a2aa..d14c885be 100644
 --- a/drivers/gpu/drm/sun4i/sun4i_tcon.c
 +++ b/drivers/gpu/drm/sun4i/sun4i_tcon.c
 @@ -221,6 +221,35 @@ void sun4i_tcon_set_status(struct sun4i_tcon *tcon,
@@ -1768,7 +1843,7 @@ index bf405a2aa..a01010f39 100644
  static int sun4i_tcon_get_clk_delay(const struct drm_display_mode *mode,
  				    int channel)
  {
-@@ -354,14 +477,24 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
+@@ -354,14 +477,29 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
  	u8 lanes = device->lanes;
  	u32 block_space, start_delay;
  	u32 tcon_div;
@@ -1787,71 +1862,89 @@ index bf405a2aa..a01010f39 100644
 +	/*
 +	 * Vendor's tcon_init() sets this unconditionally for every TCON
 +	 * instance regardless of panel type (LVDS/RGB/DSI alike); the CPU/DSI
-+	 * path here never did.
++	 * path here never did. Gated on dsi_cpu_needs_retrigger, same as
++	 * every other addition below that pristine mainline never wrote at
++	 * all for any DSI board -- see the comment further down on
++	 * dsi_cpu_mode for why this needs a real quirk rather than applying
++	 * unconditionally to every board reaching this function.
 +	 */
-+	regmap_update_bits(tcon->regs, SUN4I_TCON_GCTL_REG,
-+			   SUN4I_TCON_GCTL_IOMAP_MASK,
-+			   SUN4I_TCON_GCTL_IOMAP_TCON0);
++	if (tcon->quirks->dsi_cpu_needs_retrigger)
++		regmap_update_bits(tcon->regs, SUN4I_TCON_GCTL_REG,
++				   SUN4I_TCON_GCTL_IOMAP_MASK,
++				   SUN4I_TCON_GCTL_IOMAP_TCON0);
  
  	/* Set the resolution */
  	regmap_write(tcon->regs, SUN4I_TCON0_BASIC0_REG,
-@@ -375,6 +508,55 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
+@@ -375,6 +513,68 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
  			   SUN4I_TCON0_CTL_IF_MASK,
  			   SUN4I_TCON0_CTL_IF_8080);
  
 +	/*
-+	 * Arm the per-frame TRIGGER_START re-assertion in the IRQ handler.
-+	 *
-+	 * KNOWN OPEN RISK, same caveat as the START_DELAY constant below:
-+	 * sun4i_tcon0_mode_set_cpu() itself is not new -- pristine mainline
-+	 * already unconditionally routes every DRM_MODE_ENCODER_DSI board
-+	 * through it, including existing users on other SoCs (Pinephone/
-+	 * Pinetab on A64, TBS-A711 on A83T). What IS new is that reaching
-+	 * this function now unconditionally sets dsi_cpu_mode, which gates
-+	 * sun4i_tcon_enable_vblank()'s early return, the retrigger timer,
-+	 * and sun4i_tcon_handler()'s unconditional-IRQ_HANDLED behavior for
-+	 * every one of those boards too, not just this one. Per this
-+	 * driver's own existing comment on sun4i_tcon_handler(), those older
-+	 * TCON generations "free-run continuously off a single TRI_EN write
-+	 * ... that doesn't need a per-frame software trigger at all" --
-+	 * meaning this flag's side effects may be entirely unnecessary for
-+	 * them, and I have no way to test whether they're actively harmful.
-+	 * Scoping this to only this SoC/panel would need a real per-board
-+	 * signal (quirks can't do it: this board's TCON0 DT node reuses the
-+	 * exact same sun8i_a83t_lcd_quirks struct instance as real A83T
-+	 * boards via a shared compatible string, so a new quirks field would
-+	 * apply to them too). Not attempted here without hardware to verify
-+	 * it against; flagging for review instead.
++	 * Arm the per-frame TRIGGER_START re-assertion in the IRQ handler --
++	 * but only for TCON generations that actually need it. This
++	 * function itself is not new: pristine mainline already
++	 * unconditionally routes every DRM_MODE_ENCODER_DSI board through
++	 * it, including at least one real existing user on another SoC --
++	 * Pinephone/Pinetab on A64, confirmed still reaching this exact
++	 * function via their video-mode DSI panel (drivers/gpu/drm/panel/
++	 * panel-sitronix-st7703.c) despite using MIPI_DSI_MODE_VIDEO rather
++	 * than this board's command-mode panel, since sun4i_tcon_mode_set()'s
++	 * DRM_MODE_ENCODER_DSI case routes every DSI protocol mode through
++	 * the TCON's CPU/8080 register interface alike (see the comment
++	 * there). This driver's own sun4i_tcon_handler() comment (added
++	 * earlier in this series, see the comment below on the
++	 * TRI_FINISH_INT branch) describes that TCON generation as
++	 * free-running continuously off a single TRI_EN write, needing no
++	 * per-frame software retrigger at all -- checked directly, not
++	 * assumed: A83T's own TBS-A711 board, previously cited here too, was
++	 * wrong to cite -- its DTS panel node is "panel-lvds", so it reaches
++	 * this driver's separate LVDS mode_set path instead and was never
++	 * actually exercising this function at all. No currently-shipping
++	 * A83T board in mainline has a real DSI panel. Gating dsi_cpu_mode
++	 * (which in turn gates sun4i_tcon_enable_vblank()'s early return,
++	 * the retrigger timer, and sun4i_tcon_handler()'s
++	 * unconditional-IRQ_HANDLED behavior) behind this quirk keeps all of
++	 * that scoped to boards that actually opt in -- see the comment on
++	 * dsi_cpu_needs_retrigger in sun4i_tcon.h for how a board opts in
++	 * (a real, driver-matched compatible string, not a DT-only flag),
++	 * and why quirks previously couldn't do this (this board's TCON0
++	 * used to share sun8i_a83t_lcd_quirks verbatim with real A83T
++	 * hardware via an identical compatible string).
 +	 */
-+	tcon->dsi_cpu_mode = true;
-+	tcon->dsi = encoder_to_sun6i_dsi(encoder);
-+	/*
-+	 * Back-reference so sun6i_dsi_encoder_enable() can arm the retrigger
-+	 * timer itself once it actually finishes -- see the comment on
-+	 * sun4i_tcon_dsi_start_retrigger() for why this replaced a wall-clock
-+	 * guess made from here.
-+	 */
-+	tcon->dsi->tcon = tcon;
++	if (tcon->quirks->dsi_cpu_needs_retrigger) {
++		tcon->dsi_cpu_mode = true;
++		tcon->dsi = encoder_to_sun6i_dsi(encoder);
++		/*
++		 * Back-reference so sun6i_dsi_encoder_enable() can arm the
++		 * retrigger timer itself once it actually finishes -- see
++		 * the comment on sun4i_tcon_dsi_start_retrigger() for why
++		 * this replaced a wall-clock guess made from here.
++		 */
++		tcon->dsi->tcon = tcon;
++	}
 +
 +	/*
 +	 * CLK_DELAY and DCLK_OUT_EN are both set by the vendor implementation
 +	 * and present in a working reference system's live register values;
-+	 * mainline never set either on the DSI path.
++	 * mainline never set either on the DSI path for any board. Gated,
++	 * same reasoning as GCTL_IOMAP above.
 +	 */
-+	clk_delay = sun4i_tcon_get_clk_delay(mode, 0);
-+	regmap_update_bits(tcon->regs, SUN4I_TCON0_CTL_REG,
-+			   SUN4I_TCON0_CTL_CLK_DELAY_MASK,
-+			   SUN4I_TCON0_CTL_CLK_DELAY(clk_delay));
++	if (tcon->quirks->dsi_cpu_needs_retrigger) {
++		clk_delay = sun4i_tcon_get_clk_delay(mode, 0);
++		regmap_update_bits(tcon->regs, SUN4I_TCON0_CTL_REG,
++				   SUN4I_TCON0_CTL_CLK_DELAY_MASK,
++				   SUN4I_TCON0_CTL_CLK_DELAY(clk_delay));
 +
-+	/* See the header comment on SUN4I_TCON0_DCLK_OUT_EN_MASK. */
-+	regmap_update_bits(tcon->regs, SUN4I_TCON0_DCLK_REG,
-+			   SUN4I_TCON0_DCLK_OUT_EN_MASK,
-+			   SUN4I_TCON0_DCLK_OUT_EN_MASK);
++		/* See the header comment on SUN4I_TCON0_DCLK_OUT_EN_MASK. */
++		regmap_update_bits(tcon->regs, SUN4I_TCON0_DCLK_REG,
++				   SUN4I_TCON0_DCLK_OUT_EN_MASK,
++				   SUN4I_TCON0_DCLK_OUT_EN_MASK);
++	}
 +
  	regmap_write(tcon->regs, SUN4I_TCON_ECC_FIFO_REG,
  		     SUN4I_TCON_ECC_FIFO_EN);
  
-@@ -384,6 +566,19 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
+@@ -384,6 +584,19 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
  		     SUN4I_TCON0_CPU_IF_TRI_FIFO_EN |
  		     SUN4I_TCON0_CPU_IF_TRI_EN);
  
@@ -1871,7 +1964,7 @@ index bf405a2aa..a01010f39 100644
  	/*
  	 * This looks suspicious, but it works...
  	 *
-@@ -395,6 +590,15 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
+@@ -395,6 +608,18 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
  	block_space = mode->htotal * bpp / (tcon_div * lanes);
  	block_space -= mode->hdisplay + 40;
  
@@ -1880,14 +1973,17 @@ index bf405a2aa..a01010f39 100644
 +	 * reference system's live BLOCK_SPACE value; every other field in
 +	 * the pixel pipeline matches vendor bit-for-bit, so the gap is
 +	 * closed directly here rather than reverse-engineering which term
-+	 * of vendor's own formula differs.
++	 * of vendor's own formula differs. Gated: this is a correction
++	 * specific to this panel/SoC's real hardware behavior, not
++	 * something to apply to every board reaching this shared formula.
 +	 */
-+	block_space += 1;
++	if (tcon->quirks->dsi_cpu_needs_retrigger)
++		block_space += 1;
 +
  	regmap_write(tcon->regs, SUN4I_TCON0_CPU_TRI0_REG,
  		     SUN4I_TCON0_CPU_TRI0_BLOCK_SPACE(block_space) |
  		     SUN4I_TCON0_CPU_TRI0_BLOCK_SIZE(mode->hdisplay));
-@@ -402,26 +606,134 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
+@@ -402,25 +627,134 @@ static void sun4i_tcon0_mode_set_cpu(struct sun4i_tcon *tcon,
  	regmap_write(tcon->regs, SUN4I_TCON0_CPU_TRI1_REG,
  		     SUN4I_TCON0_CPU_TRI1_BLOCK_NUM(mode->vdisplay));
  
@@ -1895,33 +1991,29 @@ index bf405a2aa..a01010f39 100644
 -	start_delay = start_delay * mode->crtc_htotal * 149;
 -	start_delay = start_delay / (mode->crtc_clock / 1000) / 8;
 +	/*
-+	 * ((vtotal - vdisplay - 9) * htotal * de_clk_rate_mhz / pixel_clk_khz) >> 3,
-+	 * with the display engine's own clock rate at 300MHz on this SoC.
-+	 * Reproduces a working reference system's live TRI2 register value
-+	 * exactly for this panel's timings.
++	 * ((vtotal - vdisplay - N) * htotal * de_clk_rate_mhz / pixel_clk_khz) >> 3.
++	 * Pristine mainline used N=9+1+1=11 and de_clk_rate_mhz=149,
++	 * unconditionally, for every board reaching this function. This
++	 * SoC's real display-engine clock rate is 300MHz, and N=9 --
++	 * confirmed against a live working reference system's TRI2 register
++	 * value for this exact panel -- so both terms are gated on
++	 * dsi_cpu_needs_retrigger, preserving the exact pristine formula
++	 * (and whatever DE clock rate is correct for it) for every other
++	 * board unchanged.
 +	 *
 +	 * mode->crtc_clock is in kHz; a sub-1MHz mode (pre-existing
 +	 * possibility, not specific to this panel/board) would make the
 +	 * "/ 1000" term truncate to 0 and divide-by-zero below. Clamped to a
-+	 * minimum of 1 -- purely a crash guard, no real mode on this panel
-+	 * comes remotely close to that boundary.
-+	 *
-+	 * KNOWN OPEN RISK, flagged explicitly rather than silently changed:
-+	 * pristine mainline used 149 here, unconditionally, for every board
-+	 * reaching this function -- including existing sun6i-mipi-dsi users
-+	 * on other SoCs (e.g. Pinephone/Pinetab on A64, TBS-A711 on A83T).
-+	 * 300 is this SoC's real display-engine clock rate in MHz, confirmed
-+	 * against a live working reference system's TRI2 register value for
-+	 * this exact panel; 149 presumably reflects a different, older DE
-+	 * clock rate on A64/A83T. This constant is not board-scoped in any
-+	 * way -- it changes for every board using this function, not just
-+	 * this one -- and I have no A64/A83T hardware to verify what the
-+	 * correct value for them actually is or confirm 149 was even right
-+	 * to begin with. If you maintain or test one of those boards, this
-+	 * is the one change in this series most likely to need your input.
++	 * minimum of 1 -- purely a crash guard, applied to both branches,
++	 * no real mode on this panel comes remotely close to that boundary.
 +	 */
-+	start_delay = (mode->crtc_vtotal - mode->crtc_vdisplay - 9);
-+	start_delay = start_delay * mode->crtc_htotal * 300;
++	if (tcon->quirks->dsi_cpu_needs_retrigger) {
++		start_delay = (mode->crtc_vtotal - mode->crtc_vdisplay - 9);
++		start_delay = start_delay * mode->crtc_htotal * 300;
++	} else {
++		start_delay = (mode->crtc_vtotal - mode->crtc_vdisplay - 10 - 1);
++		start_delay = start_delay * mode->crtc_htotal * 149;
++	}
 +	start_delay = start_delay / max(mode->crtc_clock / 1000, 1) / 8;
  	regmap_write(tcon->regs, SUN4I_TCON0_CPU_TRI2_REG,
  		     SUN4I_TCON0_CPU_TRI2_TRANS_START_SET(10) |
@@ -1931,24 +2023,28 @@ index bf405a2aa..a01010f39 100644
 -	 * The Allwinner BSP has a comment that the period should be
 -	 * the display clock * 15, but uses an hardcoded 3000...
 +	 * The Allwinner BSP has a comment that the period should be the
-+	 * display clock * 15, but hardcodes 3000 -- which itself doesn't
-+	 * match this panel: a working reference system's live SAFE_PERIOD_NUM
-+	 * value is 1035.
++	 * display clock * 15, but hardcodes 3000 (pristine mainline's value,
++	 * unconditional for every board) -- which itself doesn't match this
++	 * panel: a working reference system's live SAFE_PERIOD_NUM value is
++	 * 1035. Gated, same reasoning as the writes above.
  	 */
  	regmap_write(tcon->regs, SUN4I_TCON_SAFE_PERIOD_REG,
 -		     SUN4I_TCON_SAFE_PERIOD_NUM(3000) |
-+		     SUN4I_TCON_SAFE_PERIOD_NUM(1035) |
++		     SUN4I_TCON_SAFE_PERIOD_NUM(tcon->quirks->dsi_cpu_needs_retrigger ?
++						1035 : 3000) |
  		     SUN4I_TCON_SAFE_PERIOD_MODE(3));
  
 -	/* Enable the output on the pins */
--	regmap_write(tcon->regs, SUN4I_TCON0_IO_TRI_REG,
--		     0xe0000000);
 +	/*
 +	 * IO_TRI_REG's HSYNC/VSYNC/DATA_PINS_DISABLE bits are for the HV/RGB
 +	 * and LVDS paths, not CPU/8080 -- a working reference system's live
-+	 * value for this interface is 0x00000000.
++	 * value for this interface is 0x00000000. Pristine mainline's value
++	 * (0xe0000000, unconditional for every board) is preserved for any
++	 * board not opting into this quirk.
 +	 */
-+	regmap_write(tcon->regs, SUN4I_TCON0_IO_TRI_REG, 0x00000000);
+ 	regmap_write(tcon->regs, SUN4I_TCON0_IO_TRI_REG,
+-		     0xe0000000);
++		     tcon->quirks->dsi_cpu_needs_retrigger ? 0x00000000 : 0xe0000000);
 +
 +	/*
 +	 * The retrigger timer itself is armed from sun6i_dsi_encoder_enable()
@@ -1958,8 +2054,8 @@ index bf405a2aa..a01010f39 100644
 +	 * encoder_enable even starts) was replaced with sequencing on real
 +	 * completion instead.
 +	 */
- }
- 
++}
++
 +/*
 + * Called from sun6i_dsi_encoder_enable() once it has genuinely finished
 + * (DSI_START_HSD already issued) rather than from mode_set_cpu() above on a
@@ -2025,13 +2121,12 @@ index bf405a2aa..a01010f39 100644
 +		disable_irq(tcon->irq);
 +		tcon->irq_enabled = false;
 +	}
-+}
+ }
 +EXPORT_SYMBOL(sun4i_tcon_dsi_stop_retrigger);
-+
+ 
  static void sun4i_tcon0_mode_set_lvds(struct sun4i_tcon *tcon,
  				      const struct drm_encoder *encoder,
- 				      const struct drm_display_mode *mode)
-@@ -713,11 +1025,31 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
+@@ -713,11 +1047,31 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
  			 const struct drm_encoder *encoder,
  			 const struct drm_display_mode *mode)
  {
@@ -2064,7 +2159,7 @@ index bf405a2aa..a01010f39 100644
  		break;
  	case DRM_MODE_ENCODER_LVDS:
  		sun4i_tcon0_mode_set_lvds(tcon, encoder, mode);
-@@ -735,6 +1067,14 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
+@@ -735,6 +1089,14 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
  	default:
  		DRM_DEBUG_DRIVER("Unknown encoder type, doing nothing...\n");
  	}
@@ -2079,7 +2174,7 @@ index bf405a2aa..a01010f39 100644
  }
  EXPORT_SYMBOL(sun4i_tcon_mode_set);
  
-@@ -759,30 +1099,197 @@ static irqreturn_t sun4i_tcon_handler(int irq, void *private)
+@@ -759,30 +1121,201 @@ static irqreturn_t sun4i_tcon_handler(int irq, void *private)
  	struct sun4i_crtc *scrtc = tcon->crtc;
  	struct sunxi_engine *engine = scrtc->engine;
  	unsigned int status;
@@ -2180,10 +2275,14 @@ index bf405a2aa..a01010f39 100644
 +	 * frame's transfer and then clears itself. Without re-asserting it,
 +	 * the panel receives a single frame at mode-set time and nothing
 +	 * ever again. Pristine mainline's sun4i_tcon0_mode_set_cpu() writes
-+	 * neither AUTO nor TRIGGER_START for any board; its existing users
-+	 * (Pinephone/Pinetab on A64, TBS-A711 on A83T) free-run continuously
-+	 * off a single TRI_EN write on older TCON hardware that doesn't need
-+	 * a per-frame software trigger at all. This TCON generation does.
++	 * neither AUTO nor TRIGGER_START for any board; its confirmed
++	 * existing user on another SoC (Pinephone/Pinetab on A64 -- see the
++	 * comment further up on dsi_cpu_needs_retrigger for why A83T's own
++	 * TBS-A711, previously also cited here, does not actually apply:
++	 * it's an LVDS panel, never reaching this function at all) free-runs
++	 * continuously off a single TRI_EN write on that older TCON
++	 * hardware, needing no per-frame software trigger at all. This TCON
++	 * generation does.
 +	 *
 +	 * This mirrors the vendor implementation's own per-frame retrigger
 +	 * shape -- a DSI-side kick followed by this TRIGGER_START write --
@@ -2284,7 +2383,7 @@ index bf405a2aa..a01010f39 100644
  static int sun4i_tcon_init_clocks(struct device *dev,
  				  struct sun4i_tcon *tcon)
  {
-@@ -811,6 +1318,16 @@ static int sun4i_tcon_init_clocks(struct device *dev,
+@@ -811,6 +1344,16 @@ static int sun4i_tcon_init_clocks(struct device *dev,
  	return 0;
  }
  
@@ -2301,7 +2400,7 @@ index bf405a2aa..a01010f39 100644
  static int sun4i_tcon_init_irq(struct device *dev,
  			       struct sun4i_tcon *tcon)
  {
-@@ -821,13 +1338,15 @@ static int sun4i_tcon_init_irq(struct device *dev,
+@@ -821,13 +1364,15 @@ static int sun4i_tcon_init_irq(struct device *dev,
  	if (irq < 0)
  		return irq;
  
@@ -2318,7 +2417,7 @@ index bf405a2aa..a01010f39 100644
  	return 0;
  }
  
-@@ -836,6 +1355,20 @@ static const struct regmap_config sun4i_tcon_regmap_config = {
+@@ -836,6 +1381,20 @@ static const struct regmap_config sun4i_tcon_regmap_config = {
  	.val_bits	= 32,
  	.reg_stride	= 4,
  	.max_register	= 0x800,
@@ -2339,7 +2438,7 @@ index bf405a2aa..a01010f39 100644
  };
  
  static int sun4i_tcon_init_regmap(struct device *dev,
-@@ -1136,6 +1669,20 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
+@@ -1136,6 +1695,20 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
  	tcon->id = engine->id;
  	tcon->quirks = of_device_get_match_data(dev);
  
@@ -2360,7 +2459,7 @@ index bf405a2aa..a01010f39 100644
  	tcon->lcd_rst = devm_reset_control_get(dev, "lcd");
  	if (IS_ERR(tcon->lcd_rst)) {
  		dev_err(dev, "Couldn't get our reset line\n");
-@@ -1304,6 +1851,7 @@ static void sun4i_tcon_unbind(struct device *dev, struct device *master,
+@@ -1304,6 +1877,7 @@ static void sun4i_tcon_unbind(struct device *dev, struct device *master,
  {
  	struct sun4i_tcon *tcon = dev_get_drvdata(dev);
  
@@ -2368,8 +2467,43 @@ index bf405a2aa..a01010f39 100644
  	list_del(&tcon->list);
  	if (tcon->quirks->has_channel_0)
  		sun4i_dclk_free(tcon);
+@@ -1514,6 +2088,26 @@ static const struct sun4i_tcon_quirks sun8i_a83t_lcd_quirks = {
+ 	.setup_lvds_phy		= sun6i_tcon_setup_lvds_phy,
+ };
+ 
++/*
++ * Same physical TCON0 IP block as sun8i_a83t_lcd_quirks -- this is a new,
++ * more-specific compatible string added by this series (see the comment on
++ * this board's DTS tcon0 node), kept alongside the existing
++ * "allwinner,sun8i-a83t-tcon-lcd" fallback so this board's node still binds
++ * against an older driver that doesn't know the new string yet. It exists
++ * because this board's DSI/CPU-mode panel needs the per-frame software
++ * TRIGGER_START retrigger that dsi_cpu_needs_retrigger gates, which real
++ * A83T boards using the bare "allwinner,sun8i-a83t-tcon-lcd" compatible do
++ * not opt into. See the comment on dsi_cpu_needs_retrigger in sun4i_tcon.h
++ * for what this actually changes.
++ */
++static const struct sun4i_tcon_quirks sun50i_a133_tcon_lcd_quirks = {
++	.supports_lvds		= true,
++	.has_channel_0		= true,
++	.dclk_min_div		= 1,
++	.setup_lvds_phy		= sun6i_tcon_setup_lvds_phy,
++	.dsi_cpu_needs_retrigger = true,
++};
++
+ static const struct sun4i_tcon_quirks sun8i_a83t_tv_quirks = {
+ 	.has_channel_1		= true,
+ };
+@@ -1558,6 +2152,7 @@ const struct of_device_id sun4i_tcon_of_table[] = {
+ 	{ .compatible = "allwinner,sun8i-a23-tcon", .data = &sun8i_a33_quirks },
+ 	{ .compatible = "allwinner,sun8i-a33-tcon", .data = &sun8i_a33_quirks },
+ 	{ .compatible = "allwinner,sun8i-a83t-tcon-lcd", .data = &sun8i_a83t_lcd_quirks },
++	{ .compatible = "allwinner,sun50i-a133-tcon-lcd", .data = &sun50i_a133_tcon_lcd_quirks },
+ 	{ .compatible = "allwinner,sun8i-a83t-tcon-tv", .data = &sun8i_a83t_tv_quirks },
+ 	{ .compatible = "allwinner,sun8i-r40-tcon-tv", .data = &sun8i_r40_tv_quirks },
+ 	{ .compatible = "allwinner,sun8i-v3s-tcon", .data = &sun8i_v3s_quirks },
 diff --git a/drivers/gpu/drm/sun4i/sun4i_tcon.h b/drivers/gpu/drm/sun4i/sun4i_tcon.h
-index fa23aa23f..014ce4722 100644
+index fa23aa23f..d8bac3847 100644
 --- a/drivers/gpu/drm/sun4i/sun4i_tcon.h
 +++ b/drivers/gpu/drm/sun4i/sun4i_tcon.h
 @@ -12,11 +12,14 @@
@@ -2449,7 +2583,26 @@ index fa23aa23f..014ce4722 100644
  #define SUN4I_TCON0_CPU_IF_TRI_EN			BIT(0)
  
  #define SUN4I_TCON0_CPU_WR_REG			0x64
-@@ -257,6 +296,22 @@ struct sun4i_tcon {
+@@ -244,6 +283,18 @@ struct sun4i_tcon_quirks {
+ 	bool	supports_lvds;   /* Does the TCON support an LVDS output? */
+ 	bool	polarity_in_ch0; /* some tcon1 channels have polarity bits in tcon0 pol register */
+ 	u8	dclk_min_div;	/* minimum divider for TCON0 DCLK */
++	/*
++	 * Some CPU/8080-interface DSI/CPU-mode TCON generations need
++	 * TRIGGER_START re-asserted per frame in software (see the comment
++	 * on sun4i_tcon_dsi_retrigger_timer_fn()); others free-run
++	 * continuously off a single TRI_EN write and would be actively
++	 * disrupted by that same machinery. Also gates a real
++	 * display-engine-clock-rate-derived constant in
++	 * sun4i_tcon0_mode_set_cpu()'s START_DELAY formula that differs
++	 * between TCON generations. False (the historical, pristine
++	 * behavior) unless a board's quirks entry opts in.
++	 */
++	bool	dsi_cpu_needs_retrigger;
+ 
+ 	/* callback to handle tcon muxing options */
+ 	int	(*set_mux)(struct sun4i_tcon *, const struct drm_encoder *);
+@@ -257,6 +308,22 @@ struct sun4i_tcon {
  	struct drm_device		*drm;
  	struct regmap			*regs;
  
@@ -2472,7 +2625,7 @@ index fa23aa23f..014ce4722 100644
  	/* Main bus clock */
  	struct clk			*clk;
  
-@@ -279,6 +334,46 @@ struct sun4i_tcon {
+@@ -279,6 +346,46 @@ struct sun4i_tcon {
  	/* Platform adjustments */
  	const struct sun4i_tcon_quirks	*quirks;
  
@@ -2519,7 +2672,7 @@ index fa23aa23f..014ce4722 100644
  	/* Associated crtc */
  	struct sun4i_crtc		*crtc;
  
-@@ -297,6 +392,8 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
+@@ -297,6 +404,8 @@ void sun4i_tcon_mode_set(struct sun4i_tcon *tcon,
  			 const struct drm_display_mode *mode);
  void sun4i_tcon_set_status(struct sun4i_tcon *crtc,
  			   const struct drm_encoder *encoder, bool enable);
@@ -2958,10 +3111,10 @@ index b6cd7352e..b3419f6d3 100644
  		.compatible = "allwinner,sun50i-h6-de3-mixer-0",
  		.data = &sun50i_h6_mixer0_cfg,
 diff --git a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
-index 9cbd65551..cb6c65e35 100644
+index 9cbd65551..3f519df7d 100644
 --- a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
 +++ b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
-@@ -143,12 +143,103 @@ int sun8i_tcon_top_de_config(struct device *dev, int mixer, int tcon)
+@@ -143,12 +143,115 @@ int sun8i_tcon_top_de_config(struct device *dev, int mixer, int tcon)
  }
  EXPORT_SYMBOL(sun8i_tcon_top_de_config);
  
@@ -2988,14 +3141,26 @@ index 9cbd65551..cb6c65e35 100644
 +	}
 +
 +	/*
-+	 * This driver has no .remove(), so a sysfs unbind clears drvdata to
-+	 * NULL without DRM ever finding out the component is gone (no
-+	 * component_del() is called) -- a real, pre-existing gap in this
-+	 * shared driver's own lifecycle handling, not something introduced
-+	 * here. This guard only stops this specific caller from crashing on
-+	 * it; it doesn't fix the underlying gap, which would need a proper
-+	 * component-aware .remove() across every board using this driver,
-+	 * not something to attempt blind in a single board's support patch.
++	 * The caller (sun4i_tcon0_set_dsi_gate()) reaches this device via a
++	 * raw of_find_device_by_node() + dev_get_drvdata() lookup, the same
++	 * pre-existing pattern sun8i_r40_tcon_tv_set_mux() already uses for
++	 * the TV path (sun8i_tcon_top_set_hdmi_src()/de_config(), neither of
++	 * which NULL-checks either) -- entirely outside the component
++	 * framework's own bind/unbind synchronization. component_del() (this
++	 * driver's own .remove(), pristine mainline, unmodified here) does
++	 * correctly tear down the whole DRM aggregate before this device's
++	 * own unbind runs, via take_down_aggregate_device() in
++	 * drivers/base/component.c, so an orderly sysfs unbind of this
++	 * device is not itself the hazard. What isn't covered is an
++	 * in-flight atomic-commit worker calling in through that raw lookup
++	 * concurrently with this device's own unbind clearing drvdata -- a
++	 * narrow, pre-existing TOCTOU race in this shared driver's own
++	 * lifecycle handling, not something introduced here. This guard only
++	 * stops this specific caller from crashing on it; fixing the
++	 * underlying race would need real synchronization between the two
++	 * drivers (or moving this off the raw reach-around entirely) across
++	 * every board using this driver, not something to attempt blind in a
++	 * single board's support patch.
 +	 */
 +	if (!tcon_top)
 +		return -ENODEV;
@@ -3066,7 +3231,7 @@ index 9cbd65551..cb6c65e35 100644
  {
  	const char *clk_name, *parent_name;
  	int ret, index;
-@@ -166,7 +257,7 @@ static struct clk_hw *sun8i_tcon_top_register_gate(struct device *dev,
+@@ -166,7 +269,7 @@ static struct clk_hw *sun8i_tcon_top_register_gate(struct device *dev,
  		return ERR_PTR(ret);
  
  	return clk_hw_register_gate(dev, clk_name, parent_name,
@@ -3075,7 +3240,7 @@ index 9cbd65551..cb6c65e35 100644
  				    regs + TCON_TOP_GATE_SRC_REG,
  				    bit, 0, lock);
  };
-@@ -241,19 +332,37 @@ static int sun8i_tcon_top_bind(struct device *dev, struct device *master,
+@@ -241,19 +344,37 @@ static int sun8i_tcon_top_bind(struct device *dev, struct device *master,
  	clk_data->hws[CLK_TCON_TOP_TV0] =
  		sun8i_tcon_top_register_gate(dev, "tcon-tv0", regs,
  					     &tcon_top->reg_lock,
@@ -3116,7 +3281,7 @@ index 9cbd65551..cb6c65e35 100644
  
  	for (i = 0; i < CLK_NUM; i++)
  		if (IS_ERR(clk_data->hws[i])) {
-@@ -325,6 +434,23 @@ static const struct sun8i_tcon_top_quirks sun50i_h6_tcon_top_quirks = {
+@@ -325,6 +446,23 @@ static const struct sun8i_tcon_top_quirks sun50i_h6_tcon_top_quirks = {
  	/* Nothing special */
  };
  
@@ -3140,7 +3305,7 @@ index 9cbd65551..cb6c65e35 100644
  /* sun4i_drv uses this list to check if a device node is a TCON TOP */
  const struct of_device_id sun8i_tcon_top_of_table[] = {
  	{
-@@ -339,6 +465,10 @@ const struct of_device_id sun8i_tcon_top_of_table[] = {
+@@ -339,6 +477,10 @@ const struct of_device_id sun8i_tcon_top_of_table[] = {
  		.compatible = "allwinner,sun50i-h6-tcon-top",
  		.data = &sun50i_h6_tcon_top_quirks
  	},

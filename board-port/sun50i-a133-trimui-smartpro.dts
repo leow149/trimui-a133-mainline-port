@@ -438,13 +438,19 @@
 
 	tcon_lcd0: lcd-controller@6511000 {
 		/*
-		 * No A100/A133-specific compatible exists upstream (the
-		 * binding's compatible enum only lists SoCs someone has
-		 * already wired up). The generic a83t-tcon-lcd fallback
-		 * matches the driver purely on this string, so it still
-		 * binds correctly even without an A133-specific entry.
+		 * allwinner,sun50i-a133-tcon-lcd is this series' own addition
+		 * (same physical IP block as A83T's TCON0, but this board's
+		 * DSI/CPU-mode panel needs the driver's dsi_cpu_needs_retrigger
+		 * quirk, which real A83T boards using the bare
+		 * "allwinner,sun8i-a83t-tcon-lcd" compatible do not opt into
+		 * -- see the comment on that quirks field in sun4i_tcon.h).
+		 * The a83t-tcon-lcd fallback is kept, matching the existing
+		 * sun50i-a64-tcon-lcd precedent in this binding, so this node
+		 * would still bind (without the new quirk) even against an
+		 * older driver that doesn't know the new compatible yet.
 		 */
-		compatible = "allwinner,sun8i-a83t-tcon-lcd";
+		compatible = "allwinner,sun50i-a133-tcon-lcd",
+			     "allwinner,sun8i-a83t-tcon-lcd";
 		reg = <0x06511000 0x1000>;
 		/*
 		 * Was GIC_SPI 101 (copied from a mismatched reference DTS) --
