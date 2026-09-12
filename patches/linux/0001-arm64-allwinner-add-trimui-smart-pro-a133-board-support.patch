@@ -1,5 +1,5 @@
-From f037653ade282f7142e4bc88397f0cde6242dfa4 Mon Sep 17 00:00:00 2001
-From: leow149 <leow149@users.noreply.github.com>
+From 0a59ea063e583bcbc0e84d44a5bb3610e8dfe8e7 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:15 +0200
 Subject: [RFC PATCH] arm64: allwinner: add TrimUI Smart Pro (A133) board
  support
@@ -53,7 +53,7 @@ Cc: Jernej Skrabec <jernej.skrabec@gmail.com>
 Cc: Samuel Holland <samuel@sholland.org>
 Cc: Maxime Ripard <mripard@kernel.org>
 Cc: Paul Kocialkowski <paulk@sys-base.io>
-Signed-off-by: leow149 <leow149@users.noreply.github.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../allwinner,sun8i-a83t-de2-mixer.yaml       |   2 +
  .../display/allwinner,sun8i-r40-tcon-top.yaml |   1 +

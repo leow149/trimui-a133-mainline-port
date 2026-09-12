@@ -1,5 +1,5 @@
-From 15494a423f80af09182534d320865d693efb2528 Mon Sep 17 00:00:00 2001
-From: leow149 <leow149@users.noreply.github.com>
+From 6aa8411a261720a501bf9ee7739dd535b25b85af Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:49 +0200
 Subject: [PATCH] sunxi: add TrimUI Smart Pro (A133) board support
 
@@ -14,6 +14,8 @@ Board bring-up for the TrimUI Smart Pro handheld (Allwinner A133 Plus):
 
 Boots mainline U-Boot end to end on real hardware (SPL -> BL31 ->
 U-Boot -> distro-boot).
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  arch/arm/mach-sunxi/Kconfig                   |   7 +
  configs/trimui-smartpro_defconfig             |  64 ++++
