@@ -1,4 +1,4 @@
-From 729478585d636469257a05f5da35cb029972bfa8 Mon Sep 17 00:00:00 2001
+From b2c787a7ceaa0b2285905802a0cf9846cd1f9c96 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:15 +0200
 Subject: [RFC PATCH] arm64: allwinner: add TrimUI Smart Pro (A133) board
@@ -65,11 +65,41 @@ clock-gate write getting silently undone by the "disable unused
 clocks" sweep, a PWM register race across channels, a PWM 100%-duty
 truncation bug, a divide-by-zero guard, and a DT schema gap.
 
-None of this has been re-tested on hardware yet -- the regmap fix in
-particular is a strong candidate for the TRIGGER_START symptom above
-(the timer's own edge-detection logic depends on it), but "strong
-candidate" is not "confirmed," so the known-issue description above
-still stands until it's actually been booted on the device.
+Re-tested all of the above on real hardware. Result: the regmap fix,
+while real, did NOT resolve the TRIGGER_START symptom -- register
+peeks (TCON0_CPU_IF_REG still shows TRIGGER_START stuck at 1;
+DSI_INT_REG's VIDEO_VBLK status never latches) confirm the panel still
+never receives a completed frame. The known-issue description above
+still stands.
+
+Testing did turn up two more real, hardware-confirmed bugs, since
+fixed:
+
+- TCON0's own interrupt line (GIC SPI 68) storms at tens of thousands
+  of firings/sec with sun4i_tcon_handler() unable to reliably sample
+  FSYNC_INT fast enough, which was tripping genirq's "nobody cared"
+  unhandled-IRQ storm protection and permanently disabling the line
+  60-100s into boot -- killing the handler's own TRI_FINISH-based
+  backstop retrigger for the rest of the session. In DSI/CPU mode this
+  driver is the only consumer of that GIC line, so there's no
+  legitimate "not for us" case for genirq's heuristic to protect
+  against here; treating every firing in that mode as handled
+  unconditionally stops the storm from disabling it, confirmed via a
+  full boot with zero "nobody cared" events afterward (previously
+  reproduced twice).
+- sun6i_dsi_encoder_enable() enabled both VIDEO_VBLK and VIDEO_LINE on
+  DSI's own interrupt register; a live vendor register dump on a
+  genuinely working reference system (already in this repo's
+  vendor-notes/, gathered weeks ago but never acted on) shows only
+  VIDEO_VBLK enabled. Matched vendor exactly. VIDEO_LINE fires once per
+  horizontal line rather than once per frame -- a plausible contributor
+  to the IRQ storm above, though removing it alone did not stop the
+  storm (the genirq fix above was still needed).
+
+Neither of these, nor the regmap fix, resolves the core bug. They're
+real, independently-verified improvements to the driver's correctness
+and robustness, kept because they're correct, not because they fixed
+the black screen.
 
 Cc: Chen-Yu Tsai <wens@kernel.org>
 Cc: Jernej Skrabec <jernej.skrabec@gmail.com>
@@ -87,9 +117,9 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  drivers/gpu/drm/panel/Kconfig                 |   8 +
  drivers/gpu/drm/panel/Makefile                |   1 +
  .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 424 +++++++++++
- drivers/gpu/drm/sun4i/sun4i_tcon.c            | 408 ++++++++++-
+ drivers/gpu/drm/sun4i/sun4i_tcon.c            | 424 ++++++++++-
  drivers/gpu/drm/sun4i/sun4i_tcon.h            |  95 +++
- drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c        | 182 ++++-
+ drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c        | 192 ++++-
  drivers/gpu/drm/sun4i/sun6i_mipi_dsi.h        |  12 +
  drivers/gpu/drm/sun4i/sun8i_mixer.c           |  48 ++
  drivers/gpu/drm/sun4i/sun8i_tcon_top.c        | 119 ++-
@@ -97,7 +127,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  drivers/pwm/Kconfig                           |  14 +
  drivers/pwm/Makefile                          |   1 +
  drivers/pwm/pwm-sun50i-a133.c                 | 317 ++++++++
- 19 files changed, 2405 insertions(+), 46 deletions(-)
+ 19 files changed, 2431 insertions(+), 46 deletions(-)
  create mode 100644 Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
  create mode 100644 arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
  create mode 100644 drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
@@ -1454,7 +1484,7 @@ index 000000000..57de8bf94
 +MODULE_DESCRIPTION("DRM driver for Orise Tech OTM1289A MIPI DSI panel (TrimUI Smart Pro)");
 +MODULE_LICENSE("GPL v2");
 diff --git a/drivers/gpu/drm/sun4i/sun4i_tcon.c b/drivers/gpu/drm/sun4i/sun4i_tcon.c
-index bf405a2aa..8500db40c 100644
+index bf405a2aa..30b275fd2 100644
 --- a/drivers/gpu/drm/sun4i/sun4i_tcon.c
 +++ b/drivers/gpu/drm/sun4i/sun4i_tcon.c
 @@ -221,6 +221,23 @@ void sun4i_tcon_set_status(struct sun4i_tcon *tcon,
@@ -1797,7 +1827,7 @@ index bf405a2aa..8500db40c 100644
  }
  EXPORT_SYMBOL(sun4i_tcon_mode_set);
  
-@@ -759,30 +986,157 @@ static irqreturn_t sun4i_tcon_handler(int irq, void *private)
+@@ -759,30 +986,173 @@ static irqreturn_t sun4i_tcon_handler(int irq, void *private)
  	struct sun4i_crtc *scrtc = tcon->crtc;
  	struct sunxi_engine *engine = scrtc->engine;
  	unsigned int status;
@@ -1809,16 +1839,32 @@ index bf405a2aa..8500db40c 100644
 -			SUN4I_TCON_GINT0_VBLANK_INT(1) |
 -			SUN4I_TCON_GINT0_TCON0_TRI_FINISH_INT)))
 +	/*
-+	 * FSYNC_INT (bit 9) reads unconditionally set on this board and was
-+	 * never enabled or acknowledged here -- leaving the level interrupt
-+	 * permanently asserted and triggering Linux's unhandled-IRQ storm
-+	 * protection shortly after boot. Treating it as handled (and
-+	 * clearing it below) keeps the line alive.
++	 * FSYNC_INT (bit 9) reads unconditionally set on this board -- a
++	 * confirmed vendor register dump on a genuinely working reference
++	 * system shows the exact same bit persistently set too (stable
++	 * across 5 rapid samples), so this is real, expected hardware
++	 * behavior in DSI/CPU mode, not a bug. What IS a real, measured
++	 * problem: it toggles far faster than a single regmap_read() can
++	 * reliably catch (live testing shows genirq's "nobody cared"
++	 * unhandled-IRQ storm protection tripping and permanently disabling
++	 * this line within 60-100s, based on this exact read occasionally
++	 * landing between pulses and seeing status=0). Once disabled,
++	 * sun4i_tcon_handler()'s own TRI_FINISH-based backstop retrigger
++	 * (see below) is gone for the rest of the boot, for good.
++	 *
++	 * In DSI/CPU mode, this driver is the only thing wired to this GIC
++	 * line -- there is no other legitimate source that this interrupt
++	 * could be "not for us", unlike the general shared-IRQ case genirq's
++	 * heuristic is meant to protect against. So in that mode, treat
++	 * every firing as ours unconditionally rather than trusting a single
++	 * status snapshot; non-DSI boards sharing this same driver are
++	 * unaffected and keep the normal status-based check.
 +	 */
-+	handled = status & (SUN4I_TCON_GINT0_VBLANK_INT(0) |
++	handled = tcon->dsi_cpu_mode ||
++		  (status & (SUN4I_TCON_GINT0_VBLANK_INT(0) |
 +			     SUN4I_TCON_GINT0_VBLANK_INT(1) |
 +			     SUN4I_TCON_GINT0_TCON0_TRI_FINISH_INT |
-+			     SUN4I_TCON_GINT0_TCON0_FSYNC_INT);
++			     SUN4I_TCON_GINT0_TCON0_FSYNC_INT));
 +
 +	if (!handled)
  		return IRQ_NONE;
@@ -1961,7 +2007,7 @@ index bf405a2aa..8500db40c 100644
  static int sun4i_tcon_init_clocks(struct device *dev,
  				  struct sun4i_tcon *tcon)
  {
-@@ -811,6 +1165,16 @@ static int sun4i_tcon_init_clocks(struct device *dev,
+@@ -811,6 +1181,16 @@ static int sun4i_tcon_init_clocks(struct device *dev,
  	return 0;
  }
  
@@ -1978,7 +2024,7 @@ index bf405a2aa..8500db40c 100644
  static int sun4i_tcon_init_irq(struct device *dev,
  			       struct sun4i_tcon *tcon)
  {
-@@ -821,13 +1185,15 @@ static int sun4i_tcon_init_irq(struct device *dev,
+@@ -821,13 +1201,15 @@ static int sun4i_tcon_init_irq(struct device *dev,
  	if (irq < 0)
  		return irq;
  
@@ -1995,7 +2041,7 @@ index bf405a2aa..8500db40c 100644
  	return 0;
  }
  
-@@ -1136,6 +1502,9 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
+@@ -1136,6 +1518,9 @@ static int sun4i_tcon_bind(struct device *dev, struct device *master,
  	tcon->id = engine->id;
  	tcon->quirks = of_device_get_match_data(dev);
  
@@ -2005,7 +2051,7 @@ index bf405a2aa..8500db40c 100644
  	tcon->lcd_rst = devm_reset_control_get(dev, "lcd");
  	if (IS_ERR(tcon->lcd_rst)) {
  		dev_err(dev, "Couldn't get our reset line\n");
-@@ -1304,6 +1673,7 @@ static void sun4i_tcon_unbind(struct device *dev, struct device *master,
+@@ -1304,6 +1689,7 @@ static void sun4i_tcon_unbind(struct device *dev, struct device *master,
  {
  	struct sun4i_tcon *tcon = dev_get_drvdata(dev);
  
@@ -2165,7 +2211,7 @@ index fa23aa23f..89881d1cd 100644
  	struct sun4i_crtc		*crtc;
  
 diff --git a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
-index d504ae583..731d90b3f 100644
+index d504ae583..a2ac35462 100644
 --- a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
 +++ b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
 @@ -35,6 +35,33 @@
@@ -2330,13 +2376,23 @@ index d504ae583..731d90b3f 100644
  	int err;
  
  	DRM_DEBUG_DRIVER("Enabling DSI output\n");
-@@ -737,6 +849,17 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
+@@ -737,6 +849,27 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
  	 */
  	regmap_write(dsi->regs, SUN6I_DSI_CTL_REG, SUN6I_DSI_CTL_EN);
  
-+	/* See the comment on SUN6I_DSI_INT_REG above. */
-+	regmap_write(dsi->regs, SUN6I_DSI_INT_REG,
-+		     SUN6I_DSI_INT_EN_VIDEO_VBLK | SUN6I_DSI_INT_EN_VIDEO_LINE);
++	/*
++	 * See the comment on SUN6I_DSI_INT_REG above. VIDEO_VBLK only, not
++	 * VIDEO_LINE -- a live vendor register dump on a working reference
++	 * system (vendor-notes/live_reg_dump_20260823.md) shows DSI_INT_REG
++	 * at 0x00020004, i.e. only the VBLK enable bit set. VIDEO_LINE fires
++	 * once per horizontal line (tens of thousands of times a second at
++	 * this panel's timing) rather than once per frame; enabling it here
++	 * doesn't match vendor and is a plausible contributor to a real,
++	 * separately-observed TCON0 interrupt storm (genirq's "nobody cared"
++	 * unhandled-IRQ storm protection has been seen tripping on tcon0's
++	 * own GIC line during testing).
++	 */
++	regmap_write(dsi->regs, SUN6I_DSI_INT_REG, SUN6I_DSI_INT_EN_VIDEO_VBLK);
 +
 +	/*
 +	 * Reset the instruction engine to a known idle state before any of
@@ -2348,7 +2404,7 @@ index d504ae583..731d90b3f 100644
  	regmap_write(dsi->regs, SUN6I_DSI_BASIC_CTL0_REG,
  		     SUN6I_DSI_BASIC_CTL0_ECC_EN | SUN6I_DSI_BASIC_CTL0_CRC_EN);
  
-@@ -747,9 +870,14 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
+@@ -747,9 +880,14 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
  
  	regmap_write(dsi->regs, SUN6I_DSI_DEBUG_DATA_REG, 0xff);
  
@@ -2365,7 +2421,7 @@ index d504ae583..731d90b3f 100644
  		     SUN6I_DSI_BASIC_CTL1_VIDEO_FILL |
  		     SUN6I_DSI_BASIC_CTL1_VIDEO_PRECISION |
  		     SUN6I_DSI_BASIC_CTL1_VIDEO_MODE);
-@@ -769,28 +897,40 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
+@@ -769,28 +907,40 @@ static void sun6i_dsi_encoder_enable(struct drm_encoder *encoder)
  	phy_configure(dsi->dphy, &opts);
  	phy_power_on(dsi->dphy);
  
@@ -2374,6 +2430,11 @@ index d504ae583..731d90b3f 100644
 -
  	/*
 -	 * FIXME: This should be moved after the switch to HS mode.
+-	 *
+-	 * Unfortunately, once in HS mode, it seems like we're not
+-	 * able to send DCS commands anymore, which would prevent any
+-	 * panel to send any DCS command as part as their enable
+-	 * method, which is quite common.
 +	 * The HS clock-enable step (DSI_START_HSC) runs before the panel's
 +	 * DCS init sequence rather than after, unlike a previous revision of
 +	 * this driver. Upstream's own comment on this ordering ("this should
@@ -2386,11 +2447,6 @@ index d504ae583..731d90b3f 100644
 +	 * puts the clock lane into its continuous-HS state, and DCS commands
 +	 * use the entirely separate LPTX/LPDT instruction tables.
  	 *
--	 * Unfortunately, once in HS mode, it seems like we're not
--	 * able to send DCS commands anymore, which would prevent any
--	 * panel to send any DCS command as part as their enable
--	 * method, which is quite common.
--	 *
 -	 * I haven't seen any artifact due to that sub-optimal
 -	 * ordering on the panels I've tested it with, so I guess this
 -	 * will do for now, until that IP is better understood.
