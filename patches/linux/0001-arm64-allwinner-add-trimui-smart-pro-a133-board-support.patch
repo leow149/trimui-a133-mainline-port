@@ -121,7 +121,7 @@ atomic-context claims again, and a retrigger-timer TOCTOU claim (not
 reachable: it requires TRI_FINISH_INT pending before TRIGGER_START has
 ever been written even once).
 
-v5 -> v6: Fixed a real IRQ re-enable race: a DPMS off/on cycle's
+v6 -> v7: Fixed a real IRQ re-enable race: a DPMS off/on cycle's
 sun4i_tcon_dsi_stop_retrigger() masks the IRQ but never acks GINT0, so
 a stale TRI_FINISH_INT/FSYNC_INT left latched from before the disable
 can fire the hardirq the instant sun4i_tcon_dsi_retrigger_timer_fn()
