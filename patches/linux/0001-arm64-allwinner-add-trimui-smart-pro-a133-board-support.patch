@@ -1,7 +1,7 @@
-From e9eab6ba528e09a3634c6d9b7c35702045396ffa Mon Sep 17 00:00:00 2001
+From 4804dbc79a3be6c85f01045ba0c10bff6b2e86f3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:15 +0200
-Subject: [RFC PATCH v5] arm64: allwinner: add TrimUI Smart Pro (A133) board
+Subject: [RFC PATCH v6] arm64: allwinner: add TrimUI Smart Pro (A133) board
  support
 
 Board bring-up for the TrimUI Smart Pro handheld (Allwinner A133 Plus):
@@ -291,6 +291,70 @@ that did not reproduce on retest; most likely a transient unrelated to
 this change, not a deterministic regression, but noted here rather than
 silently discarded.
 
+Same reviewer's v5 reply found 7 more findings, 5 new and 2 repeated
+from earlier rounds (the tcon_top raw-lookup TOCTOU race and the DCLK
+divide-by-zero guard, both already discussed above -- neither is caused
+by this board's changes, so both remain out of scope for this series).
+
+Two of the five new findings are real, confirmed and fixed:
+
+- pwm_a133_apply()'s disable path cleared PWM_A133_PER_REG's channel
+  enable bit but never cleared the matching PWM_A133_PCGR_REG channel
+  clock-gate bit, which the enable path only ever sets (briefly
+  clearing it to reconfigure period/duty, then setting it again before
+  returning) -- leaving a disabled channel's clock running indefinitely.
+  Fixed by clearing the gate bit in the disable path too.
+- allwinner,sun8i-r40-tcon-top.yaml's base schema required port@4/
+  port@5 (the HDMI mux ports) unconditionally across every compatible
+  string in the file, which this board's tcon-top node -- correctly,
+  it has no HDMI mux -- cannot provide. This exact gap was already
+  called out as an open, unresolved problem in an earlier round of
+  this same commit message (see the in-code comment on this board's
+  if/then block at the time), rather than actually fixed. Fixed now:
+  moved port@2/port@3/port@4/port@5 out of the base required list and
+  into each variant's own if/then block instead, checked against the
+  real in-tree dtsi for every affected SoC to get each one right
+  (sun8i-r40.dtsi and sunxi-d1s-t113.dtsi both wire up all four ports;
+  sun50i-h6.dtsi wires up only port@4/port@5; this board wires up
+  neither pair). Verified empirically, not just re-read: installed
+  dtschema locally and ran dt-validate against this board's own
+  compiled DTB and a real upstream H6 DTB
+  (sun50i-h6-beelink-gs1.dtb) -- the old schema genuinely rejects this
+  board's DTB ("port@4 is a required property"), the fixed schema
+  accepts both DTBs cleanly.
+
+The other three new findings were checked against real source and are
+false positives:
+
+- Four instances of "sleeping function called from an atomic context"
+  (otm1289a_prepare()'s msleep(), sun6i_dsi_encoder_enable()'s
+  clk_prepare_enable(), sun6i_dsi_encoder_disable()'s (via
+  sun4i_tcon_dsi_stop_retrigger()) disable_irq(), and the PWM driver's
+  mutex_lock()) were flagged again this round, three of them at call
+  sites already checked and answered as far back as v2/v3 above --
+  re-verified once more directly against drm_atomic_helper.c:
+  commit_tail() (which calls every atomic_enable/atomic_disable hook)
+  runs either synchronously in the ioctl caller's own process context
+  or via INIT_WORK()/queue_work(system_dfl_wq, ...) on a workqueue --
+  both fully preemptible, sleep-safe contexts. "Atomic" in DRM's
+  atomic-commit API names the all-or-nothing state-change semantics,
+  not a spinlock-held execution context. No code changed; this is the
+  same answer as before, repeated because the question was repeated.
+- A claimed TOCTOU race where sun4i_tcon_dsi_retrigger_timer_fn()'s
+  tick==0 enable_irq() call could let a hardirq fire and kick
+  TRIGGER_START a second time, racing the softirq's own about-to-happen
+  first kick: this requires TRI_FINISH_INT to already be pending at
+  that exact moment, which isn't reachable -- TRI_FINISH signals
+  completion of a triggered CPU-interface transfer, and at tick==0
+  TRIGGER_START has never been written even once yet (that first write
+  happens later in this same function call, after the enable_irq()).
+  Reasonably confident this doesn't reproduce in practice; noted here
+  rather than silently dropped in case the reasoning turns out wrong.
+
+Rebuilt clean (kernel Image only; the DT schema fix touches
+documentation, not the DTS itself, so no DTB rebuild was needed for
+it).
+
 Cc: Chen-Yu Tsai <wens@kernel.org>
 Cc: Jernej Skrabec <jernej.skrabec@gmail.com>
 Cc: Samuel Holland <samuel@sholland.org>
@@ -300,7 +364,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../display/allwinner,sun4i-a10-tcon.yaml     |   1 +
  .../allwinner,sun8i-a83t-de2-mixer.yaml       |   2 +
- .../display/allwinner,sun8i-r40-tcon-top.yaml |  43 ++
+ .../display/allwinner,sun8i-r40-tcon-top.yaml |  58 +-
  .../pwm/allwinner,sun50i-a133-pwm.yaml        |  67 ++
  arch/arm64/boot/dts/allwinner/Makefile        |   1 +
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 697 ++++++++++++++++++
@@ -317,8 +381,8 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  drivers/gpu/drm/sun4i/sun8i_tcon_top.h        |   2 +
  drivers/pwm/Kconfig                           |  14 +
  drivers/pwm/Makefile                          |   1 +
- drivers/pwm/pwm-sun50i-a133.c                 | 322 ++++++++
- 20 files changed, 2745 insertions(+), 46 deletions(-)
+ drivers/pwm/pwm-sun50i-a133.c                 | 335 +++++++++
+ 20 files changed, 2771 insertions(+), 48 deletions(-)
  create mode 100644 Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
  create mode 100644 arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
  create mode 100644 drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
@@ -350,7 +414,7 @@ index cbd18fd83..ce72c1ba7 100644
        - allwinner,sun50i-h616-de33-mixer-0
  
 diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
-index 7d849c409..2dd2c255e 100644
+index 7d849c409..533b06fbd 100644
 --- a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
 +++ b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
 @@ -43,6 +43,7 @@ properties:
@@ -361,10 +425,47 @@ index 7d849c409..2dd2c255e 100644
  
    reg:
      maxItems: 1
-@@ -201,6 +202,48 @@ allOf:
+@@ -99,8 +100,6 @@ properties:
+     required:
+       - port@0
+       - port@1
+-      - port@4
+-      - port@5
+ 
+ required:
+   - "#clock-cells"
+@@ -151,6 +150,8 @@ allOf:
+           required:
+             - port@2
+             - port@3
++            - port@4
++            - port@5
+ 
+   - if:
+       properties:
+@@ -179,6 +180,13 @@ allOf:
+             - description: TCON TV0 output clock name
+             - description: DSI output clock name
+ 
++        ports:
++          required:
++            - port@2
++            - port@3
++            - port@4
++            - port@5
++
+   - if:
+       properties:
+         compatible:
+@@ -201,6 +209,52 @@ allOf:
            items:
              - description: TCON TV0 output clock name
  
++        ports:
++          required:
++            - port@4
++            - port@5
++
 +  - if:
 +      properties:
 +        compatible:
@@ -394,18 +495,17 @@ index 7d849c409..2dd2c255e 100644
 +            - description: TCON TV0 output clock name (unused, see above)
 +            - description: DSI output clock name
 +
-+    # NOTE: this variant has no HDMI mux (no port@4/port@5) and, on at
-+    # least the one board using it so far, only mixer0 (no port@2/port@3)
-+    # -- but properties.ports.required above applies unconditionally to
-+    # every compatible in this file, including this one, and an `if/then`
-+    # can only add to that required list, not relax it. A DTS for this
-+    # compatible that only wires up port@0/port@1 is therefore expected to
-+    # fail `dtbs_check` against this schema as it stands. Properly fixing
-+    # that means restructuring the base schema so port@2-5 are required
-+    # per-variant instead of unconditionally, which would need re-checking
-+    # against R40/D1/H6's actual in-tree DTS files to do safely -- left
-+    # for a maintainer with those boards to verify, rather than guessed at
-+    # here.
++    # This variant has no HDMI mux (no port@4/port@5) and, on the one
++    # board using it so far, only mixer0 (no port@2/port@3). The base
++    # schema's ports.required list only covers port@0/port@1, which every
++    # variant wires up; port@2/port@3 and port@4/port@5 are required
++    # per-variant above instead (R40 and D1 both use two mixers and an
++    # HDMI/TCON-TV mux, so both are added to their own if/then blocks;
++    # H6 has one mixer but still an HDMI mux, so only port@4/port@5 is
++    # added there) -- checked against each SoC's actual in-tree
++    # dtsi/dts (sun8i-r40.dtsi, sunxi-d1s-t113.dtsi, sun50i-h6.dtsi), not
++    # guessed at. This compatible needs no addition here since it has
++    # neither extra pair.
 +
  examples:
    - |
@@ -3364,10 +3464,10 @@ index 5630a521a..9c906e5b0 100644
  obj-$(CONFIG_PWM_TH1520)	+= pwm_th1520.o
 diff --git a/drivers/pwm/pwm-sun50i-a133.c b/drivers/pwm/pwm-sun50i-a133.c
 new file mode 100644
-index 000000000..877d76d07
+index 000000000..1e36393d0
 --- /dev/null
 +++ b/drivers/pwm/pwm-sun50i-a133.c
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,335 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Driver for Allwinner A133 (sun50iw10) PWM Controller
@@ -3523,6 +3623,19 @@ index 000000000..877d76d07
 +		val = pwm_a133_readl(pc, PWM_A133_PER_REG);
 +		val &= ~PWM_A133_PER_EN(ch);
 +		pwm_a133_writel(pc, PWM_A133_PER_REG, val);
++
++		/*
++		 * Also gate the channel clock back off. The enable path
++		 * below always leaves this bit set on return (it's only
++		 * cleared transiently there, to reconfigure period/duty,
++		 * then set again before returning) -- without clearing it
++		 * here too, a disabled channel's clock keeps running
++		 * indefinitely instead of being gated off with the channel.
++		 */
++		val = pwm_a133_readl(pc, PWM_A133_PCGR_REG);
++		val &= ~PWM_A133_PCGR_GATING(ch);
++		pwm_a133_writel(pc, PWM_A133_PCGR_REG, val);
++
 +		mutex_unlock(&pc->lock);
 +		return 0;
 +	}
