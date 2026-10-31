@@ -1,0 +1,50 @@
+From c01c08104ea71b4a9e4702f68863532413502581 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:36:23 +0100
+Subject: [PATCH 21/21] arm64: dts: allwinner: trimui-smart-pro: Use the
+ external 32k crystal
+
+The board has a 32.768 kHz crystal on the RTC (the stock firmware runs from
+it with auto-switch on). Describe it and select it for the 32k clock.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/allwinner/sun50i-a133-trimui-smartpro.dts  | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 5112e0d94..4ff7f1e92 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -50,6 +50,13 @@ bl31@40000000 {
+ 		};
+ 	};
+ 
++	ext_osc32k: ext-osc32k-clk {
++		compatible = "fixed-clock";
++		clock-frequency = <32768>;
++		clock-output-names = "ext-osc32k";
++		#clock-cells = <0>;
++	};
++
+ 	battery: battery {
+ 		compatible = "simple-battery";
+ 		charge-full-design-microamp-hours = <5000000>;
+@@ -263,6 +270,13 @@ reg_cpusldo: cpusldo {
+ 	};
+ };
+ 
++&rtc {
++	clocks = <&r_ccu CLK_R_AHB_BUS_RTC>, <&dcxo24M>, <&ext_osc32k>;
++	clock-names = "bus", "hosc", "ext-osc32k";
++	assigned-clocks = <&rtc CLK_OSC32K>;
++	assigned-clock-rates = <32768>;
++};
++
+ &uart0 {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&uart0_pb_pins>;
+-- 
+2.56.0
+

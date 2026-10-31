@@ -50,6 +50,13 @@
 		};
 	};
 
+	ext_osc32k: ext-osc32k-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32768>;
+		clock-output-names = "ext-osc32k";
+		#clock-cells = <0>;
+	};
+
 	battery: battery {
 		compatible = "simple-battery";
 		charge-full-design-microamp-hours = <5000000>;
@@ -261,6 +268,13 @@
 			};
 		};
 	};
+};
+
+&rtc {
+	clocks = <&r_ccu CLK_R_AHB_BUS_RTC>, <&dcxo24M>, <&ext_osc32k>;
+	clock-names = "bus", "hosc", "ext-osc32k";
+	assigned-clocks = <&rtc CLK_OSC32K>;
+	assigned-clock-rates = <32768>;
 };
 
 &uart0 {

@@ -1,7 +1,7 @@
 From 6b025f243df8cc80a1436d2a093dfe6e0504bc70 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
-Subject: [PATCH 08/18] drm/sun4i: mixer: Add A133 mixers
+Subject: [PATCH 08/21] drm/sun4i: mixer: Add A133 mixers
 
 The A133 display engine is DE2-style with two mixers; mixer 0 runs at 300 MHz.
 

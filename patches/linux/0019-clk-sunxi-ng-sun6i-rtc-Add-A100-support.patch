@@ -1,0 +1,34 @@
+From d49533ef985b6b4b8065035932f33c03f1f143b6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:36:22 +0100
+Subject: [PATCH 19/21] clk: sunxi-ng: sun6i-rtc: Add A100 support
+
+The A100/A133 RTC has the same clock tree as the A523 one: an external 32k
+crystal with automatic fallback to the internal oscillator, and IOSC
+calibration. The RTC part is the R329 one (linear day counter).
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clk/sunxi-ng/ccu-sun6i-rtc.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c b/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
+index f6bfeba00..e5b12e996 100644
+--- a/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
++++ b/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
+@@ -333,6 +333,11 @@ static const struct sun6i_rtc_match_data sun55i_a523_rtc_ccu_data = {
+ };
+ 
+ static const struct of_device_id sun6i_rtc_ccu_match[] = {
++	{
++		/* Same clock tree as A523: external 32k crystal, IOSC calibration. */
++		.compatible	= "allwinner,sun50i-a100-rtc",
++		.data		= &sun55i_a523_rtc_ccu_data,
++	},
+ 	{
+ 		.compatible	= "allwinner,sun50i-h616-rtc",
+ 		.data		= &sun50i_h616_rtc_ccu_data,
+-- 
+2.56.0
+

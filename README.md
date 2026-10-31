@@ -19,7 +19,7 @@ Work in progress, not yet submitted upstream in this form.
 | Battery level, charging (AXP717) | ✅ Working, stock charge current, battery thermistor on |
 | CPU frequency scaling 408-1464 MHz, thermal throttling | ✅ Working |
 | SD card, eMMC, UART console, reboot | ✅ Working |
-| RTC | ❌ Not yet (no A100 RTC node/driver support) |
+| RTC (external 32.768 kHz crystal) | ✅ Working, keeps time across reboots |
 | Audio, stick RGB LEDs, suspend | ❌ Not yet |
 | USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
@@ -47,6 +47,7 @@ tools/             Small standalone tools written for this port
   uart_session.py     holds the UART console open; commands go in through a FIFO
   uart_push.py        md5-verified file transfer over the UART console
   push_kernel.sh      installs a new kernel/DTB on the SD card over the UART, no card swap
+  uboot_test_boot.py  boots a kernel/DTB installed with push_kernel.sh --test once
   reboot_loop.sh      reboot reliability test over the UART
   backup_restore/     eMMC/RAM backup & restore scripts (no dumps, scripts only)
 vendor-notes/      Our own recorded register comparisons/notes (not vendor source/binaries)
