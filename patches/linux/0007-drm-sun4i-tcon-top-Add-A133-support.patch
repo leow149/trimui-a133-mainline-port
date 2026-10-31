@@ -1,0 +1,42 @@
+From a1f9a48734202e7d3935eabb2a53aab1a99200ac Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:26 +0100
+Subject: [PATCH 07/18] drm/sun4i: tcon-top: Add A133 support
+
+The A133 TCON TOP has no TV path and exposes the MIPI DSI clock gate.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/gpu/drm/sun4i/sun8i_tcon_top.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+index d74a3c8a5..dd9359451 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
++++ b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+@@ -347,6 +347,10 @@ static const struct sun8i_tcon_top_quirks sun20i_d1_tcon_top_quirks = {
+ 	.has_dsi	= true,
+ };
+ 
++static const struct sun8i_tcon_top_quirks sun50i_a133_tcon_top_quirks = {
++	.has_dsi	= true,
++};
++
+ static const struct sun8i_tcon_top_quirks sun50i_h6_tcon_top_quirks = {
+ 	/* Nothing special */
+ };
+@@ -361,6 +365,10 @@ const struct of_device_id sun8i_tcon_top_of_table[] = {
+ 		.compatible = "allwinner,sun20i-d1-tcon-top",
+ 		.data = &sun20i_d1_tcon_top_quirks
+ 	},
++	{
++		.compatible = "allwinner,sun50i-a133-tcon-top",
++		.data = &sun50i_a133_tcon_top_quirks
++	},
+ 	{
+ 		.compatible = "allwinner,sun50i-h6-tcon-top",
+ 		.data = &sun50i_h6_tcon_top_quirks
+-- 
+2.56.0
+

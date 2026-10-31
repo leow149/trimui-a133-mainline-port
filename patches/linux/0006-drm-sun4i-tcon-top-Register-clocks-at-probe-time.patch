@@ -1,0 +1,95 @@
+From 4a38c3c21d176d5b377ee42ee0642ad3af20b807 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:26 +0100
+Subject: [PATCH 06/18] drm/sun4i: tcon-top: Register clocks at probe time
+
+On SoCs where the DSI controller takes its module clock from the TCON TOP DSI
+gate (D1, A133), the DSI driver needs that clock in its probe, but the TCON TOP
+only registered its clocks in the component bind callback, which runs later.
+Set up the registers and clocks in probe instead.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/gpu/drm/sun4i/sun8i_tcon_top.c | 38 ++++++++++++++++++++++----
+ 1 file changed, 32 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+index 9cbd65551..d74a3c8a5 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
++++ b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+@@ -171,10 +171,15 @@ static struct clk_hw *sun8i_tcon_top_register_gate(struct device *dev,
+ 				    bit, 0, lock);
+ };
+ 
+-static int sun8i_tcon_top_bind(struct device *dev, struct device *master,
+-			       void *data)
++/*
++ * The TCON TOP gates are a clock provider for other display blocks, e.g. the
++ * DSI "mod" clock on D1 and A133. Those consumers need the clocks in their own
++ * probe(), before the DRM component bind runs, so all hardware and clock setup
++ * happens at probe time; the component bind/unbind have nothing left to do.
++ */
++static int sun8i_tcon_top_init(struct platform_device *pdev)
+ {
+-	struct platform_device *pdev = to_platform_device(dev);
++	struct device *dev = &pdev->dev;
+ 	struct clk_hw_onecell_data *clk_data;
+ 	struct sun8i_tcon_top *tcon_top;
+ 	const struct sun8i_tcon_top_quirks *quirks;
+@@ -281,8 +286,7 @@ static int sun8i_tcon_top_bind(struct device *dev, struct device *master,
+ 	return ret;
+ }
+ 
+-static void sun8i_tcon_top_unbind(struct device *dev, struct device *master,
+-				  void *data)
++static void sun8i_tcon_top_fini(struct device *dev)
+ {
+ 	struct sun8i_tcon_top *tcon_top = dev_get_drvdata(dev);
+ 	struct clk_hw_onecell_data *clk_data = tcon_top->clk_data;
+@@ -297,6 +301,17 @@ static void sun8i_tcon_top_unbind(struct device *dev, struct device *master,
+ 	reset_control_assert(tcon_top->rst);
+ }
+ 
++static int sun8i_tcon_top_bind(struct device *dev, struct device *master,
++			       void *data)
++{
++	return 0;
++}
++
++static void sun8i_tcon_top_unbind(struct device *dev, struct device *master,
++				  void *data)
++{
++}
++
+ static const struct component_ops sun8i_tcon_top_ops = {
+ 	.bind	= sun8i_tcon_top_bind,
+ 	.unbind	= sun8i_tcon_top_unbind,
+@@ -304,12 +319,23 @@ static const struct component_ops sun8i_tcon_top_ops = {
+ 
+ static int sun8i_tcon_top_probe(struct platform_device *pdev)
+ {
+-	return component_add(&pdev->dev, &sun8i_tcon_top_ops);
++	int ret;
++
++	ret = sun8i_tcon_top_init(pdev);
++	if (ret)
++		return ret;
++
++	ret = component_add(&pdev->dev, &sun8i_tcon_top_ops);
++	if (ret)
++		sun8i_tcon_top_fini(&pdev->dev);
++
++	return ret;
+ }
+ 
+ static void sun8i_tcon_top_remove(struct platform_device *pdev)
+ {
+ 	component_del(&pdev->dev, &sun8i_tcon_top_ops);
++	sun8i_tcon_top_fini(&pdev->dev);
+ }
+ 
+ static const struct sun8i_tcon_top_quirks sun8i_r40_tcon_top_quirks = {
+-- 
+2.56.0
+

@@ -7,39 +7,48 @@ and U-Boot with a small, documented set of board-support patches.
 
 ## Status
 
+Work in progress, not yet submitted upstream in this form.
+
 | Component | Status |
 |---|---|
 | U-Boot (mainline, blob-free boot chain) | ✅ Working |
-| Boot to a shell over UART | ✅ Working |
 | DRAM at real, correct timings | ✅ Working |
-| Backlight / PWM | ✅ Working |
-| Display (panel actually showing pixels) | ❌ **Open bug** — see below |
-| GPU, Wi-Fi/BT, buttons, audio, USB | Not yet attempted |
+| Display (MIPI DSI panel, OTM1289A / ER68576) + backlight | ✅ Working, rotated to landscape |
+| Buttons + analog sticks (two UART microcontrollers) | ✅ Working, one gamepad input device, sticks auto-centred |
+| Power key, volume keys | ✅ Working |
+| Battery level, charging (AXP717) | ✅ Working, stock charge current, battery thermistor on |
+| CPU frequency scaling 408-1464 MHz, thermal throttling | ✅ Working |
+| SD card, eMMC, UART console, reboot | ✅ Working |
+| RTC | ❌ Not yet (no A100 RTC node/driver support) |
+| Audio, stick RGB LEDs, suspend | ❌ Not yet |
+| USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
+| Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
-**The one open blocker: black screen.** The panel attaches, the backlight turns on, but no
-pixels ever reach it. Extensive investigation has narrowed this to a single register:
-`TCON0_CPU_IF_REG`'s `TRIGGER_START` bit — a documented self-clearing one-shot that never
-clears on this port, despite the entire rest of the pixel pipeline (every static register
-value, the driver's control-flow/sequencing, and even measured real-time timing) confirmed
-matching a genuinely working vendor system bit-for-bit.
-
-- **[`COMMUNITY_HELP_REQUEST.md`](COMMUNITY_HELP_REQUEST.md)** — a technical summary of the
-  specific open bug: what's confirmed working, what's been ruled out and how, and the
-  specific open question. Written for anyone with deeper Allwinner/sunxi DSI-controller
-  knowledge who might recognize the symptom. **This is the best starting point if you're
-  here because someone linked you this repo about the display bug specifically.**
+The long-standing black-screen bug is solved. It had four independent causes, all needed:
+SRAM C routed to the CPU (which shadows the whole display-engine register space), the
+DE2 clock block missing from the device tree, the TCON interrupt pointing at the DSI's
+line, and the panel reset on the wrong pin.
+[`COMMUNITY_HELP_REQUEST.md`](COMMUNITY_HELP_REQUEST.md) is kept as a record of the
+investigation; its open question is answered by the above.
 
 ## Repo layout
 
 ```
-patches/          Our actual code changes, as patches against a named upstream commit
-  linux/             — DRM/KMS driver work: TCON, DSI, D-PHY, panel driver, PWM, DTS
-  u-boot/             — board DTS + defconfig for mainline U-Boot
+patches/linux/     Kernel patch series against a named upstream commit, one change per
+                   patch (clk, drm/sun4i, panel, pwm, 8250_dw, gamepad, DT), + defconfig
+patches/u-boot/    Board DTS + defconfig for mainline U-Boot
 board-port/        Board bring-up scripts/configs used day-to-day (not raw patches)
-tools/             Small standalone diagnostic tools written for this port
-  devmem.c            — minimal statically-linked /dev/mem peek/poke tool
-  drmtest.c           — raw-ioctl DRM legacy-modeset test tool (no libdrm dependency)
-  backup_restore/     — eMMC/RAM backup & restore scripts (no dumps, scripts only)
+tools/             Small standalone tools written for this port
+  padview/            framebuffer gamepad viewer (buttons, sticks, last events)
+  devmem.c            minimal statically-linked /dev/mem peek/poke tool
+  i2creg.c            I2C register peek/poke (used on the AXP717 PMIC)
+  regsnap.c           nolibc AXP717 + pin-controller register dump, for stock-vs-mainline diffs
+  drmtest.c           raw-ioctl DRM legacy-modeset test tool (no libdrm dependency)
+  uart_session.py     holds the UART console open; commands go in through a FIFO
+  uart_push.py        md5-verified file transfer over the UART console
+  push_kernel.sh      installs a new kernel/DTB on the SD card over the UART, no card swap
+  reboot_loop.sh      reboot reliability test over the UART
+  backup_restore/     eMMC/RAM backup & restore scripts (no dumps, scripts only)
 vendor-notes/      Our own recorded register comparisons/notes (not vendor source/binaries)
 ```
 
@@ -72,9 +81,10 @@ This tracks upstream, so apply the patch on top of a clean checkout at the base 
 # Linux — based on v7.2 area, commit 2626025102 (2026-08-21)
 git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 cd linux && git checkout 26260251022fbc2f248a3d747a9b2b961b18d2d8
-git am /path/to/this/repo/patches/linux/0001-arm64-allwinner-add-trimui-smart-pro-a133-board-support.patch
-cp /path/to/this/repo/patches/linux/trimui-a133-smartpro_defconfig .config
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig Image sun50i-a133-trimui-smartpro.dtb
+git am /path/to/this/repo/patches/linux/*.patch
+cp /path/to/this/repo/patches/linux/trimui-a133-smartpro_defconfig arch/arm64/configs/trimui_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- trimui_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image allwinner/sun50i-a133-trimui-smartpro.dtb
 
 # U-Boot — commit 6073c36b2c (2026-08-20, v2026.10-rc area)
 git clone https://source.denx.de/u-boot/u-boot.git

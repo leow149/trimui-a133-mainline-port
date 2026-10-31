@@ -1,0 +1,513 @@
+From 6d1ae6a014131865420c3c8bdb0181fc14444f27 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:29 +0100
+Subject: [PATCH 12/18] drm/panel: Add Orise OTM1289A / ER68576 MIPI DSI panel
+ driver
+
+720x1280 video-mode DSI panel used in the TrimUI Smart Pro. Units ship with
+either an OTM1289A or an ER68576 controller behind the same module; the driver
+reads the panel ID and sends the matching init sequence, falling back to the
+OTM1289A one like the stock firmware.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/gpu/drm/panel/Kconfig                 |   8 +
+ drivers/gpu/drm/panel/Makefile                |   1 +
+ .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 453 ++++++++++++++++++
+ 3 files changed, 462 insertions(+)
+ create mode 100644 drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
+
+diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
+index cbdf7b8f7..fab1ed5f4 100644
+--- a/drivers/gpu/drm/panel/Kconfig
++++ b/drivers/gpu/drm/panel/Kconfig
+@@ -758,6 +758,14 @@ config DRM_PANEL_ORISETECH_OTM8009A
+ 	  Say Y here if you want to enable support for Orise Technology
+ 	  otm8009a 480x800 dsi 2dl panel.
+ 
++config DRM_PANEL_ORISETECH_OTM1289A
++	tristate "Orise Technology otm1289a 720x1280 dsi panel"
++	depends on OF
++	depends on DRM_MIPI_DSI
++	help
++	  Say Y here if you want to enable support for Orise Technology
++	  otm1289a 720x1280 dsi panel, as used on the TrimUI Smart Pro.
++
+ config DRM_PANEL_OSD_OSD101T2587_53TS
+ 	tristate "OSD OSD101T2587-53TS DSI 1920x1200 video mode panel"
+ 	depends on OF
+diff --git a/drivers/gpu/drm/panel/Makefile b/drivers/gpu/drm/panel/Makefile
+index 3b523cf37..d824f0a9b 100644
+--- a/drivers/gpu/drm/panel/Makefile
++++ b/drivers/gpu/drm/panel/Makefile
+@@ -74,6 +74,7 @@ obj-$(CONFIG_DRM_PANEL_MANTIX_MLAF057WE51) += panel-mantix-mlaf057we51.o
+ obj-$(CONFIG_DRM_PANEL_OLIMEX_LCD_OLINUXINO) += panel-olimex-lcd-olinuxino.o
+ obj-$(CONFIG_DRM_PANEL_ORISETECH_OTA5601A) += panel-orisetech-ota5601a.o
+ obj-$(CONFIG_DRM_PANEL_ORISETECH_OTM8009A) += panel-orisetech-otm8009a.o
++obj-$(CONFIG_DRM_PANEL_ORISETECH_OTM1289A) += panel-orisetech-otm1289a.o
+ obj-$(CONFIG_DRM_PANEL_OSD_OSD101T2587_53TS) += panel-osd-osd101t2587-53ts.o
+ obj-$(CONFIG_DRM_PANEL_PANASONIC_VVX10F034N00) += panel-panasonic-vvx10f034n00.o
+ obj-$(CONFIG_DRM_PANEL_RASPBERRYPI_TOUCHSCREEN) += panel-raspberrypi-touchscreen.o
+diff --git a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
+new file mode 100644
+index 000000000..2b3df810c
+--- /dev/null
++++ b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
+@@ -0,0 +1,453 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * DRM driver for the 720x1280 MIPI-DSI panel module of the TrimUI Smart Pro
++ * (Allwinner A133). The module ships with different controllers; the stock
++ * boot loader reads the controller ID and picks an init table. Tables are
++ * provided for the Orise Tech OTM1289A and the ER68576.
++ *
++ * Init tables and timings come from the stock firmware (vendor U-Boot and
++ * kernel binaries, and the vendor device tree).
++ */
++
++#include <linux/backlight.h>
++#include <linux/delay.h>
++#include <linux/gpio/consumer.h>
++#include <linux/module.h>
++#include <linux/regulator/consumer.h>
++
++#include <video/mipi_display.h>
++
++#include <drm/drm_connector.h>
++#include <drm/drm_mipi_dsi.h>
++#include <drm/drm_modes.h>
++#include <drm/drm_of.h>
++#include <drm/drm_panel.h>
++
++#define OTM1289A_HDISPLAY	720
++#define OTM1289A_VDISPLAY	1280
++
++struct otm1289a {
++	struct device *dev;
++	struct drm_panel panel;
++	struct gpio_desc *reset_gpio;
++	struct regulator *supply;
++	enum drm_panel_orientation orientation;
++	bool prepared;
++};
++
++/*
++ * Timings from the vendor device tree (lcd0 node): dclk 69 MHz,
++ * ht=880 hbp=88 hspw=4, vt=1320 vbp=9 vspw=4. Allwinner's hbp/vbp count
++ * sync + back porch, so the DRM front porches are 880-720-88 = 72 and
++ * 1320-1280-9 = 31. With these, sun6i_dsi_setup_burst() programs
++ * DRQ_SET = (72-20)*24/32 = 39, the value read back from the stock
++ * firmware.
++ */
++static const struct drm_display_mode otm1289a_mode = {
++	.clock = 69000,
++	.hdisplay = OTM1289A_HDISPLAY,
++	.hsync_start = OTM1289A_HDISPLAY + 72,
++	.hsync_end = OTM1289A_HDISPLAY + 72 + 4,
++	.htotal = 880,
++	.vdisplay = OTM1289A_VDISPLAY,
++	.vsync_start = OTM1289A_VDISPLAY + 31,
++	.vsync_end = OTM1289A_VDISPLAY + 31 + 4,
++	.vtotal = 1320,
++	.width_mm = 65,
++	.height_mm = 116,
++	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
++};
++
++struct otm1289a_init_cmd {
++	u8 cmd;
++	u8 len;
++	u8 data[38];
++};
++
++#define OTM1289A_CMD(_cmd, ...) \
++	{ .cmd = (_cmd), .len = sizeof((u8[]) { __VA_ARGS__ }), .data = { __VA_ARGS__ } }
++
++/* OTM1289A init table from the vendor kernel (lcd_panel_init()). */
++static const struct otm1289a_init_cmd otm1289a_init_sequence[] = {
++	OTM1289A_CMD(0x00, 0x00),
++	OTM1289A_CMD(0xff, 0x12, 0x89, 0x01),
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xff, 0x12, 0x89),
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xff, 0xb0),
++	/* panel setting */
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xc0, 0x4a, 0x00, 0x10, 0x10, 0x96, 0x01, 0x68, 0x40),
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xc0, 0x3b, 0x01, 0x09),
++	OTM1289A_CMD(0x00, 0x8c),
++	OTM1289A_CMD(0xc0, 0x00),
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xc1, 0x33),
++	/* power setting */
++	OTM1289A_CMD(0x00, 0x85),
++	OTM1289A_CMD(0xc5, 0x0a, 0x0a, 0x46),
++	OTM1289A_CMD(0x00, 0x00),
++	OTM1289A_CMD(0xd8, 0x27, 0x27),
++	OTM1289A_CMD(0x00, 0x01),
++	OTM1289A_CMD(0xd9, 0x77),
++	OTM1289A_CMD(0x00, 0x84),
++	OTM1289A_CMD(0xc4, 0x02),
++	OTM1289A_CMD(0x00, 0x93),
++	OTM1289A_CMD(0xc4, 0x04),
++	OTM1289A_CMD(0x00, 0x96),
++	OTM1289A_CMD(0xf5, 0xe7),
++	OTM1289A_CMD(0x00, 0xa0),
++	OTM1289A_CMD(0xf5, 0x4a),
++	OTM1289A_CMD(0x00, 0x8a),
++	OTM1289A_CMD(0xc0, 0x11),
++	OTM1289A_CMD(0x00, 0x83),
++	OTM1289A_CMD(0xf5, 0x81),
++	/* power IC */
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xc4, 0x96, 0x05),
++	/* panel timing state control */
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xcb, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xcb, 0xfc, 0xfc, 0xfc, 0x00, 0x14, 0x14, 0x14),
++	/* panel pad mapping control */
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xcc, 0x02, 0x0a, 0x0c, 0x0e, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xcc, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x1d, 0x06, 0x01, 0x09, 0x0b, 0x0d, 0x0f, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0xa0),
++	OTM1289A_CMD(0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x1d, 0x05),
++	OTM1289A_CMD(0x00, 0xb0),
++	OTM1289A_CMD(0xcc, 0x05, 0x0f, 0x0d, 0x0b, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0xc0),
++	OTM1289A_CMD(0xcc, 0x00, 0x00, 0x00, 0x00, 0x1d, 0x1e, 0x01, 0x06, 0x10, 0x0e, 0x0c, 0x0a, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0xd0),
++	OTM1289A_CMD(0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1d, 0x1e, 0x02),
++	/* panel timing setting */
++	OTM1289A_CMD(0x00, 0x80),
++	OTM1289A_CMD(0xce, 0x87, 0x03, 0x10, 0x86, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0x90),
++	OTM1289A_CMD(0xce, 0x34, 0xff, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00),
++	OTM1289A_CMD(0x00, 0xa0),
++	OTM1289A_CMD(0xce, 0x30, 0x83, 0x88, 0x00, 0x20, 0x00, 0x82, 0x87, 0x00, 0x81, 0x86, 0x00, 0x80, 0x85, 0x00),
++	OTM1289A_CMD(0x00, 0xb0),
++	OTM1289A_CMD(0xce, 0x30, 0x00, 0x84, 0x00, 0x20, 0x00, 0x01, 0x83, 0x00, 0x02, 0x82, 0x00, 0x03, 0x81, 0x00),
++	OTM1289A_CMD(0x00, 0xe0),
++	OTM1289A_CMD(0xce, 0x0a, 0x04, 0xfc, 0x00, 0x00, 0x0a, 0x04, 0xfc),
++	OTM1289A_CMD(0x00, 0xf0),
++	OTM1289A_CMD(0xce, 0x01, 0x20, 0x01, 0x01, 0x00, 0x00),
++	/* gamma */
++	OTM1289A_CMD(0x00, 0x00),
++	OTM1289A_CMD(0xe1, 0x00, 0x16, 0x26, 0x37, 0x47, 0x65, 0x64, 0x7d, 0x76, 0x62, 0x69, 0x50, 0x38, 0x21, 0x13, 0x00),
++	OTM1289A_CMD(0x00, 0x00),
++	OTM1289A_CMD(0xe2, 0x00, 0x16, 0x26, 0x37, 0x47, 0x65, 0x64, 0x7d, 0x76, 0x62, 0x69, 0x50, 0x38, 0x21, 0x13, 0x00),
++	/* CMD2 disable */
++	OTM1289A_CMD(0x00, 0x00),
++	OTM1289A_CMD(0xff, 0xff, 0xff, 0xff),
++};
++
++/*
++ * ER68576 init table from vendor U-Boot. Like the OTM1289A table it ends
++ * before sleep-out/display-on, which otm1289a_init_sequence_send() adds.
++ */
++static const struct otm1289a_init_cmd er68576_init_sequence[] = {
++	OTM1289A_CMD(0x36, 0x14),
++	OTM1289A_CMD(0xe0, 0xab, 0xba),
++	OTM1289A_CMD(0xe1, 0xba, 0xab),
++	OTM1289A_CMD(0xb1, 0x10, 0x01, 0x47, 0xff),
++	OTM1289A_CMD(0xb2, 0x09, 0x0e, 0x01, 0x50, 0x50, 0x14),
++	OTM1289A_CMD(0xb3, 0x56, 0xd2, 0x00),
++	OTM1289A_CMD(0xb4, 0x7a, 0x60, 0x04),
++	OTM1289A_CMD(0xb6, 0xbe, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00),
++	OTM1289A_CMD(0xb8, 0x05, 0x12, 0x29, 0x49, 0x48, 0x00, 0x00),
++	OTM1289A_CMD(0xb9, 0x7c, 0x6a, 0x5e, 0x52, 0x4f, 0x41, 0x45, 0x31,
++			   0x4c, 0x4c, 0x4c, 0x67, 0x53, 0x58, 0x4d, 0x48,
++			   0x35, 0x1d, 0x06, 0x7c, 0x6a, 0x5e, 0x52, 0x4f,
++			   0x41, 0x45, 0x31, 0x4c, 0x4c, 0x4c, 0x67, 0x53,
++			   0x58, 0x4d, 0x48, 0x35, 0x1d, 0x06),
++	OTM1289A_CMD(0xc0, 0x54, 0x32, 0x23, 0x45, 0x33, 0x33, 0x33, 0x33,
++			   0x10, 0x04, 0x90, 0x04, 0x0f, 0x00, 0x00, 0xc0),
++	OTM1289A_CMD(0xc1, 0x32, 0x94, 0x02, 0x87, 0x10, 0x04, 0x90, 0x04,
++			   0x54, 0x00),
++	OTM1289A_CMD(0xc2, 0x73, 0x09, 0x08, 0x89, 0x08, 0x11, 0x22, 0x33,
++			   0x44, 0x82, 0x18, 0x00),
++	OTM1289A_CMD(0xc3, 0x8b, 0x49, 0x13, 0x11, 0x0f, 0x0d, 0x00, 0x00,
++			   0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
++			   0x02, 0x02, 0x05, 0x07, 0x02, 0x02),
++	OTM1289A_CMD(0xc4, 0x0a, 0x08, 0x12, 0x10, 0x0e, 0x0c, 0x00, 0x00,
++			   0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x00, 0x02,
++			   0x02, 0x02, 0x04, 0x06, 0x02, 0x02),
++	OTM1289A_CMD(0xc5, 0xe8, 0x85, 0x76),
++	OTM1289A_CMD(0xc6, 0x2a, 0x2a),
++	OTM1289A_CMD(0xc8, 0x21, 0x00, 0x32, 0x40, 0x44, 0x16),
++	OTM1289A_CMD(0xca, 0xcb, 0x43),
++	OTM1289A_CMD(0xcd, 0x0e, 0x32, 0x32, 0x20, 0x19, 0x6b, 0x06, 0xb3),
++	OTM1289A_CMD(0xd2, 0xe3, 0x2b, 0x38, 0x00),
++	OTM1289A_CMD(0xd4, 0x00, 0x01, 0x00, 0x0e, 0x04, 0x44, 0x08, 0x10,
++			   0x10, 0x4f, 0x00),
++	OTM1289A_CMD(0xe6, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
++	OTM1289A_CMD(0xf0, 0x32, 0x05, 0x20, 0x00, 0xff),
++	OTM1289A_CMD(0xf3, 0x00),
++};
++
++static inline struct otm1289a *panel_to_otm1289a(struct drm_panel *panel)
++{
++	return container_of(panel, struct otm1289a, panel);
++}
++
++/*
++ * Like the stock boot loader, tell the controllers apart by their DCS
++ * 0xda/0xdb/0xdc ID. Anything that is not an ER68576, or a failed read, gets
++ * the OTM1289A table, which is also the stock fallback.
++ */
++static bool otm1289a_is_er68576(struct otm1289a *ctx)
++{
++	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
++	static const u8 regs[] = { 0xda, 0xdb, 0xdc };
++	u8 id[3];
++	unsigned int i;
++	int ret;
++
++	for (i = 0; i < ARRAY_SIZE(regs); i++) {
++		ret = mipi_dsi_dcs_read(dsi, regs[i], &id[i], 1);
++		if (ret != 1) {
++			dev_warn(ctx->dev, "panel ID read 0x%02x failed (%d)\n",
++				 regs[i], ret);
++			return false;
++		}
++	}
++
++	dev_info(ctx->dev, "panel ID %02x %02x %02x\n", id[0], id[1], id[2]);
++
++	return id[0] == 0xe8 && id[1] == 0x85 && id[2] == 0x76;
++}
++
++static int otm1289a_init_sequence_send(struct otm1289a *ctx)
++{
++	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
++	const struct otm1289a_init_cmd *seq = otm1289a_init_sequence;
++	unsigned int i, n = ARRAY_SIZE(otm1289a_init_sequence);
++	int ret;
++
++	if (otm1289a_is_er68576(ctx)) {
++		dev_info(ctx->dev, "using er68576 init sequence\n");
++		seq = er68576_init_sequence;
++		n = ARRAY_SIZE(er68576_init_sequence);
++	}
++
++	for (i = 0; i < n; i++) {
++		const struct otm1289a_init_cmd *c = &seq[i];
++
++		ret = mipi_dsi_dcs_write(dsi, c->cmd, c->data, c->len);
++		if (ret < 0)
++			return ret;
++	}
++
++	/* Delays from the vendor tables. */
++	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
++	if (ret < 0)
++		return ret;
++	msleep(50);
++
++	ret = mipi_dsi_dcs_set_display_on(dsi);
++	if (ret < 0)
++		return ret;
++	msleep(120);
++
++	return 0;
++}
++
++static int otm1289a_disable(struct drm_panel *panel)
++{
++	struct otm1289a *ctx = panel_to_otm1289a(panel);
++	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
++	int ret;
++
++	ret = mipi_dsi_dcs_set_display_off(dsi);
++	if (ret < 0)
++		return ret;
++	msleep(40);
++
++	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
++	if (ret < 0)
++		return ret;
++	msleep(150);
++
++	return 0;
++}
++
++static int otm1289a_unprepare(struct drm_panel *panel)
++{
++	struct otm1289a *ctx = panel_to_otm1289a(panel);
++
++	if (ctx->reset_gpio) {
++		gpiod_set_value_cansleep(ctx->reset_gpio, 1);
++		msleep(20);
++	}
++
++	regulator_disable(ctx->supply);
++
++	ctx->prepared = false;
++
++	return 0;
++}
++
++static int otm1289a_prepare(struct drm_panel *panel)
++{
++	struct otm1289a *ctx = panel_to_otm1289a(panel);
++	int ret;
++
++	ret = regulator_enable(ctx->supply);
++	if (ret < 0) {
++		dev_err(panel->dev, "failed to enable supply: %d\n", ret);
++		return ret;
++	}
++
++	if (ctx->reset_gpio) {
++		gpiod_set_value_cansleep(ctx->reset_gpio, 0);
++		gpiod_set_value_cansleep(ctx->reset_gpio, 1);
++		msleep(20);
++		gpiod_set_value_cansleep(ctx->reset_gpio, 0);
++		msleep(100);
++	}
++
++	ret = otm1289a_init_sequence_send(ctx);
++	if (ret) {
++		dev_err(panel->dev, "init sequence failed: %d\n", ret);
++		regulator_disable(ctx->supply);
++		return ret;
++	}
++
++	ctx->prepared = true;
++
++	return 0;
++}
++
++static int otm1289a_enable(struct drm_panel *panel)
++{
++	return 0;
++}
++
++static int otm1289a_get_modes(struct drm_panel *panel,
++			      struct drm_connector *connector)
++{
++	struct drm_display_mode *mode;
++
++	mode = drm_mode_duplicate(connector->dev, &otm1289a_mode);
++	if (!mode) {
++		dev_err(panel->dev, "failed to add mode %ux%u\n",
++			otm1289a_mode.hdisplay, otm1289a_mode.vdisplay);
++		return -ENOMEM;
++	}
++
++	drm_mode_set_name(mode);
++	drm_mode_probed_add(connector, mode);
++
++	connector->display_info.width_mm = mode->width_mm;
++	connector->display_info.height_mm = mode->height_mm;
++
++	return 1;
++}
++
++/*
++ * The 720x1280 portrait panel sits sideways in a landscape device; the DT
++ * "rotation" property says how, so fbcon and userspace can rotate to match.
++ */
++static enum drm_panel_orientation otm1289a_get_orientation(struct drm_panel *panel)
++{
++	struct otm1289a *ctx = panel_to_otm1289a(panel);
++
++	return ctx->orientation;
++}
++
++static const struct drm_panel_funcs otm1289a_drm_funcs = {
++	.disable   = otm1289a_disable,
++	.unprepare = otm1289a_unprepare,
++	.prepare   = otm1289a_prepare,
++	.enable    = otm1289a_enable,
++	.get_modes = otm1289a_get_modes,
++	.get_orientation = otm1289a_get_orientation,
++};
++
++static int otm1289a_probe(struct mipi_dsi_device *dsi)
++{
++	struct device *dev = &dsi->dev;
++	struct otm1289a *ctx;
++	int ret;
++
++	ctx = devm_drm_panel_alloc(dev, struct otm1289a, panel,
++				   &otm1289a_drm_funcs,
++				   DRM_MODE_CONNECTOR_DSI);
++	if (IS_ERR(ctx))
++		return PTR_ERR(ctx);
++
++	ctx->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
++	if (IS_ERR(ctx->reset_gpio)) {
++		dev_err(dev, "cannot get reset-gpio\n");
++		return PTR_ERR(ctx->reset_gpio);
++	}
++
++	ctx->supply = devm_regulator_get(dev, "power");
++	if (IS_ERR(ctx->supply)) {
++		ret = PTR_ERR(ctx->supply);
++		if (ret != -EPROBE_DEFER)
++			dev_err(dev, "failed to request regulator: %d\n", ret);
++		return ret;
++	}
++
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to get orientation\n");
++
++	mipi_dsi_set_drvdata(dsi, ctx);
++	ctx->dev = dev;
++
++	/* PWM backlight, controlled through the panel's prepare/unprepare. */
++	ret = drm_panel_of_backlight(&ctx->panel);
++	if (ret)
++		return ret;
++
++	/* Vendor DT: 4 lanes, RGB888, non-burst video mode (lcd_dsi_if = 0). */
++	dsi->lanes = 4;
++	dsi->format = MIPI_DSI_FMT_RGB888;
++	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_LPM;
++
++	drm_panel_add(&ctx->panel);
++
++	ret = mipi_dsi_attach(dsi);
++	if (ret < 0) {
++		dev_err(dev, "mipi_dsi_attach failed. Is host ready?\n");
++		drm_panel_remove(&ctx->panel);
++		return ret;
++	}
++
++	return 0;
++}
++
++static void otm1289a_remove(struct mipi_dsi_device *dsi)
++{
++	struct otm1289a *ctx = mipi_dsi_get_drvdata(dsi);
++
++	mipi_dsi_detach(dsi);
++	drm_panel_remove(&ctx->panel);
++}
++
++static const struct of_device_id orisetech_otm1289a_of_match[] = {
++	{ .compatible = "orisetech,otm1289a" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, orisetech_otm1289a_of_match);
++
++static struct mipi_dsi_driver orisetech_otm1289a_driver = {
++	.probe  = otm1289a_probe,
++	.remove = otm1289a_remove,
++	.driver = {
++		.name = "panel-orisetech-otm1289a",
++		.of_match_table = orisetech_otm1289a_of_match,
++	},
++};
++module_mipi_dsi_driver(orisetech_otm1289a_driver);
++
++MODULE_DESCRIPTION("DRM driver for Orise Tech OTM1289A MIPI DSI panel (TrimUI Smart Pro)");
++MODULE_LICENSE("GPL v2");
+-- 
+2.56.0
+

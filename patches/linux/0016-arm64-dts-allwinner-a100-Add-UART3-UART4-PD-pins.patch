@@ -1,0 +1,37 @@
+From e2156840f3ab5f08bf43b692dbae84788cb98078 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:31 +0100
+Subject: [PATCH 16/18] arm64: dts: allwinner: a100: Add UART3/UART4 PD pins
+
+Pin groups for UART3 on PD14/PD15 and UART4 on PD18/PD19.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 9298216b7..59f700e6e 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -268,6 +268,16 @@ uart0_pb_pins: uart0-pb-pins {
+ 				pins = "PB9", "PB10";
+ 				function = "uart0";
+ 			};
++
++			uart3_pd_pins: uart3-pd-pins {
++				pins = "PD14", "PD15";
++				function = "uart3";
++			};
++
++			uart4_pd_pins: uart4-pd-pins {
++				pins = "PD18", "PD19";
++				function = "uart4";
++			};
+ 		};
+ 
+ 		mmc0: mmc@4020000 {
+-- 
+2.56.0
+

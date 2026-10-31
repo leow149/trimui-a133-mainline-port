@@ -1,0 +1,118 @@
+From fb836f13566b97ecb0a37b4c0aba3eeee65f7a74 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:29 +0100
+Subject: [PATCH 13/18] serial: 8250_dw: Configure Allwinner A100 UARTs while
+ busy
+
+LCR/DLL/DLH writes are ignored while a DesignWare UART is busy. The driver's
+workaround (loopback, then wait for BUSY to clear) does not work on the A133:
+BUSY stays set in loopback while the RX line is active or held low. A UART
+connected to a peer that is already streaming, or held in break, is then left
+with DLAB set and the IER write landing in DLH, and never receives anything.
+
+Allwinner's UART_HALT register has a documented way out: with CHCFG_AT_BUSY set
+the configuration registers accept writes while busy, and CHANGE_UPDATE applies
+them. Use it for the new "allwinner,sun50i-a100-uart" compatible.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/tty/serial/8250/8250_dw.c | 47 +++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+
+diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
+index 5fba913f3..5b06d8a34 100644
+--- a/drivers/tty/serial/8250/8250_dw.c
++++ b/drivers/tty/serial/8250/8250_dw.c
+@@ -51,6 +51,7 @@
+ #define DW_UART_QUIRK_APMC0D08		BIT(4)
+ #define DW_UART_QUIRK_CPR_VALUE		BIT(5)
+ #define DW_UART_QUIRK_IER_KICK		BIT(6)
++#define DW_UART_QUIRK_CHCFG_AT_BUSY	BIT(7)
+ 
+ /*
+  * Number of consecutive IIR_NO_INT interrupts required to trigger interrupt
+@@ -99,6 +100,33 @@ static inline u32 dw8250_modify_msr(struct uart_port *p, unsigned int offset, u3
+ 	return value;
+ }
+ 
++/*
++ * Allwinner UARTs can take LCR/DLL/DLH writes while busy once CHCFG_AT_BUSY is
++ * set; CHANGE_UPDATE then applies them and self-clears. Loopback does not
++ * stop BUSY on these, so it is the only way to configure them while the line
++ * is active.
++ */
++#define SUNXI_UART_HALT			0xa4
++#define SUNXI_UART_HALT_CHCFG_AT_BUSY	BIT(1)
++#define SUNXI_UART_HALT_CHANGE_UPDATE	BIT(2)
++
++static bool dw8250_has_chcfg_at_busy(struct dw8250_data *d)
++{
++	return d->pdata && d->pdata->quirks & DW_UART_QUIRK_CHCFG_AT_BUSY;
++}
++
++static void dw8250_chcfg_update(struct uart_port *p)
++{
++	u32 halt = serial_port_in(p, SUNXI_UART_HALT);
++	int retries = 1000;
++
++	serial_port_out(p, SUNXI_UART_HALT, halt | SUNXI_UART_HALT_CHANGE_UPDATE);
++	while ((serial_port_in(p, SUNXI_UART_HALT) & SUNXI_UART_HALT_CHANGE_UPDATE) &&
++	       --retries)
++		udelay(1);
++	serial_port_out(p, SUNXI_UART_HALT, halt & ~SUNXI_UART_HALT_CHCFG_AT_BUSY);
++}
++
+ static void dw8250_idle_exit(struct uart_port *p)
+ {
+ 	struct dw8250_data *d = to_dw8250_data(p->private_data);
+@@ -107,6 +135,12 @@ static void dw8250_idle_exit(struct uart_port *p)
+ 	if (d->uart_16550_compatible)
+ 		return;
+ 
++	if (dw8250_has_chcfg_at_busy(d)) {
++		dw8250_chcfg_update(p);
++		d->in_idle = 0;
++		return;
++	}
++
+ 	if (up->capabilities & UART_CAP_FIFO)
+ 		serial_port_out(p, UART_FCR, up->fcr);
+ 	serial_port_out(p, UART_MCR, up->mcr);
+@@ -141,6 +175,13 @@ static int dw8250_idle_enter(struct uart_port *p)
+ 
+ 	d->in_idle = 1;
+ 
++	if (dw8250_has_chcfg_at_busy(d)) {
++		serial_port_out(p, SUNXI_UART_HALT,
++				serial_port_in(p, SUNXI_UART_HALT) |
++				SUNXI_UART_HALT_CHCFG_AT_BUSY);
++		return 0;
++	}
++
+ 	/* Prevent triggering interrupt from RBR filling */
+ 	serial_port_out(p, UART_IER, 0);
+ 
+@@ -845,6 +886,11 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
+ 	.usr_reg = DW_UART_USR,
+ };
+ 
++static const struct dw8250_platform_data dw8250_sun50i_a100_data = {
++	.usr_reg = DW_UART_USR,
++	.quirks = DW_UART_QUIRK_CHCFG_AT_BUSY,
++};
++
+ static const struct dw8250_platform_data dw8250_octeon_3860_data = {
+ 	.usr_reg = OCTEON_UART_USR,
+ 	.quirks = DW_UART_QUIRK_OCTEON,
+@@ -890,6 +936,7 @@ static const struct dw8250_platform_data dw8250_ultrarisc_dp1000_data = {
+ 
+ static const struct of_device_id dw8250_of_match[] = {
+ 	{ .compatible = "snps,dw-apb-uart", .data = &dw8250_dw_apb },
++	{ .compatible = "allwinner,sun50i-a100-uart", .data = &dw8250_sun50i_a100_data },
+ 	{ .compatible = "cavium,octeon-3860-uart", .data = &dw8250_octeon_3860_data },
+ 	{ .compatible = "marvell,armada-38x-uart", .data = &dw8250_armada_38x_data },
+ 	{ .compatible = "renesas,rzn1-uart", .data = &dw8250_renesas_rzn1_data },
+-- 
+2.56.0
+

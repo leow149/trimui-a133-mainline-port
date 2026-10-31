@@ -1,0 +1,399 @@
+From 74ae2c0899f89694b52f4d78f7d19f32126f71d4 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:30 +0100
+Subject: [PATCH 14/18] Input: joystick: Add TrimUI Smart Pro gamepad driver
+
+The buttons and analog sticks of the TrimUI Smart Pro are scanned by two
+microcontrollers, one per side, each streaming 8-byte frames over its own UART
+(19200 8N1, receive only). Both halves are bound by this serdev driver and
+reported through one input device owned by the left half.
+
+The stick centre is taken from the first frames after power-up and the range
+grows to the extremes seen, as the stock default calibration leaves the sticks
+up to 20% off centre on real units.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/input/joystick/Kconfig               |  11 +
+ drivers/input/joystick/Makefile              |   1 +
+ drivers/input/joystick/trimui-smartpro-pad.c | 335 +++++++++++++++++++
+ 3 files changed, 347 insertions(+)
+ create mode 100644 drivers/input/joystick/trimui-smartpro-pad.c
+
+diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
+index 7755e5b45..2b7f7d06b 100644
+--- a/drivers/input/joystick/Kconfig
++++ b/drivers/input/joystick/Kconfig
+@@ -422,4 +422,15 @@ config JOYSTICK_SEESAW
+ 	  To compile this driver as a module, choose M here: the module will be
+ 	  called adafruit-seesaw.
+ 
++config JOYSTICK_TRIMUI_SMARTPRO
++	tristate "TrimUI Smart Pro gamepad"
++	depends on SERIAL_DEV_BUS && OF
++	help
++	  Say Y here to use the built-in buttons and analog sticks of the
++	  TrimUI Smart Pro handheld. They are read from two microcontrollers
++	  connected over UART.
++
++	  To compile this driver as a module, choose M here: the module will be
++	  called trimui-smartpro-pad.
++
+ endif
+diff --git a/drivers/input/joystick/Makefile b/drivers/input/joystick/Makefile
+index 9976f596a..53952b31e 100644
+--- a/drivers/input/joystick/Makefile
++++ b/drivers/input/joystick/Makefile
+@@ -35,6 +35,7 @@ obj-$(CONFIG_JOYSTICK_SPACEBALL)	+= spaceball.o
+ obj-$(CONFIG_JOYSTICK_SPACEORB)		+= spaceorb.o
+ obj-$(CONFIG_JOYSTICK_STINGER)		+= stinger.o
+ obj-$(CONFIG_JOYSTICK_TMDC)		+= tmdc.o
++obj-$(CONFIG_JOYSTICK_TRIMUI_SMARTPRO)	+= trimui-smartpro-pad.o
+ obj-$(CONFIG_JOYSTICK_TURBOGRAFX)	+= turbografx.o
+ obj-$(CONFIG_JOYSTICK_TWIDJOY)		+= twidjoy.o
+ obj-$(CONFIG_JOYSTICK_WARRIOR)		+= warrior.o
+diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
+new file mode 100644
+index 000000000..96c334017
+--- /dev/null
++++ b/drivers/input/joystick/trimui-smartpro-pad.c
+@@ -0,0 +1,335 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * TrimUI Smart Pro gamepad
++ *
++ * The buttons and analog sticks are scanned by two small microcontrollers,
++ * one per side of the device. Each one streams 8-byte frames over its own
++ * UART (19200 8N1, receive only):
++ *
++ *   0xff  ??  buttons  x_hi x_lo  y_hi y_lo  0xfe
++ *
++ * The stick values are 12-bit ADC readings. Both halves are reported through
++ * one input device owned by the left half, which links to the right half.
++ */
++
++#include <linux/bits.h>
++#include <linux/delay.h>
++#include <linux/device.h>
++#include <linux/input.h>
++#include <linux/minmax.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/property.h>
++#include <linux/regulator/consumer.h>
++#include <linux/serdev.h>
++#include <linux/spinlock.h>
++#include <linux/unaligned.h>
++
++#define TSP_PAD_BAUD		19200
++#define TSP_PAD_FRAME_LEN	8
++#define TSP_PAD_SOF		0xff
++#define TSP_PAD_EOF		0xfe
++
++/*
++ * Time for the MCUs to start after power-up. Until they drive their TX line
++ * high the UART sees a break and stays busy, and a busy DesignWare UART
++ * ignores the line settings.
++ */
++#define TSP_PAD_POWER_UP_MS	100
++
++/*
++ * The stick centre is taken from the first frames after power-up (sticks are
++ * assumed untouched then) and the range grows to the extremes seen since.
++ * The starting range is the one the stock firmware uses without a per-unit
++ * calibration file: 1050..2900 around 2150.
++ */
++#define TSP_PAD_CAL_FRAMES	16
++#define TSP_PAD_ADC_SPAN_LOW	1100
++#define TSP_PAD_ADC_SPAN_HIGH	750
++
++#define TSP_PAD_AXIS_MAX	32767
++#define TSP_PAD_AXIS_FUZZ	128
++#define TSP_PAD_AXIS_FLAT	4096
++
++struct tsp_pad_side {
++	unsigned short keys[8];		/* by bit in the button byte, 0 = unused */
++	unsigned int abs_x;
++	unsigned int abs_y;
++};
++
++static const struct tsp_pad_side tsp_pad_left = {
++	.keys = {
++		BTN_TL, 0, BTN_DPAD_UP, BTN_DPAD_LEFT,
++		BTN_DPAD_RIGHT, BTN_DPAD_DOWN, 0, BTN_MODE,
++	},
++	.abs_x = ABS_X,
++	.abs_y = ABS_Y,
++};
++
++static const struct tsp_pad_side tsp_pad_right = {
++	.keys = {
++		BTN_TR, 0, BTN_NORTH, BTN_WEST,
++		BTN_EAST, BTN_SOUTH, BTN_SELECT, BTN_START,
++	},
++	.abs_x = ABS_RX,
++	.abs_y = ABS_RY,
++};
++
++struct tsp_pad_axis_cal {
++	int zero;
++	int low;
++	int high;
++};
++
++struct tsp_pad_half {
++	struct serdev_device *serdev;
++	const struct tsp_pad_side *side;
++	spinlock_t lock;		/* protects input */
++	struct input_dev *input;
++	u8 buf[TSP_PAD_FRAME_LEN];
++	size_t len;
++	unsigned int cal_frames;
++	struct tsp_pad_axis_cal cal[2];	/* x, y */
++};
++
++/* Map an ADC reading to +-TSP_PAD_AXIS_MAX; the sticks read inverted. */
++static int tsp_pad_axis(struct tsp_pad_axis_cal *cal, int raw)
++{
++	int v = raw - cal->zero;
++
++	cal->low = min(cal->low, raw);
++	cal->high = max(cal->high, raw);
++
++	if (v > 0)
++		v = v * TSP_PAD_AXIS_MAX / (cal->high - cal->zero);
++	else
++		v = v * TSP_PAD_AXIS_MAX / (cal->zero - cal->low);
++
++	return -v;
++}
++
++/* Average the first frames into the centre, then set the starting range. */
++static bool tsp_pad_calibrate(struct tsp_pad_half *half, const int *raw)
++{
++	int i;
++
++	if (half->cal_frames == TSP_PAD_CAL_FRAMES)
++		return true;
++
++	for (i = 0; i < 2; i++)
++		half->cal[i].zero += raw[i];
++	if (++half->cal_frames < TSP_PAD_CAL_FRAMES)
++		return false;
++
++	for (i = 0; i < 2; i++) {
++		half->cal[i].zero /= TSP_PAD_CAL_FRAMES;
++		half->cal[i].low = half->cal[i].zero - TSP_PAD_ADC_SPAN_LOW;
++		half->cal[i].high = half->cal[i].zero + TSP_PAD_ADC_SPAN_HIGH;
++	}
++	return true;
++}
++
++static void tsp_pad_report(struct tsp_pad_half *half)
++{
++	const struct tsp_pad_side *side = half->side;
++	int raw[2] = {
++		get_unaligned_be16(&half->buf[3]),
++		get_unaligned_be16(&half->buf[5]),
++	};
++	u8 buttons = half->buf[2];
++	bool sticks = tsp_pad_calibrate(half, raw);
++	int i;
++
++	spin_lock(&half->lock);
++	if (half->input) {
++		for (i = 0; i < ARRAY_SIZE(side->keys); i++)
++			if (side->keys[i])
++				input_report_key(half->input, side->keys[i],
++						 buttons & BIT(i));
++		if (sticks) {
++			input_report_abs(half->input, side->abs_x,
++					 tsp_pad_axis(&half->cal[0], raw[0]));
++			input_report_abs(half->input, side->abs_y,
++					 tsp_pad_axis(&half->cal[1], raw[1]));
++		}
++		input_sync(half->input);
++	}
++	spin_unlock(&half->lock);
++}
++
++static size_t tsp_pad_receive_buf(struct serdev_device *serdev,
++				  const u8 *data, size_t count)
++{
++	struct tsp_pad_half *half = serdev_device_get_drvdata(serdev);
++	u8 *sof;
++	size_t i;
++
++	for (i = 0; i < count; i++) {
++		if (!half->len && data[i] != TSP_PAD_SOF)
++			continue;
++
++		half->buf[half->len++] = data[i];
++		if (half->len < TSP_PAD_FRAME_LEN)
++			continue;
++
++		if (half->buf[TSP_PAD_FRAME_LEN - 1] == TSP_PAD_EOF) {
++			tsp_pad_report(half);
++			half->len = 0;
++			continue;
++		}
++
++		/* Lost sync: restart at the next possible start byte. */
++		sof = memchr(&half->buf[1], TSP_PAD_SOF, TSP_PAD_FRAME_LEN - 1);
++		if (sof) {
++			half->len = &half->buf[TSP_PAD_FRAME_LEN] - sof;
++			memmove(half->buf, sof, half->len);
++		} else {
++			half->len = 0;
++		}
++	}
++
++	return count;
++}
++
++static const struct serdev_device_ops tsp_pad_serdev_ops = {
++	.receive_buf = tsp_pad_receive_buf,
++};
++
++static void tsp_pad_set_input(struct tsp_pad_half *half,
++			      struct input_dev *input)
++{
++	spin_lock(&half->lock);
++	half->input = input;
++	spin_unlock(&half->lock);
++}
++
++static void tsp_pad_detach(void *data)
++{
++	tsp_pad_set_input(data, NULL);
++}
++
++static void tsp_pad_setup_side(struct input_dev *input,
++			       const struct tsp_pad_side *side)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(side->keys); i++)
++		if (side->keys[i])
++			input_set_capability(input, EV_KEY, side->keys[i]);
++
++	input_set_abs_params(input, side->abs_x, -TSP_PAD_AXIS_MAX,
++			     TSP_PAD_AXIS_MAX, TSP_PAD_AXIS_FUZZ,
++			     TSP_PAD_AXIS_FLAT);
++	input_set_abs_params(input, side->abs_y, -TSP_PAD_AXIS_MAX,
++			     TSP_PAD_AXIS_MAX, TSP_PAD_AXIS_FUZZ,
++			     TSP_PAD_AXIS_FLAT);
++}
++
++static struct serdev_device_driver tsp_pad_driver;
++
++/* The left half owns the input device and feeds it from both halves. */
++static int tsp_pad_setup_input(struct tsp_pad_half *half)
++{
++	struct device *dev = &half->serdev->dev;
++	struct tsp_pad_half *right;
++	struct device_node *np;
++	struct device *rdev;
++	struct device_link *link;
++	struct input_dev *input;
++	int ret;
++
++	np = of_parse_phandle(dev->of_node, "trimui,right-pad", 0);
++	if (!np)
++		return dev_err_probe(dev, -EINVAL, "no trimui,right-pad\n");
++
++	rdev = driver_find_device_by_of_node(&tsp_pad_driver.driver, np);
++	of_node_put(np);
++	if (!rdev)
++		return dev_err_probe(dev, -EPROBE_DEFER,
++				     "right pad not bound yet\n");
++
++	/* Unbinds us before the right half goes away. */
++	link = device_link_add(dev, rdev, DL_FLAG_AUTOREMOVE_CONSUMER);
++	right = dev_get_drvdata(rdev);
++	put_device(rdev);
++	if (!link)
++		return dev_err_probe(dev, -EINVAL, "cannot link right pad\n");
++
++	input = devm_input_allocate_device(dev);
++	if (!input)
++		return -ENOMEM;
++
++	input->name = "TrimUI Smart Pro Gamepad";
++	input->phys = "trimui-smartpro-pad/input0";
++	input->id.bustype = BUS_HOST;
++	tsp_pad_setup_side(input, half->side);
++	tsp_pad_setup_side(input, right->side);
++
++	ret = input_register_device(input);
++	if (ret)
++		return ret;
++
++	tsp_pad_set_input(half, input);
++	ret = devm_add_action_or_reset(dev, tsp_pad_detach, half);
++	if (ret)
++		return ret;
++
++	tsp_pad_set_input(right, input);
++	return devm_add_action_or_reset(dev, tsp_pad_detach, right);
++}
++
++static int tsp_pad_probe(struct serdev_device *serdev)
++{
++	struct device *dev = &serdev->dev;
++	struct tsp_pad_half *half;
++	int ret;
++
++	half = devm_kzalloc(dev, sizeof(*half), GFP_KERNEL);
++	if (!half)
++		return -ENOMEM;
++
++	half->serdev = serdev;
++	half->side = device_get_match_data(dev);
++	spin_lock_init(&half->lock);
++	serdev_device_set_drvdata(serdev, half);
++	serdev_device_set_client_ops(serdev, &tsp_pad_serdev_ops);
++
++	if (half->side == &tsp_pad_left) {
++		ret = tsp_pad_setup_input(half);
++		if (ret)
++			return ret;
++	}
++
++	ret = devm_regulator_get_enable(dev, "power");
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot enable power\n");
++	msleep(TSP_PAD_POWER_UP_MS);
++
++	ret = devm_serdev_device_open(dev, serdev);
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot open UART\n");
++
++	serdev_device_set_baudrate(serdev, TSP_PAD_BAUD);
++	serdev_device_set_flow_control(serdev, false);
++	return serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
++}
++
++static const struct of_device_id tsp_pad_of_match[] = {
++	{ .compatible = "trimui,smart-pro-pad-left", .data = &tsp_pad_left },
++	{ .compatible = "trimui,smart-pro-pad-right", .data = &tsp_pad_right },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, tsp_pad_of_match);
++
++static struct serdev_device_driver tsp_pad_driver = {
++	.driver = {
++		.name = "trimui-smartpro-pad",
++		.of_match_table = tsp_pad_of_match,
++	},
++	.probe = tsp_pad_probe,
++};
++module_serdev_device_driver(tsp_pad_driver);
++
++MODULE_DESCRIPTION("TrimUI Smart Pro gamepad driver");
++MODULE_LICENSE("GPL");
+-- 
+2.56.0
+

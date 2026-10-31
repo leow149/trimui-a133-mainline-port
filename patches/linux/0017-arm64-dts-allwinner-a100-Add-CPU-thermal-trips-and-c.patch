@@ -1,0 +1,99 @@
+From 82eaaf6818e038ae27d66178a11719bdb1b413ba Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:31 +0100
+Subject: [PATCH 17/18] arm64: dts: allwinner: a100: Add CPU thermal trips and
+ cooling
+
+The CPU thermal zone had no trip points, so nothing throttled the CPUs or shut
+down on overheating once cpufreq can run the top OPPs. Use the stock firmware's
+values: passive cooling from 80 C, critical at 110 C.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 33 +++++++++++++++++--
+ 1 file changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 59f700e6e..2c21b533a 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -8,6 +8,7 @@
+ #include <dt-bindings/clock/sun50i-a100-r-ccu.h>
+ #include <dt-bindings/reset/sun50i-a100-ccu.h>
+ #include <dt-bindings/reset/sun50i-a100-r-ccu.h>
++#include <dt-bindings/thermal/thermal.h>
+ 
+ / {
+ 	interrupt-parent = <&gic>;
+@@ -24,6 +25,7 @@ cpu0: cpu@0 {
+ 			reg = <0x0>;
+ 			enable-method = "psci";
+ 			clocks = <&ccu CLK_CPUX>;
++			#cooling-cells = <2>;
+ 		};
+ 
+ 		cpu1: cpu@1 {
+@@ -32,6 +34,7 @@ cpu1: cpu@1 {
+ 			reg = <0x1>;
+ 			enable-method = "psci";
+ 			clocks = <&ccu CLK_CPUX>;
++			#cooling-cells = <2>;
+ 		};
+ 
+ 		cpu2: cpu@2 {
+@@ -40,6 +43,7 @@ cpu2: cpu@2 {
+ 			reg = <0x2>;
+ 			enable-method = "psci";
+ 			clocks = <&ccu CLK_CPUX>;
++			#cooling-cells = <2>;
+ 		};
+ 
+ 		cpu3: cpu@3 {
+@@ -48,6 +52,7 @@ cpu3: cpu@3 {
+ 			reg = <0x3>;
+ 			enable-method = "psci";
+ 			clocks = <&ccu CLK_CPUX>;
++			#cooling-cells = <2>;
+ 		};
+ 	};
+ 
+@@ -679,9 +684,33 @@ r_i2c1: i2c@7081800 {
+ 
+ 	thermal-zones {
+ 		cpu-thermal {
+-			polling-delay-passive = <0>;
+-			polling-delay = <0>;
++			polling-delay-passive = <500>;
++			polling-delay = <1000>;
+ 			thermal-sensors = <&ths 0>;
++
++			trips {
++				cpu_alert: cpu-alert {
++					temperature = <80000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				cpu-crit {
++					temperature = <110000>;
++					hysteresis = <2000>;
++					type = "critical";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					trip = <&cpu_alert>;
++					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
++							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++				};
++			};
+ 		};
+ 
+ 		ddr-thermal {
+-- 
+2.56.0
+

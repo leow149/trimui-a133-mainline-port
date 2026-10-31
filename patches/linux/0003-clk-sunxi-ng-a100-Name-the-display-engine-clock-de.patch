@@ -1,0 +1,32 @@
+From 53823d4356a5052cf248542057537d84cc46cbac Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:25 +0100
+Subject: [PATCH 03/18] clk: sunxi-ng: a100: Name the display engine clock "de"
+
+The DE2 clock block (ccu-sun8i-de2) looks up its parent by the name "de". On
+A100 that clock was called "de0", which left the mixer clocks orphaned and
+reading 0 Hz.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+index 1f81c7ac4..df794a4c1 100644
+--- a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
++++ b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+@@ -311,7 +311,8 @@ static SUNXI_CCU_M_WITH_MUX_GATE(mbus_clk, "mbus", mbus_parents, 0x540,
+ 				 CLK_IS_CRITICAL);
+ 
+ static const char * const de_parents[] = { "pll-com", "pll-periph0-2x" };
+-static SUNXI_CCU_M_WITH_MUX_GATE(de_clk, "de0", de_parents, 0x600,
++/* Named "de": the DE2 clock block (ccu-sun8i-de2.c) uses that parent name. */
++static SUNXI_CCU_M_WITH_MUX_GATE(de_clk, "de", de_parents, 0x600,
+ 				 0, 4,		/* M */
+ 				 24, 1,		/* mux */
+ 				 BIT(31),	/* gate */
+-- 
+2.56.0
+

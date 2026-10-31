@@ -1,0 +1,77 @@
+From 6b025f243df8cc80a1436d2a093dfe6e0504bc70 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:27 +0100
+Subject: [PATCH 08/18] drm/sun4i: mixer: Add A133 mixers
+
+The A133 display engine is DE2-style with two mixers; mixer 0 runs at 300 MHz.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/gpu/drm/sun4i/sun8i_mixer.c | 43 +++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+
+diff --git a/drivers/gpu/drm/sun4i/sun8i_mixer.c b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+index b6cd7352e..5cad5f000 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_mixer.c
++++ b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+@@ -853,6 +853,41 @@ static const struct sun8i_mixer_cfg sun50i_a64_mixer1_cfg = {
+ 	.vi_num		= 1,
+ };
+ 
++/*
++ * A133 DE2.0 mixers, from the vendor BSP's de_feat.c: mixer0 has 2 VI + 2 UI
++ * channels, mixer1 1 VI + 2 UI, all with scalers. The stock firmware runs the
++ * DE at 300 MHz.
++ */
++static const struct sun8i_mixer_cfg sun50i_a133_mixer0_cfg = {
++	.lay_cfg = {
++		.ccsc		= CCSC_MIXER0_LAYOUT,
++		.de_type	= SUN8I_MIXER_DE2,
++		.vi_scaler_num	= 2,
++		.scaler_mask	= 0xf,
++		.scanline_yuv	= 2560,
++		.de2_fcc_alpha	= 1,
++	},
++	.de_type	= SUN8I_MIXER_DE2,
++	.mod_rate	= 300000000,
++	.ui_num		= 2,
++	.vi_num		= 2,
++};
++
++static const struct sun8i_mixer_cfg sun50i_a133_mixer1_cfg = {
++	.lay_cfg = {
++		.ccsc		= CCSC_MIXER1_LAYOUT,
++		.de_type	= SUN8I_MIXER_DE2,
++		.vi_scaler_num	= 1,
++		.scaler_mask	= 0x7,
++		.scanline_yuv	= 2048,
++		.de2_fcc_alpha	= 1,
++	},
++	.de_type	= SUN8I_MIXER_DE2,
++	.mod_rate	= 300000000,
++	.ui_num		= 2,
++	.vi_num		= 1,
++};
++
+ static const struct sun8i_mixer_cfg sun50i_h6_mixer0_cfg = {
+ 	.lay_cfg = {
+ 		.de_type	= SUN8I_MIXER_DE3,
+@@ -920,6 +955,14 @@ static const struct of_device_id sun8i_mixer_of_table[] = {
+ 		.compatible = "allwinner,sun50i-a64-de2-mixer-1",
+ 		.data = &sun50i_a64_mixer1_cfg,
+ 	},
++	{
++		.compatible = "allwinner,sun50i-a133-de2-mixer-0",
++		.data = &sun50i_a133_mixer0_cfg,
++	},
++	{
++		.compatible = "allwinner,sun50i-a133-de2-mixer-1",
++		.data = &sun50i_a133_mixer1_cfg,
++	},
+ 	{
+ 		.compatible = "allwinner,sun50i-h6-de3-mixer-0",
+ 		.data = &sun50i_h6_mixer0_cfg,
+-- 
+2.56.0
+

@@ -1,0 +1,142 @@
+From e4dfb4fe709ccf36489f1e97932cf75660d7b7b7 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:26 +0100
+Subject: [PATCH 05/18] dt-bindings: display: sun4i: Add A133 TCON LCD, TCON
+ TOP and DE2 mixers
+
+Add the A133 compatibles for the LCD TCON, the TCON TOP (no TV/HDMI path, but a
+gated MIPI DSI clock) and the two DE2 mixers.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../display/allwinner,sun4i-a10-tcon.yaml     |  1 +
+ .../allwinner,sun8i-a83t-de2-mixer.yaml       |  2 +
+ .../display/allwinner,sun8i-r40-tcon-top.yaml | 58 ++++++++++++++++++-
+ 3 files changed, 59 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+index 724d93b91..c01a444cd 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+@@ -45,6 +45,7 @@ properties:
+       - items:
+           - enum:
+               - allwinner,sun50i-a64-tcon-lcd
++              - allwinner,sun50i-a133-tcon-lcd
+           - const: allwinner,sun8i-a83t-tcon-lcd
+ 
+       - items:
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
+index cbd18fd83..ce72c1ba7 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
+@@ -23,6 +23,8 @@ properties:
+       - allwinner,sun20i-d1-de2-mixer-1
+       - allwinner,sun50i-a64-de2-mixer-0
+       - allwinner,sun50i-a64-de2-mixer-1
++      - allwinner,sun50i-a133-de2-mixer-0
++      - allwinner,sun50i-a133-de2-mixer-1
+       - allwinner,sun50i-h6-de3-mixer-0
+       - allwinner,sun50i-h616-de33-mixer-0
+ 
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
+index 7d849c409..533b06fbd 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
+@@ -43,6 +43,7 @@ properties:
+       - allwinner,sun8i-r40-tcon-top
+       - allwinner,sun20i-d1-tcon-top
+       - allwinner,sun50i-h6-tcon-top
++      - allwinner,sun50i-a133-tcon-top
+ 
+   reg:
+     maxItems: 1
+@@ -99,8 +100,6 @@ properties:
+     required:
+       - port@0
+       - port@1
+-      - port@4
+-      - port@5
+ 
+ required:
+   - "#clock-cells"
+@@ -151,6 +150,8 @@ allOf:
+           required:
+             - port@2
+             - port@3
++            - port@4
++            - port@5
+ 
+   - if:
+       properties:
+@@ -179,6 +180,13 @@ allOf:
+             - description: TCON TV0 output clock name
+             - description: DSI output clock name
+ 
++        ports:
++          required:
++            - port@2
++            - port@3
++            - port@4
++            - port@5
++
+   - if:
+       properties:
+         compatible:
+@@ -201,6 +209,52 @@ allOf:
+           items:
+             - description: TCON TV0 output clock name
+ 
++        ports:
++          required:
++            - port@4
++            - port@5
++
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: allwinner,sun50i-a133-tcon-top
++
++    then:
++      properties:
++        clocks:
++          items:
++            - description: The TCON TOP interface clock
++            - description: >
++                The TCON TOP TV0 clock. This SoC has no TCON-TV/HDMI output
++                at all, so this is an otherwise-unused filler clock, only
++                present because the driver unconditionally registers a TV0
++                gate regardless of quirks.
++            - description: The TCON TOP MIPI DSI clock
++
++        clock-names:
++          items:
++            - const: bus
++            - const: tcon-tv0
++            - const: dsi
++
++        clock-output-names:
++          items:
++            - description: TCON TV0 output clock name (unused, see above)
++            - description: DSI output clock name
++
++    # This variant has no HDMI mux (no port@4/port@5) and, on the one
++    # board using it so far, only mixer0 (no port@2/port@3). The base
++    # schema's ports.required list only covers port@0/port@1, which every
++    # variant wires up; port@2/port@3 and port@4/port@5 are required
++    # per-variant above instead (R40 and D1 both use two mixers and an
++    # HDMI/TCON-TV mux, so both are added to their own if/then blocks;
++    # H6 has one mixer but still an HDMI mux, so only port@4/port@5 is
++    # added there) -- checked against each SoC's actual in-tree
++    # dtsi/dts (sun8i-r40.dtsi, sunxi-d1s-t113.dtsi, sun50i-h6.dtsi), not
++    # guessed at. This compatible needs no addition here since it has
++    # neither extra pair.
++
+ examples:
+   - |
+     #include <dt-bindings/interrupt-controller/arm-gic.h>
+-- 
+2.56.0
+
