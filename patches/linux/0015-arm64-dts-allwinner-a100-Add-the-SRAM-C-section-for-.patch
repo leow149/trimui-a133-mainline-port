@@ -1,0 +1,43 @@
+From f44c6dbd7aa41be016303a815609283b02ff2c9c Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:30 +0100
+Subject: [PATCH 15/18] arm64: dts: allwinner: a100: Add the SRAM C section for
+ the display engine
+
+As on A64, SYS_CFG bit 24 maps SRAM C either to the CPU or to the display
+engine, and while it is mapped to the CPU the whole DE register space reads
+and writes SRAM. Describe the section so the DE2 bus driver can claim it.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index ba6020989..9298216b7 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -127,6 +127,19 @@ sram_c: sram@24000 {
+ 				#address-cells = <1>;
+ 				#size-cells = <1>;
+ 				ranges = <0 0x024000 0x21000>;
++
++				/*
++				 * SYS_CFG +0x04 bit 24, same as A64: 1 maps
++				 * this SRAM to the CPU, 0 to the display
++				 * engine. While it is mapped to the CPU, the
++				 * whole DE register space reads and writes
++				 * SRAM instead.
++				 */
++				de2_sram: sram-section@0 {
++					compatible = "allwinner,sun50i-a100-sram-c",
++						     "allwinner,sun50i-a64-sram-c";
++					reg = <0x0000 0x21000>;
++				};
+ 			};
+ 
+ 			sram_a2: sram@100000 {
+-- 
+2.56.0
+

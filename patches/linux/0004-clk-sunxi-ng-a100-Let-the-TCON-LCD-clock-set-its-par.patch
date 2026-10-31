@@ -1,0 +1,39 @@
+From 6fcd757bf881c3507c794e45ccde61f149235b9f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:25 +0100
+Subject: [PATCH 04/18] clk: sunxi-ng: a100: Let the TCON LCD clock set its
+ parent rate
+
+MIPI DSI needs the TCON LCD clock at a rate the fixed PLL_VIDEO setting cannot
+divide down to (408 MHz for the TrimUI Smart Pro panel). Allow the clock to
+retune its PLL_VIDEO parent.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+index df794a4c1..758a1446d 100644
+--- a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
++++ b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+@@ -681,13 +681,14 @@ static const char * const tcon_lcd_parents[] = { "pll-video0-4x",
+ 						  "pll-video2-4x",
+ 						  "pll-video3-4x",
+ 						  "pll-periph0-2x" };
++/* Let the TCON clock retune its PLL_VIDEO parent (e.g. 408 MHz for DSI). */
+ static SUNXI_CCU_MP_WITH_MUX_GATE(tcon_lcd_clk, "tcon-lcd0",
+ 				  tcon_lcd_parents, 0xb60,
+ 				  0, 4,		/* M */
+ 				  8, 2,		/* P */
+ 				  24, 3,	/* mux */
+ 				  BIT(31),	/* gate */
+-				  0);
++				  CLK_SET_RATE_PARENT);
+ 
+ static SUNXI_CCU_GATE(bus_tcon_lcd_clk, "bus-tcon-lcd0", "ahb3",
+ 		      0xb7c, BIT(0), 0);
+-- 
+2.56.0
+

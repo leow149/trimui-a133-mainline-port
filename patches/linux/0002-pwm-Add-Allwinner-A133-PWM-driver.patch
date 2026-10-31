@@ -1,0 +1,398 @@
+From 2274ce77a3e549873e00971ab67e7953067dbae2 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:24 +0100
+Subject: [PATCH 02/18] pwm: Add Allwinner A133 PWM driver
+
+Driver for the A133 PWM controller, used for the LCD backlight on the TrimUI
+Smart Pro.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/pwm/Kconfig           |  14 ++
+ drivers/pwm/Makefile          |   1 +
+ drivers/pwm/pwm-sun50i-a133.c | 335 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 350 insertions(+)
+ create mode 100644 drivers/pwm/pwm-sun50i-a133.c
+
+diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index 729776086..cead75470 100644
+--- a/drivers/pwm/Kconfig
++++ b/drivers/pwm/Kconfig
+@@ -748,6 +748,20 @@ config PWM_SUN4I
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called pwm-sun4i.
+ 
++config PWM_SUN50I_A133
++	tristate "Allwinner A133 PWM support"
++	depends on ARCH_SUNXI || COMPILE_TEST
++	depends on HAS_IOMEM
++	help
++	  PWM driver for the Allwinner A133 (sun50iw10) PWM controller — a
++	  newer, richer IP generation than what PWM_SUN4I models (16
++	  channels grouped in pairs, per-pair dead-zone/group-sync control),
++	  with no existing mainline driver. This driver only implements
++	  plain single-channel cycle-mode output, enough for backlight use.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called pwm-sun50i-a133.
++
+ config PWM_SUNPLUS
+ 	tristate "Sunplus PWM support"
+ 	depends on ARCH_SUNPLUS || COMPILE_TEST
+diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index 5630a521a..9c906e5b0 100644
+--- a/drivers/pwm/Makefile
++++ b/drivers/pwm/Makefile
+@@ -68,6 +68,7 @@ obj-$(CONFIG_PWM_STM32)		+= pwm-stm32.o
+ obj-$(CONFIG_PWM_STM32_LP)	+= pwm-stm32-lp.o
+ obj-$(CONFIG_PWM_STMPE)		+= pwm-stmpe.o
+ obj-$(CONFIG_PWM_SUN4I)		+= pwm-sun4i.o
++obj-$(CONFIG_PWM_SUN50I_A133)	+= pwm-sun50i-a133.o
+ obj-$(CONFIG_PWM_SUNPLUS)	+= pwm-sunplus.o
+ obj-$(CONFIG_PWM_TEGRA)		+= pwm-tegra.o
+ obj-$(CONFIG_PWM_TH1520)	+= pwm_th1520.o
+diff --git a/drivers/pwm/pwm-sun50i-a133.c b/drivers/pwm/pwm-sun50i-a133.c
+new file mode 100644
+index 000000000..1e36393d0
+--- /dev/null
++++ b/drivers/pwm/pwm-sun50i-a133.c
+@@ -0,0 +1,335 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Driver for Allwinner A133 (sun50iw10) PWM Controller
++ *
++ * No mainline driver exists for this IP: it's a newer, richer generation
++ * than what drivers/pwm/pwm-sun4i.c models (16 channels grouped in pairs,
++ * per-pair dead-zone control, group-sync start, cache-loaded period/duty
++ * registers) — register layout confirmed from the real, public A133 User
++ * Manual (chapter 10.11, base 0x0300a000), which documents this block in
++ * full down to bit level (unlike the Display Engine chapter elsewhere in
++ * the same manual). This driver only implements plain single-channel PWM
++ * output (cycle mode, no capture/dead-zone/group-sync) — enough to drive
++ * a backlight, not a full port of every feature this IP has.
++ *
++ * The clock source (OSC24M or APB1, selected per-pair in PCCR01/PCCR23)
++ * is entirely internal to this IP block — CCU only exposes a bus/register
++ * access gate (CLK_BUS_PWM), no separate "mod" clock, confirmed by its
++ * absence from include/dt-bindings/clock/sun50i-a100-ccu.h. This driver
++ * hardcodes OSC24M (24MHz), matching the register field's own reset
++ * default and the only clock source needed for typical backlight rates.
++ */
++
++#include <linux/bitops.h>
++#include <linux/clk.h>
++#include <linux/io.h>
++#include <linux/math64.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/pwm.h>
++#include <linux/reset.h>
++
++#define PWM_A133_OSC24M_RATE		24000000
++
++#define PWM_A133_PCCR01_REG		0x0020
++#define PWM_A133_PCCR23_REG		0x0024
++#define PWM_A133_PCCR_CLK_SRC_OSC24M	(0 << 7)
++#define PWM_A133_PCCR_CLK_SRC_MASK	GENMASK(8, 7)
++
++#define PWM_A133_PCGR_REG		0x0040
++#define PWM_A133_PCGR_BYPASS(ch)	BIT(16 + (ch))
++#define PWM_A133_PCGR_GATING(ch)	BIT(ch)
++
++#define PWM_A133_PER_REG		0x0080
++#define PWM_A133_PER_EN(ch)		BIT(ch)
++
++#define PWM_A133_CH_STRIDE		0x0020
++#define PWM_A133_PCR_REG(ch)		(0x0100 + PWM_A133_CH_STRIDE * (ch))
++#define PWM_A133_PPR_REG(ch)		(0x0104 + PWM_A133_CH_STRIDE * (ch))
++
++#define PWM_A133_PCR_MODE_CYCLE		(0 << 9)
++#define PWM_A133_PCR_ACT_STA_HIGH	BIT(8)
++#define PWM_A133_PCR_PRESCAL_K_MASK	GENMASK(7, 0)
++
++#define PWM_A133_PPR_ENTIRE_CYCLE_SHIFT	16
++#define PWM_A133_PPR_ENTIRE_CYCLE_MASK		GENMASK(31, 16)
++#define PWM_A133_PPR_ACT_CYCLE_MASK		GENMASK(15, 0)
++
++#define PWM_A133_PRESCALE_K_MAX	256
++#define PWM_A133_CYCLE_MAX	65536
++
++struct pwm_a133 {
++	void __iomem *base;
++	struct clk *bus_clk;
++	struct reset_control *rst;
++	/*
++	 * PWM_A133_PCGR_REG (channel clock gating) and PWM_A133_PER_REG
++	 * (channel enable) are each single shared registers covering every
++	 * channel on this chip, and PWM_A133_PCCR01_REG/PCCR23_REG are each
++	 * shared by a pair of channels. The PWM core only serializes calls
++	 * per pwm_device, not across different channels on the same chip, so
++	 * two channels' .apply() read-modify-write sequences on one of these
++	 * shared registers can race and silently drop one channel's update.
++	 * This lock serializes the whole apply() body across channels.
++	 */
++	struct mutex lock;
++};
++
++static struct pwm_a133 *to_pwm_a133(struct pwm_chip *chip)
++{
++	return pwmchip_get_drvdata(chip);
++}
++
++static u32 pwm_a133_readl(struct pwm_a133 *pc, u32 offset)
++{
++	return readl(pc->base + offset);
++}
++
++static void pwm_a133_writel(struct pwm_a133 *pc, u32 offset, u32 val)
++{
++	writel(val, pc->base + offset);
++}
++
++static int pwm_a133_calc(u64 period_ns, u64 duty_ns, u32 *entire_cycle,
++			 u32 *act_cycle, u32 *prescale_k)
++{
++	u64 period_cycles_total, prescale;
++	u64 period_cycles, duty_cycles;
++
++	period_cycles_total = mul_u64_u32_div(period_ns, PWM_A133_OSC24M_RATE,
++					      NSEC_PER_SEC);
++	if (period_cycles_total < 1)
++		period_cycles_total = 1;
++
++	prescale = DIV_ROUND_UP_ULL(period_cycles_total, PWM_A133_CYCLE_MAX);
++	if (prescale < 1)
++		prescale = 1;
++	if (prescale > PWM_A133_PRESCALE_K_MAX)
++		return -ERANGE;
++
++	period_cycles = DIV_ROUND_CLOSEST_ULL(period_cycles_total, prescale);
++	if (period_cycles < 1)
++		period_cycles = 1;
++	if (period_cycles > PWM_A133_CYCLE_MAX)
++		period_cycles = PWM_A133_CYCLE_MAX;
++
++	duty_cycles = DIV_ROUND_CLOSEST_ULL(period_cycles * duty_ns, period_ns);
++	if (duty_cycles > period_cycles)
++		duty_cycles = period_cycles;
++
++	/*
++	 * act_cycle's hardware field is 16 bits wide (0-65535). period_cycles
++	 * can legitimately be PWM_A133_CYCLE_MAX (65536, representable in
++	 * entire_cycle as period_cycles - 1 = 65535), so a 100%-duty request
++	 * at that exact period would set duty_cycles = 65536 too -- which
++	 * masks down to 0 when written to the 16-bit field below, silently
++	 * turning 100% duty into 0%. Clamping to the field's real maximum
++	 * trades a negligible ~0.0015% duty error in that one edge case for
++	 * never emitting a fully wrong output.
++	 */
++	if (duty_cycles >= PWM_A133_CYCLE_MAX)
++		duty_cycles = PWM_A133_CYCLE_MAX - 1;
++
++	*prescale_k = prescale - 1;
++	*entire_cycle = period_cycles - 1;
++	*act_cycle = duty_cycles;
++
++	return 0;
++}
++
++static int pwm_a133_apply(struct pwm_chip *chip, struct pwm_device *pwm,
++			  const struct pwm_state *state)
++{
++	struct pwm_a133 *pc = to_pwm_a133(chip);
++	unsigned int ch = pwm->hwpwm;
++	u32 entire_cycle, act_cycle, prescale_k, val;
++	u32 pccr_reg = (ch < 2) ? PWM_A133_PCCR01_REG : PWM_A133_PCCR23_REG;
++	int ret;
++
++	if (!state->enabled) {
++		mutex_lock(&pc->lock);
++		val = pwm_a133_readl(pc, PWM_A133_PER_REG);
++		val &= ~PWM_A133_PER_EN(ch);
++		pwm_a133_writel(pc, PWM_A133_PER_REG, val);
++
++		/*
++		 * Also gate the channel clock back off. The enable path
++		 * below always leaves this bit set on return (it's only
++		 * cleared transiently there, to reconfigure period/duty,
++		 * then set again before returning) -- without clearing it
++		 * here too, a disabled channel's clock keeps running
++		 * indefinitely instead of being gated off with the channel.
++		 */
++		val = pwm_a133_readl(pc, PWM_A133_PCGR_REG);
++		val &= ~PWM_A133_PCGR_GATING(ch);
++		pwm_a133_writel(pc, PWM_A133_PCGR_REG, val);
++
++		mutex_unlock(&pc->lock);
++		return 0;
++	}
++
++	ret = pwm_a133_calc(state->period, state->duty_cycle, &entire_cycle,
++			    &act_cycle, &prescale_k);
++	if (ret) {
++		dev_err(pwmchip_parent(chip), "period exceeds the maximum value\n");
++		return ret;
++	}
++
++	/*
++	 * PWM_A133_PCCR01_REG/PCCR23_REG (shared by a channel pair) and
++	 * PWM_A133_PCGR_REG/PWM_A133_PER_REG (shared by all 16 channels) are
++	 * each read-modify-written below; the PWM core doesn't serialize
++	 * .apply() calls across different channels on the same chip, so this
++	 * whole sequence needs its own lock against a concurrent apply() on
++	 * another channel racing on the same register. Sleeping here is
++	 * within contract: this op is named pwm_apply_might_sleep() in the
++	 * PWM core's own public API specifically because implementations are
++	 * expected to be able to sleep; only the separate pwm_apply_atomic()
++	 * path requires a non-sleeping implementation, which this chip
++	 * doesn't provide.
++	 */
++	mutex_lock(&pc->lock);
++
++	/* Clock source: OSC24M for the whole pair this channel belongs to. */
++	val = pwm_a133_readl(pc, pccr_reg);
++	val &= ~PWM_A133_PCCR_CLK_SRC_MASK;
++	val |= PWM_A133_PCCR_CLK_SRC_OSC24M;
++	pwm_a133_writel(pc, pccr_reg, val);
++
++	/* Gate the channel clock off while changing prescale/period/duty. */
++	val = pwm_a133_readl(pc, PWM_A133_PCGR_REG);
++	val &= ~(PWM_A133_PCGR_GATING(ch) | PWM_A133_PCGR_BYPASS(ch));
++	pwm_a133_writel(pc, PWM_A133_PCGR_REG, val);
++
++	val = PWM_A133_PCR_MODE_CYCLE | (prescale_k & PWM_A133_PCR_PRESCAL_K_MASK);
++	if (state->polarity == PWM_POLARITY_NORMAL)
++		val |= PWM_A133_PCR_ACT_STA_HIGH;
++	pwm_a133_writel(pc, PWM_A133_PCR_REG(ch), val);
++
++	val = (entire_cycle << PWM_A133_PPR_ENTIRE_CYCLE_SHIFT) & PWM_A133_PPR_ENTIRE_CYCLE_MASK;
++	val |= act_cycle & PWM_A133_PPR_ACT_CYCLE_MASK;
++	pwm_a133_writel(pc, PWM_A133_PPR_REG(ch), val);
++
++	/* Re-enable the channel clock now that period/duty are set. */
++	val = pwm_a133_readl(pc, PWM_A133_PCGR_REG);
++	val |= PWM_A133_PCGR_GATING(ch);
++	pwm_a133_writel(pc, PWM_A133_PCGR_REG, val);
++
++	val = pwm_a133_readl(pc, PWM_A133_PER_REG);
++	val |= PWM_A133_PER_EN(ch);
++	pwm_a133_writel(pc, PWM_A133_PER_REG, val);
++
++	mutex_unlock(&pc->lock);
++
++	return 0;
++}
++
++static int pwm_a133_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
++			      struct pwm_state *state)
++{
++	struct pwm_a133 *pc = to_pwm_a133(chip);
++	unsigned int ch = pwm->hwpwm;
++	u32 per, pcr, ppr;
++	u32 entire_cycle, act_cycle, prescale;
++
++	per = pwm_a133_readl(pc, PWM_A133_PER_REG);
++	pcr = pwm_a133_readl(pc, PWM_A133_PCR_REG(ch));
++	ppr = pwm_a133_readl(pc, PWM_A133_PPR_REG(ch));
++
++	state->enabled = !!(per & PWM_A133_PER_EN(ch));
++	state->polarity = (pcr & PWM_A133_PCR_ACT_STA_HIGH) ?
++			   PWM_POLARITY_NORMAL : PWM_POLARITY_INVERSED;
++
++	prescale = (pcr & PWM_A133_PCR_PRESCAL_K_MASK) + 1;
++	entire_cycle = ((ppr & PWM_A133_PPR_ENTIRE_CYCLE_MASK) >>
++			PWM_A133_PPR_ENTIRE_CYCLE_SHIFT) + 1;
++	act_cycle = ppr & PWM_A133_PPR_ACT_CYCLE_MASK;
++
++	state->period = DIV_ROUND_CLOSEST_ULL((u64)entire_cycle * prescale * NSEC_PER_SEC,
++					      PWM_A133_OSC24M_RATE);
++	state->duty_cycle = DIV_ROUND_CLOSEST_ULL((u64)act_cycle * prescale * NSEC_PER_SEC,
++						  PWM_A133_OSC24M_RATE);
++
++	return 0;
++}
++
++static const struct pwm_ops pwm_a133_ops = {
++	.apply = pwm_a133_apply,
++	.get_state = pwm_a133_get_state,
++};
++
++static const struct of_device_id pwm_a133_dt_ids[] = {
++	{ .compatible = "allwinner,sun50i-a133-pwm" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, pwm_a133_dt_ids);
++
++static int pwm_a133_probe(struct platform_device *pdev)
++{
++	struct pwm_chip *chip;
++	struct pwm_a133 *pc;
++	int ret;
++
++	chip = devm_pwmchip_alloc(&pdev->dev, 4, sizeof(*pc));
++	if (IS_ERR(chip))
++		return PTR_ERR(chip);
++	pc = to_pwm_a133(chip);
++
++	mutex_init(&pc->lock);
++
++	pc->base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(pc->base))
++		return PTR_ERR(pc->base);
++
++	pc->bus_clk = devm_clk_get_enabled(&pdev->dev, "bus");
++	if (IS_ERR(pc->bus_clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(pc->bus_clk),
++				     "get bus clock failed\n");
++
++	pc->rst = devm_reset_control_get_exclusive(&pdev->dev, NULL);
++	if (IS_ERR(pc->rst))
++		return dev_err_probe(&pdev->dev, PTR_ERR(pc->rst),
++				     "get reset failed\n");
++
++	ret = reset_control_deassert(pc->rst);
++	if (ret)
++		return dev_err_probe(&pdev->dev, ret,
++				     "cannot deassert reset control\n");
++
++	chip->ops = &pwm_a133_ops;
++
++	ret = pwmchip_add(chip);
++	if (ret < 0) {
++		dev_err(&pdev->dev, "failed to add PWM chip: %d\n", ret);
++		reset_control_assert(pc->rst);
++		return ret;
++	}
++
++	platform_set_drvdata(pdev, chip);
++
++	return 0;
++}
++
++static void pwm_a133_remove(struct platform_device *pdev)
++{
++	struct pwm_chip *chip = platform_get_drvdata(pdev);
++	struct pwm_a133 *pc = to_pwm_a133(chip);
++
++	pwmchip_remove(chip);
++	reset_control_assert(pc->rst);
++}
++
++static struct platform_driver pwm_a133_driver = {
++	.driver = {
++		.name = "sun50i-a133-pwm",
++		.of_match_table = pwm_a133_dt_ids,
++	},
++	.probe = pwm_a133_probe,
++	.remove = pwm_a133_remove,
++};
++module_platform_driver(pwm_a133_driver);
++
++MODULE_DESCRIPTION("Allwinner A133 PWM driver");
++MODULE_LICENSE("GPL");
+-- 
+2.56.0
+
