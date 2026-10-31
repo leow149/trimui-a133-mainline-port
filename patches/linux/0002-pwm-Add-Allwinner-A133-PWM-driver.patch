@@ -1,7 +1,7 @@
 From 2274ce77a3e549873e00971ab67e7953067dbae2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:24 +0100
-Subject: [PATCH 02/18] pwm: Add Allwinner A133 PWM driver
+Subject: [PATCH 02/21] pwm: Add Allwinner A133 PWM driver
 
 Driver for the A133 PWM controller, used for the LCD backlight on the TrimUI
 Smart Pro.

@@ -1,7 +1,7 @@
 From f1dd38fc99372b30e7cb7b48899b7dc00c422bd7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:32 +0100
-Subject: [PATCH 18/18] arm64: dts: allwinner: Add TrimUI Smart Pro
+Subject: [PATCH 18/21] arm64: dts: allwinner: Add TrimUI Smart Pro
 
 TrimUI Smart Pro handheld (Allwinner A133, AXP717). Working: MIPI DSI panel
 and backlight, buttons and sticks, power and volume keys, battery and charger,

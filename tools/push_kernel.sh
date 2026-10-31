@@ -12,13 +12,22 @@
 #    re-check md5, unmount.
 # 5. Back to 115200 (U-Boot and the next kernel expect it).
 #
-# Usage: tools/push_kernel.sh [--dtb] [--reboot]
+# Usage: tools/push_kernel.sh [--dtb] [--test] [--reboot]
+#   --test  install as /Image.test and /test.dtb next to the default files, for a
+#           one-shot boot with tools/uboot_test_boot.py (the default boot is untouched)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 FIFO=uart_logs/uart.fifo
 LOG=uart_logs/ana1_polarity_test_20261030.log
 IMG=build-artifacts/Image
 DTB=build-artifacts/sun50i-a133-trimui-smartpro.dtb
+CARD_IMG=Image; CARD_DTB=sun50i-a133-trimui-smartpro.dtb; WITH_DTB=
+for a in "$@"; do
+  case $a in
+  --test) CARD_IMG=Image.test; CARD_DTB=test.dtb ;;
+  --dtb) WITH_DTB=1 ;;
+  esac
+done
 FAST=1500000
 send() { printf '%s\n' "$1" > "$FIFO"; }
 # Wait for "TOKEN <value>" after the prompt, print the value.
@@ -47,16 +56,16 @@ send "stty $FAST"; sleep 0.5; send "@@BAUD $FAST"; send "@@DELAY ${PUSH_DELAY_MS
 echo "link up at $FAST baud"
 t0=$(date +%s)
 PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$IMG.xz" /tmp/Image.xz "$FIFO" "$LOG"
-[ "${1:-}" = --dtb ] || [ "${2:-}" = --dtb ] && PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$DTB" /tmp/new.dtb "$FIFO" "$LOG"
+[ -n "$WITH_DTB" ] && PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$DTB" /tmp/new.dtb "$FIFO" "$LOG"
 echo "transfer took $(( $(date +%s) - t0 )) s"
 got=$(ask IMGMD5 'unxz -f /tmp/Image.xz && echo IMGMD5 $(md5sum < /tmp/Image | cut -c1-32)' 300)
 [ "$got" = "$want" ] || { echo "decompressed md5 $got != $want"; exit 1; }
-cmd='P=$(findfs LABEL=TRIMUIBOOT) && mkdir -p /mnt/boot && mount $P /mnt/boot && cp /tmp/Image /mnt/boot/Image'
-[ "${1:-}" = --dtb ] || [ "${2:-}" = --dtb ] && cmd="$cmd && cp /tmp/new.dtb /mnt/boot/sun50i-a133-trimui-smartpro.dtb"
-cmd="$cmd && sync && echo CARDMD5 \$(md5sum < /mnt/boot/Image | cut -c1-32); umount /mnt/boot; rm -f /tmp/Image /tmp/Image.xz"
+cmd='P=$(findfs LABEL=TRIMUIBOOT) && mkdir -p /mnt/boot && mount $P /mnt/boot && cp /tmp/Image /mnt/boot/'$CARD_IMG
+[ -n "$WITH_DTB" ] && cmd="$cmd && cp /tmp/new.dtb /mnt/boot/$CARD_DTB"
+cmd="$cmd && sync && echo CARDMD5 \$(md5sum < /mnt/boot/$CARD_IMG | cut -c1-32); umount /mnt/boot; rm -f /tmp/Image /tmp/Image.xz"
 got=$(ask CARDMD5 "$cmd" 300)
 [ "$got" = "$want" ] || { echo "card md5 $got != $want"; exit 1; }
-echo "kernel $want installed on the SD boot partition"
+echo "kernel $want installed on the SD boot partition as /$CARD_IMG"
 restore; trap - EXIT
 for a in "$@"; do [ "$a" = --reboot ] && { sleep 1; send "sync; reboot"; echo "reboot sent"; }; done
 exit 0

@@ -1,7 +1,7 @@
 From 4a38c3c21d176d5b377ee42ee0642ad3af20b807 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
-Subject: [PATCH 06/18] drm/sun4i: tcon-top: Register clocks at probe time
+Subject: [PATCH 06/21] drm/sun4i: tcon-top: Register clocks at probe time
 
 On SoCs where the DSI controller takes its module clock from the TCON TOP DSI
 gate (D1, A133), the DSI driver needs that clock in its probe, but the TCON TOP

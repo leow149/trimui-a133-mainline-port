@@ -1,7 +1,7 @@
 From 6fcd757bf881c3507c794e45ccde61f149235b9f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:25 +0100
-Subject: [PATCH 04/18] clk: sunxi-ng: a100: Let the TCON LCD clock set its
+Subject: [PATCH 04/21] clk: sunxi-ng: a100: Let the TCON LCD clock set its
  parent rate
 
 MIPI DSI needs the TCON LCD clock at a rate the fixed PLL_VIDEO setting cannot
