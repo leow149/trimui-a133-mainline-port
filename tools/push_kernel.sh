@@ -1,10 +1,11 @@
 #!/bin/bash
 # Install build-artifacts/Image (and optionally the DTB) on the TrimUI's SD boot
-# partition over the UART console, no card swap. Needs a running mainline shell on
-# the device and tools/uart_session.py holding the port.
+# partition, no card swap. Uses the USB network (ssh trimui, see board-port/usb-net.sh)
+# when the device answers there, else the UART console (needs a running mainline shell
+# and tools/uart_session.py holding the port).
 #
 # 1. xz-compress the Image (cached by md5).
-# 2. Switch both ends of the console to 1.5 Mbaud (A133 UART clock 24 MHz / 16 = 1.5 Mbaud
+# 2. USB: scp Image.xz to /tmp and skip to 4. UART: switch both ends of the console to 1.5 Mbaud (A133 UART clock 24 MHz / 16 = 1.5 Mbaud
 #    exactly; the FT232R adapter does it too).
 # 3. Push Image.xz to /tmp with tools/uart_push.py (chunked, md5-verified, retried).
 # 4. On the device: unxz, check md5, copy over /Image on the partition labelled TRIMUIBOOT
@@ -29,10 +30,16 @@ for a in "$@"; do
   esac
 done
 FAST=1500000
+USB=
+ssh -o BatchMode=yes -o ConnectTimeout=3 trimui true 2>/dev/null && USB=1
 send() { printf '%s\n' "$1" > "$FIFO"; }
 # Wait for "TOKEN <value>" after the prompt, print the value.
 ask() {
   local tok=$1 cmd=$2 start
+  if [ -n "$USB" ]; then
+    ssh trimui "$cmd" | grep -ao "^$tok [^ ]*" | tail -1 | cut -d' ' -f2
+    return 0
+  fi
   start=$(stat -c %s "$LOG")
   send "$cmd"
   for _ in $(seq 1 ${3:-120}); do
@@ -48,15 +55,22 @@ if [ ! -f "$IMG.xz" ] || [ "$(cat "$IMG.xz.src" 2>/dev/null)" != "$want" ]; then
   xz -9 -T0 -k -f "$IMG"; echo "$want" > "$IMG.xz.src"
 fi
 echo "Image.xz $(stat -c %s "$IMG.xz") bytes"
+t0=$(date +%s)
+if [ -n "$USB" ]; then
+  echo "using the USB network"
+  restore() { :; }
+  scp -q "$IMG.xz" trimui:/tmp/Image.xz
+  [ -n "$WITH_DTB" ] && scp -q "$DTB" trimui:/tmp/new.dtb
+else
 restore() { send "@@DELAY 50"; send "stty 115200"; sleep 0.5; send "@@BAUD 115200"; }
 trap restore EXIT
 send ""; sleep 0.5
 send "stty $FAST"; sleep 0.5; send "@@BAUD $FAST"; send "@@DELAY ${PUSH_DELAY_MS:-3}"; sleep 0.5; send ""
 [ "$(ask FASTOK 'echo FASTOK $((6*7))' 20)" = 42 ] || { echo "no response at $FAST baud"; exit 1; }
 echo "link up at $FAST baud"
-t0=$(date +%s)
 PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$IMG.xz" /tmp/Image.xz "$FIFO" "$LOG"
 [ -n "$WITH_DTB" ] && PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$DTB" /tmp/new.dtb "$FIFO" "$LOG"
+fi
 echo "transfer took $(( $(date +%s) - t0 )) s"
 got=$(ask IMGMD5 'unxz -f /tmp/Image.xz && echo IMGMD5 $(md5sum < /tmp/Image | cut -c1-32)' 300)
 [ "$got" = "$want" ] || { echo "decompressed md5 $got != $want"; exit 1; }
@@ -80,5 +94,9 @@ got=$(ask CARDMD5 "$cmd" 300)
 [ "$got" = "$want" ] || { echo "card md5 $got != $want"; exit 1; }
 echo "kernel $want installed on the SD boot partition as /$CARD_IMG"
 restore; trap - EXIT
-for a in "$@"; do [ "$a" = --reboot ] && { sleep 1; send "sync; reboot"; echo "reboot sent"; }; done
+for a in "$@"; do
+  [ "$a" = --reboot ] || continue
+  if [ -n "$USB" ]; then ssh trimui 'sync; reboot' || true; else sleep 1; send "sync; reboot"; fi
+  echo "reboot sent"
+done
 exit 0
