@@ -1,0 +1,149 @@
+From f2f1bad679db74a278c22de50ec11ac585c13615 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:44:47 +0100
+Subject: [PATCH 2/2] sunxi: a133: dram: Set the NSI port priorities
+
+Since the A133 the DRAM port arbitration is done by a separate block, the
+NSI, which nothing programmed: all masters had the same priority, and the
+display engine underran (glitch lines on the panel) whenever the GPU
+loaded the DRAM. Set the port priorities like the BSP does, with the
+display engines high, and disable the bandwidth limiting QoS.
+
+Measured on the TrimUI Smart Pro with vkcube running: 861 TCON underflows
+in 30 s before, none after.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../include/asm/arch-sunxi/cpu_sun50i_h6.h    |  1 +
+ arch/arm/mach-sunxi/dram_sun50i_a133.c        | 97 +++++++++++++++++++
+ 2 files changed, 98 insertions(+)
+
+diff --git a/arch/arm/include/asm/arch-sunxi/cpu_sun50i_h6.h b/arch/arm/include/asm/arch-sunxi/cpu_sun50i_h6.h
+index 2a9b0869..7f4b7da4 100644
+--- a/arch/arm/include/asm/arch-sunxi/cpu_sun50i_h6.h
++++ b/arch/arm/include/asm/arch-sunxi/cpu_sun50i_h6.h
+@@ -33,6 +33,7 @@
+ #define SUNXI_DRAM_COM_BASE		0x04810000
+ #define SUNXI_DRAM_CTL0_BASE		0x04820000
+ #define SUNXI_DRAM_PHY0_BASE		0x04830000
++#define SUNXI_NSI_BASE			0x03100000
+ #endif
+ 
+ #define SUNXI_TWI0_BASE			0x05002000
+diff --git a/arch/arm/mach-sunxi/dram_sun50i_a133.c b/arch/arm/mach-sunxi/dram_sun50i_a133.c
+index ca3e2513..8e7d2e1f 100644
+--- a/arch/arm/mach-sunxi/dram_sun50i_a133.c
++++ b/arch/arm/mach-sunxi/dram_sun50i_a133.c
+@@ -1202,6 +1202,101 @@ static const struct dram_para para = {
+ 	.tpr14 = CONFIG_DRAM_SUNXI_TPR14,
+ };
+ 
++/*
++ * Since the A133 the DRAM port arbitration is done by a separate block, the
++ * NSI, which is not documented in the manual. The registers and defaults
++ * come from the BSP nsi driver.
++ */
++#define NSI_PORT_REG(port, reg)		(SUNXI_NSI_BASE + (ulong)(port) * 0x200 + (reg))
++#define NSI_MODE			0x10
++#define NSI_PRI_CFG			0x14
++#define NSI_PRI_CFG_RD(pri)			((pri) << 2)
++#define NSI_PRI_CFG_WR(pri)			((pri) << 0)
++#define NSI_IO_CFG			0x18
++#define NSI_ENABLE			0xc0
++
++enum nsi_pri {
++	NSI_PRI_LOWEST = 0,
++	NSI_PRI_LOW,
++	NSI_PRI_HIGH,
++	NSI_PRI_HIGHEST,
++};
++
++enum nsi_qos_sel {
++	NSI_QOS_SEL_OUTPUT = 0,
++	NSI_QOS_SEL_INPUT,
++};
++
++enum nsi_port {
++	NSI_PORT_CPU = 0,
++	NSI_PORT_GPU,
++	NSI_PORT_SD1,
++	NSI_PORT_MSTG,
++	NSI_PORT_GMAC0,
++	NSI_PORT_GMAC1,
++	NSI_PORT_USB0,
++	NSI_PORT_USB1,
++	NSI_PORT_NDFC,
++	NSI_PORT_DMAC,
++	NSI_PORT_CE,
++	NSI_PORT_DE0,
++	NSI_PORT_DE1,
++	NSI_PORT_VE,
++	NSI_PORT_CSI,
++	NSI_PORT_ISP,
++	NSI_PORT_G2D,
++	NSI_PORT_EINK,
++	NSI_PORT_IOMMU,
++	NSI_PORT_CPUS,
++	NSI_PORT_COUNT,
++};
++
++static const struct {
++	u8 pri;
++	u8 qos_sel;
++} nsi_port_cfg[NSI_PORT_COUNT] = {
++	[NSI_PORT_CPU]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_INPUT },
++	[NSI_PORT_GPU]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_INPUT },
++	[NSI_PORT_SD1]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_MSTG]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_GMAC0]	= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_GMAC1]	= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_USB0]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_USB1]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_NDFC]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_DMAC]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_CE]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_DE0]		= { NSI_PRI_HIGH,    NSI_QOS_SEL_INPUT },
++	[NSI_PORT_DE1]		= { NSI_PRI_HIGH,    NSI_QOS_SEL_INPUT },
++	[NSI_PORT_VE]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_INPUT },
++	[NSI_PORT_CSI]		= { NSI_PRI_HIGH,    NSI_QOS_SEL_INPUT },
++	[NSI_PORT_ISP]		= { NSI_PRI_HIGH,    NSI_QOS_SEL_INPUT },
++	[NSI_PORT_G2D]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_INPUT },
++	[NSI_PORT_EINK]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++	[NSI_PORT_IOMMU]	= { NSI_PRI_HIGHEST, NSI_QOS_SEL_INPUT },
++	[NSI_PORT_CPUS]		= { NSI_PRI_LOWEST,  NSI_QOS_SEL_OUTPUT },
++};
++
++/*
++ * Without this all ports have the same priority, and the display engine
++ * underruns whenever the GPU loads the DRAM.
++ */
++static void nsi_set_master_priority(void)
++{
++	unsigned int port;
++
++	for (port = 0; port < NSI_PORT_COUNT; port++) {
++		u8 pri = nsi_port_cfg[port].pri;
++
++		/* No bandwidth limiting QoS, only the port priority. */
++		writel(0, NSI_PORT_REG(port, NSI_MODE));
++		writel(0, NSI_PORT_REG(port, NSI_ENABLE));
++		writel(nsi_port_cfg[port].qos_sel, NSI_PORT_REG(port, NSI_IO_CFG));
++		writel(NSI_PRI_CFG_RD(pri) | NSI_PRI_CFG_WR(pri),
++		       NSI_PORT_REG(port, NSI_PRI_CFG));
++	}
++}
++
+ unsigned long sunxi_dram_init(void)
+ {
+ 	struct dram_config config;
+@@ -1221,5 +1316,7 @@ unsigned long sunxi_dram_init(void)
+ 	      1U << config.bankgrps, 1U << config.ranks,
+ 	      16U << config.bus_full_width);
+ 
++	nsi_set_master_priority();
++
+ 	return calculate_dram_size(&config);
+ }
+-- 
+2.56.0
+
