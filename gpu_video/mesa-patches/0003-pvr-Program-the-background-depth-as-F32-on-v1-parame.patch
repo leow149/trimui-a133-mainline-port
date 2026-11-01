@@ -1,0 +1,38 @@
+From afd28b83857a9a52590050f469ad0094d96377a8 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:23:17 +0100
+Subject: [PATCH 3/4] pvr: Program the background depth as F32 on v1 parameter
+ format cores
+
+On cores with the v1 simple internal parameter format (GE8300) the ISP
+compares the background object depth as F32 whatever the ZLS format, so a
+D16/D24 clear value written as unorm made every depth test against the
+cleared depth fail.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/imagination/vulkan/pvr_arch_job_render.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
+index 0b7f172..0ae2fce 100644
+--- a/src/imagination/vulkan/pvr_arch_job_render.c
++++ b/src/imagination/vulkan/pvr_arch_job_render.c
+@@ -1109,6 +1109,13 @@ static void pvr_frag_state_stream_init(struct pvr_render_ctx *ctx,
+    pvr_csb_pack (stream_ptr, CR_ISP_BGOBJDEPTH, value) {
+       const float depth_clear = job->ds_clear_value.depth;
+ 
++      /* Cores with the v1 simple internal parameter format compare depth as
++       * F32 internally whatever the ZLS format, so the background object
++       * depth has to be a float.
++       */
++      if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v1))
++         zload_format = ROGUE_CR_ZLS_FORMAT_TYPE_F32Z;
++
+       /* This is valid even when we don't have a depth attachment because:
+        *  - zload_format is set to a sensible default above, and
+        *  - job->depth_clear_value is set to a sensible default in that case.
+-- 
+2.56.0
+

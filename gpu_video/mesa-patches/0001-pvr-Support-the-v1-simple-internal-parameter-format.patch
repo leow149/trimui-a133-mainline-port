@@ -1,3 +1,20 @@
+From d2579a02d76d66074c10d9730d9c3a8f5a8189d8 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:23:17 +0100
+Subject: [PATCH 1/4] pvr: Support the v1 simple internal parameter format
+
+The GE8300 (Series 8XE) uses version 1 of the simple internal parameter
+format, but the macrotile setup and the ISP tile count alignment asserted
+version 2. Like the vendor driver, use a single macrotile covering the
+whole render target, and only align to 2x2 tile groups on version 2.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/imagination/include/hwdef/rogue_hw_utils.h |  7 +++----
+ src/imagination/vulkan/pvr_arch_job_render.c   | 14 +++++++++++++-
+ 2 files changed, 16 insertions(+), 5 deletions(-)
+
 diff --git a/src/imagination/include/hwdef/rogue_hw_utils.h b/src/imagination/include/hwdef/rogue_hw_utils.h
 index a859059..892587e 100644
 --- a/src/imagination/include/hwdef/rogue_hw_utils.h
@@ -16,40 +33,8 @@ index a859059..892587e 100644
        /* Align to a 2x2 tile block. */
        *x_out = ALIGN_POT(*x_out, 2);
        *y_out = ALIGN_POT(*y_out, 2);
-diff --git a/src/imagination/vulkan/pvr_arch_job_common.c b/src/imagination/vulkan/pvr_arch_job_common.c
-index f420deb..ee05811 100644
---- a/src/imagination/vulkan/pvr_arch_job_common.c
-+++ b/src/imagination/vulkan/pvr_arch_job_common.c
-@@ -23,6 +23,7 @@
- 
- #include <stdbool.h>
- #include <stdint.h>
-+#include <stdlib.h>
- 
- #include "hwdef/rogue_hw_defs.h"
- #include "hwdef/rogue_hw_utils.h"
-@@ -293,6 +294,19 @@ void pvr_arch_pbe_pack_state(
-       reg.maxclip_x = render_params->max_x_clip;
-       reg.zslice = render_params->slice;
-       reg.maxclip_y = render_params->max_y_clip;
-+      /* EXPERIMENT (GE8300): clip in 2-pixel units? */
-+      if (getenv("PVR_PBE_SIZE_INC")) {
-+         reg.size_x += 1;
-+         reg.size_y += 1;
-+      }
-+      if (getenv("PVR_PBE_CLIP_SMALL")) {
-+         reg.maxclip_x = 20;
-+         reg.maxclip_y = 20;
-+      }
-+      if (getenv("PVR_PBE_CLIP_X2")) {
-+         reg.maxclip_x = render_params->max_x_clip * 2 + 1;
-+         reg.maxclip_y = render_params->max_y_clip * 2 + 1;
-+      }
-    }
- }
- 
 diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
-index f1cc515..7b19f49 100644
+index f1cc515..0b7f172 100644
 --- a/src/imagination/vulkan/pvr_arch_job_render.c
 +++ b/src/imagination/vulkan/pvr_arch_job_render.c
 @@ -126,7 +126,19 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
@@ -73,17 +58,6 @@ index f1cc515..7b19f49 100644
        assert(PVR_GET_FEATURE_VALUE(dev_info,
                                     simple_parameter_format_version,
                                     0) == 2);
-@@ -631,6 +643,13 @@ VkResult pvr_arch_render_target_dataset_create(
-    assert(height <= rogue_get_render_size_max_y(dev_info));
-    assert(layers > 0 && layers <= PVR_MAX_FRAMEBUFFER_LAYERS);
- 
-+   /* EXPERIMENT (GE8300): declare a 2x render target, see vktest */
-+   if (getenv("PVR_V1_RT_DOUBLE") &&
-+       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0) == 1) {
-+      width = MIN2(width * 2, rogue_get_render_size_max_x(dev_info));
-+      height = MIN2(height * 2, rogue_get_render_size_max_y(dev_info));
-+   }
-+
-    pvr_arch_rt_mtile_info_init(dev_info, &mtile_info, width, height, samples);
- 
-    rt_dataset = vk_zalloc(&device->vk.alloc,
+-- 
+2.56.0
+

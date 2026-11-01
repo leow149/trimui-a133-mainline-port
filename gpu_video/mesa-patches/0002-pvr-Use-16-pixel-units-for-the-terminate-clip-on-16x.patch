@@ -1,0 +1,57 @@
+From 4c579ae380f0fd0c5da5d127451c705615d79696 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:23:17 +0100
+Subject: [PATCH 2/4] pvr: Use 16 pixel units for the terminate clip on 16x16
+ tile cores
+
+The TA terminate state clip region is in tile units, which are 16 pixels
+on cores with 16x16 tiles, as already done for the region clip. With the
+fixed 32 pixel unit only the top left quarter of the render target was
+binned and rendered on the GE8300.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/imagination/vulkan/pvr_arch_framebuffer.c | 19 +++++++++----------
+ 1 file changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/src/imagination/vulkan/pvr_arch_framebuffer.c b/src/imagination/vulkan/pvr_arch_framebuffer.c
+index e0bc337..22fdd71 100644
+--- a/src/imagination/vulkan/pvr_arch_framebuffer.c
++++ b/src/imagination/vulkan/pvr_arch_framebuffer.c
+@@ -35,6 +35,13 @@ VkResult PVR_PER_ARCH(ppp_state_create)(struct pvr_device *device,
+ {
+    const uint32_t cache_line_size =
+       pvr_get_slc_cache_line_size(&device->pdevice->dev_info);
++   /* The clip region is in tile units: 32 pixels, or 16 on cores with 16x16
++    * tiles, like the region clip (see pvr_get_geom_region_clip_align_size()).
++    */
++   const uint32_t clip_block_size =
++      PVR_HAS_FEATURE(&device->pdevice->dev_info, tile_size_16x16)
++         ? 16U
++         : ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS;
+    uint32_t ppp_state[3];
+    VkResult result;
+ 
+@@ -43,16 +50,8 @@ VkResult PVR_PER_ARCH(ppp_state_create)(struct pvr_device *device,
+    }
+ 
+    pvr_csb_pack (&ppp_state[1], TA_STATE_TERMINATE0, term0) {
+-      term0.clip_right =
+-         DIV_ROUND_UP(
+-            width,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS) -
+-         1;
+-      term0.clip_bottom =
+-         DIV_ROUND_UP(
+-            height,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_BOTTOM_BLOCK_SIZE_IN_PIXELS) -
+-         1;
++      term0.clip_right = DIV_ROUND_UP(width, clip_block_size) - 1;
++      term0.clip_bottom = DIV_ROUND_UP(height, clip_block_size) - 1;
+    }
+ 
+    pvr_csb_pack (&ppp_state[2], TA_STATE_TERMINATE1, term1) {
+-- 
+2.56.0
+

@@ -1,7 +1,7 @@
 From 199f43aa46b580f6d340016d9da8fc4e3d64b306 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:26:41 +0100
-Subject: [PATCH 45/48] wifi: xradio: XR829: connect and pass traffic
+Subject: [PATCH 45/49] wifi: xradio: XR829: connect and pass traffic
 
 Port the remaining HT40 API (XR829 firmware) differences needed for
 station mode, converting from the XR819 structures at the firmware
