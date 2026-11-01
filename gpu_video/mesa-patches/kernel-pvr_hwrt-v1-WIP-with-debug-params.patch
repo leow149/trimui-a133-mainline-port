@@ -1,0 +1,105 @@
+diff --git a/drivers/gpu/drm/imagination/pvr_hwrt.c b/drivers/gpu/drm/imagination/pvr_hwrt.c
+index 05c68c78d..69d23c8a8 100644
+--- a/drivers/gpu/drm/imagination/pvr_hwrt.c
++++ b/drivers/gpu/drm/imagination/pvr_hwrt.c
+@@ -217,6 +217,15 @@ get_cr_te_aa_val(struct pvr_device *pvr_dev, u32 samples, u32 *value_out)
+ 	return 0;
+ }
+ 
++/* DEBUG: GE8300 bring-up experiments */
++static unsigned int dbg_isp_mul = 1, dbg_tescr_mul = 1, dbg_temt_mul = 1;
++module_param(dbg_isp_mul, uint, 0644);
++module_param(dbg_tescr_mul, uint, 0644);
++module_param(dbg_temt_mul, uint, 0644);
++static unsigned int dbg_ppp_mul = 1, dbg_rgn_mul = 1;
++module_param(dbg_ppp_mul, uint, 0644);
++module_param(dbg_rgn_mul, uint, 0644);
++
+ static void
+ hwrtdata_common_init(void *cpu_ptr, void *priv)
+ {
+@@ -254,20 +263,31 @@ hwrt_init_common_fw_structure(struct pvr_file *pvr_file,
+ 		if (WARN_ON(err))
+ 			return err;
+ 
+-		WARN_ON(parameter_format != 2);
+-
+-		/*
+-		 * Set up 16 macrotiles with a multiple of 2x2 tiles per macrotile, which is
+-		 * aligned to a tile group.
+-		 */
+-		info.mtile_x[0] = DIV_ROUND_UP(info.num_tiles_x, 8) * 2;
+-		info.mtile_y[0] = DIV_ROUND_UP(info.num_tiles_y, 8) * 2;
++		if (parameter_format == 1) {
++			/*
++			 * One macrotile covering the whole render target, as the
++			 * vendor driver sets up for Series 8XE cores.
++			 */
++			info.mtile_x[0] = info.num_tiles_x * dbg_temt_mul;
++			info.mtile_y[0] = info.num_tiles_y * dbg_temt_mul;
++			info.tile_max_x = info.num_tiles_x * dbg_tescr_mul - 1;
++			info.tile_max_y = info.num_tiles_y * dbg_tescr_mul - 1;
++		} else {
++			WARN_ON(parameter_format != 2);
++
++			/*
++			 * Set up 16 macrotiles with a multiple of 2x2 tiles per
++			 * macrotile, which is aligned to a tile group.
++			 */
++			info.mtile_x[0] = DIV_ROUND_UP(info.num_tiles_x, 8) * 2;
++			info.mtile_y[0] = DIV_ROUND_UP(info.num_tiles_y, 8) * 2;
++			info.tile_max_x = round_up(info.num_tiles_x, 2) - 1;
++			info.tile_max_y = round_up(info.num_tiles_y, 2) - 1;
++		}
+ 		info.mtile_x[1] = 0;
+ 		info.mtile_y[1] = 0;
+ 		info.mtile_x[2] = 0;
+ 		info.mtile_y[2] = 0;
+-		info.tile_max_x = round_up(info.num_tiles_x, 2) - 1;
+-		info.tile_max_y = round_up(info.num_tiles_y, 2) - 1;
+ 	} else {
+ 		/* Set up 16 macrotiles with a multiple of 4x4 tiles per macrotile. */
+ 		info.mtile_x[0] = round_up(DIV_ROUND_UP(info.num_tiles_x, 4), 4);
+@@ -306,9 +326,9 @@ hwrt_init_common_fw_structure(struct pvr_file *pvr_file,
+ 		return err;
+ 
+ 	hwrt->common.screen_pixel_max =
+-		(((args->width - 1) << ROGUE_CR_PPP_SCREEN_PIXXMAX_SHIFT) &
++		(((args->width * dbg_ppp_mul - 1) << ROGUE_CR_PPP_SCREEN_PIXXMAX_SHIFT) &
+ 		 ~ROGUE_CR_PPP_SCREEN_PIXXMAX_CLRMSK) |
+-		(((args->height - 1) << ROGUE_CR_PPP_SCREEN_PIXYMAX_SHIFT) &
++		(((args->height * dbg_ppp_mul - 1) << ROGUE_CR_PPP_SCREEN_PIXYMAX_SHIFT) &
+ 		 ~ROGUE_CR_PPP_SCREEN_PIXYMAX_CLRMSK);
+ 
+ 	hwrt->common.te_screen =
+@@ -325,15 +345,25 @@ hwrt_init_common_fw_structure(struct pvr_file *pvr_file,
+ 		((info.mtile_y[1] << ROGUE_CR_TE_MTILE2_Y2_SHIFT) & ~ROGUE_CR_TE_MTILE2_Y2_CLRMSK) |
+ 		((info.mtile_y[2] << ROGUE_CR_TE_MTILE2_Y3_SHIFT) & ~ROGUE_CR_TE_MTILE2_Y3_CLRMSK);
+ 
+-	err = get_cr_isp_mtile_size_val(pvr_dev, args->samples, &info,
+-					&hwrt->common.isp_mtile_size);
+-	if (err)
+-		return err;
++	{
++		struct pvr_rt_mtile_info isp_info = info;
++
++		isp_info.mtile_x[0] = info.num_tiles_x * dbg_isp_mul;
++		isp_info.mtile_y[0] = info.num_tiles_y * dbg_isp_mul;
++		err = get_cr_isp_mtile_size_val(pvr_dev, args->samples, &isp_info,
++						&hwrt->common.isp_mtile_size);
++		if (err)
++			return err;
++	}
++	pr_info("DBGHWRT %ux%u te_screen %08x te_mtile1 %08x te_mtile2 %08x isp_mtile %08x stride %u rgn %u\n",
++		args->width, args->height, hwrt->common.te_screen, hwrt->common.te_mtile1,
++		hwrt->common.te_mtile2, hwrt->common.isp_mtile_size, hwrt->common.mtile_stride,
++		args->region_header_size);
+ 
+ 	hwrt->common.tpc_stride = geom_data_args->tpc_stride;
+ 	hwrt->common.tpc_size = geom_data_args->tpc_size;
+ 
+-	hwrt->common.rgn_header_size = args->region_header_size;
++	hwrt->common.rgn_header_size = args->region_header_size * dbg_rgn_mul;
+ 
+ 	err = pvr_fw_object_create(pvr_dev, sizeof(struct rogue_fwif_hwrtdata_common),
+ 				   PVR_BO_FW_FLAGS_DEVICE_UNCACHED, hwrtdata_common_init, hwrt,
