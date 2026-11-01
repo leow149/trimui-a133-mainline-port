@@ -1,0 +1,82 @@
+From 929100c219abf49bba1c74946c89ba64bf8c3cb9 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 13:46:50 +0100
+Subject: [PATCH 38/39] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on
+ A100
+
+With single-buffered FIFOs the controller waits for the host to take each
+packet before the next one can be loaded. The A100/A133 has 8 KB of FIFO
+RAM, enough to double-buffer endpoints 1 and 2, where bulk gadget functions
+end up. NCM over the OTG port went from 120 to 309 Mbit/s device to host and
+from 75 to 154 Mbit/s host to device (with TX DMA).
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/usb/musb/sunxi.c | 36 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
+index 900e7a2c6..417620e2e 100644
+--- a/drivers/usb/musb/sunxi.c
++++ b/drivers/usb/musb/sunxi.c
+@@ -956,6 +956,34 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_4eps = {
+ 	.ram_bits	= SUNXI_MUSB_RAM_BITS,
+ };
+ 
++/*
++ * A100/A133: 8 KB of FIFO RAM; double buffer endpoints 1 and 2, where bulk
++ * gadget functions end up, so the controller can send or receive one packet
++ * while the next one is being moved (7 KB + 64 bytes in use).
++ */
++static const struct musb_fifo_cfg sunxi_musb_mode_cfg_a100[] = {
++	MUSB_EP_FIFO_DOUBLE(1, FIFO_TX, 512),
++	MUSB_EP_FIFO_DOUBLE(1, FIFO_RX, 512),
++	MUSB_EP_FIFO_DOUBLE(2, FIFO_TX, 512),
++	MUSB_EP_FIFO_DOUBLE(2, FIFO_RX, 512),
++	MUSB_EP_FIFO_SINGLE(3, FIFO_TX, 512),
++	MUSB_EP_FIFO_SINGLE(3, FIFO_RX, 512),
++	MUSB_EP_FIFO_SINGLE(4, FIFO_TX, 512),
++	MUSB_EP_FIFO_SINGLE(4, FIFO_RX, 512),
++	MUSB_EP_FIFO_SINGLE(5, FIFO_TX, 512),
++	MUSB_EP_FIFO_SINGLE(5, FIFO_RX, 512),
++};
++
++static const struct musb_hdrc_config sunxi_musb_hdrc_config_a100 = {
++	.fifo_cfg       = sunxi_musb_mode_cfg_a100,
++	.fifo_cfg_size  = ARRAY_SIZE(sunxi_musb_mode_cfg_a100),
++	.multipoint	= true,
++	.dyn_fifo	= true,
++	/* Two FIFOs per endpoint, plus ep_0. */
++	.num_eps	= (ARRAY_SIZE(sunxi_musb_mode_cfg_a100) / 2) + 1,
++	.ram_bits	= SUNXI_MUSB_RAM_BITS,
++};
++
+ static int sunxi_musb_probe(struct platform_device *pdev)
+ {
+ 	struct musb_hdrc_platform_data	pdata;
+@@ -1115,6 +1143,12 @@ static const struct sunxi_musb_cfg sun8i_h3_musb_cfg = {
+ 	.no_configdata = true,
+ };
+ 
++static const struct sunxi_musb_cfg sun50i_a100_musb_cfg = {
++	.hdrc_config = &sunxi_musb_hdrc_config_a100,
++	.has_reset = true,
++	.no_configdata = true,
++};
++
+ static const struct sunxi_musb_cfg suniv_f1c100s_musb_cfg = {
+ 	.hdrc_config = &sunxi_musb_hdrc_config_5eps,
+ 	.has_sram = true,
+@@ -1131,6 +1165,8 @@ static const struct of_device_id sunxi_musb_match[] = {
+ 	  .data = &sun8i_a33_musb_cfg, },
+ 	{ .compatible = "allwinner,sun8i-h3-musb",
+ 	  .data = &sun8i_h3_musb_cfg, },
++	{ .compatible = "allwinner,sun50i-a100-musb",
++	  .data = &sun50i_a100_musb_cfg, },
+ 	{ .compatible = "allwinner,suniv-f1c100s-musb",
+ 	  .data = &suniv_f1c100s_musb_cfg, },
+ 	{}
+-- 
+2.56.0
+
