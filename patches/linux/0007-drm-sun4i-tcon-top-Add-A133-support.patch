@@ -1,7 +1,7 @@
 From a1f9a48734202e7d3935eabb2a53aab1a99200ac Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
-Subject: [PATCH 07/29] drm/sun4i: tcon-top: Add A133 support
+Subject: [PATCH 07/30] drm/sun4i: tcon-top: Add A133 support
 
 The A133 TCON TOP has no TV path and exposes the MIPI DSI clock gate.
 

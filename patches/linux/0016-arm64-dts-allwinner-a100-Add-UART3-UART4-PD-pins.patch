@@ -1,7 +1,7 @@
 From e2156840f3ab5f08bf43b692dbae84788cb98078 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:31 +0100
-Subject: [PATCH 16/29] arm64: dts: allwinner: a100: Add UART3/UART4 PD pins
+Subject: [PATCH 16/30] arm64: dts: allwinner: a100: Add UART3/UART4 PD pins
 
 Pin groups for UART3 on PD14/PD15 and UART4 on PD18/PD19.
 
