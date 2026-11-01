@@ -1,0 +1,29 @@
+From ea980f9e8114e5667869da791a78b2b9efcd0887 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 19:17:49 +0100
+Subject: [PATCH 48/48] arm64: dts: allwinner: trimui-smart-pro: Enable the GPU
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 1f76c1bb4..de812388b 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -365,6 +365,10 @@ button-879 {
+ 	};
+ };
+ 
++&gpu {
++	status = "okay";
++};
++
+ &mmc0 {
+ 	bus-width = <4>;
+ 	vmmc-supply = <&reg_cldo3>;
+-- 
+2.56.0
+

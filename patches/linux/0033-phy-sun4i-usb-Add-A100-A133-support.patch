@@ -1,7 +1,7 @@
 From 956365418fb7324d347e581807cdd067a2d6fd37 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:08 +0100
-Subject: [PATCH 33/45] phy: sun4i-usb: Add A100/A133 support
+Subject: [PATCH 33/48] phy: sun4i-usb: Add A100/A133 support
 
 The A100/A133 OTG PHY needs PHY1 as SIDDQ helper, the usual analog tuning
 (45 ohm calibration, TX amplitude, disconnect threshold) although its SIDDQ is

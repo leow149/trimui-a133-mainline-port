@@ -1,7 +1,7 @@
 From 68fe3d1c95bace061f34a0ed222ebd49b46d232c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
-Subject: [PATCH 42/45] net: wireless: Import the xradio XR819 driver
+Subject: [PATCH 42/48] net: wireless: Import the xradio XR819 driver
 
 Out-of-tree driver from https://github.com/fifteenhex/xradio (commit
 3ce657a, GPL-2.0), the XRadio/Allwinner XR819 vendor driver ported to
