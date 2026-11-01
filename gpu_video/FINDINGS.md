@@ -1,0 +1,101 @@
+# GPU + video engine: research (2026-11-01)
+
+## Hardware (stock DT, stock rootfs from backups/emmc_chunks, extracted to gpu_video/stock/)
+- GPU: PowerVR GE8300 (Series 8XE), BVNC 22.102.54.38, 0x01800000, SPI 97, clocks pll_gpu + gpu,
+  power domain = PPU block at 0x07001000 (SPI 119, "allwinner,gpu-pd"; same address/shape as D1's
+  sun20i-ppu), OPPs 228/400 MHz @0.95 V, 700 MHz @1.1 V.
+- Cedar VE (H.264/H.265/MPEG decode, H.264/H.265/JPEG encode): 0x01c0e000, SPI 94, pll_ve + ve,
+  behind the Allwinner IOMMU 0x030f0000 (master 2).
+- Separate "google-vp9" decoder (Hantro G2) at 0x01c00000, SPI 90.
+- Mainline has drivers for the H6/H616 versions of all of these: cedrus (sun50i-h6-video-engine),
+  hantro (sun50i-h6-vpu-g2), sun50i-iommu (h6/h616), PPU (sun20i-ppu / h6-prcm-ppu). The A100 dtsi has
+  none of the nodes yet.
+- Reading VE_VERSION (0x01c0e0f0) with only VE_BGR gate+reset enabled HUNG THE BUS (device needed a
+  power cycle). Don't poke VE registers by hand; let a driver bring up clocks incl. MBUS gating.
+
+## Stock software
+- GPU: Imagination Rogue DDK 1.19@6345021 (non-WS build): pvrsrvkm.ko (Dual MIT/GPL, 4.9.191),
+  dc_sunxi.ko (display class on Allwinner disp2), libGLESv2/EGL/GLES_CM, libVK_IMG (Vulkan),
+  libPVROCL (OpenCL), libpvrNULL_WSEGL (presents via the DDK display-class API). glibc 2.33.
+- VE: CedarX (libvdecoder, libvencoder + h264/h265/jpeg, libVE, libMemAdapter), kernel cedar_ve built
+  into the stock kernel.
+
+## Route A: open stack (mainline powervr + Mesa Vulkan)
+- Kernel: in-tree drivers/gpu/drm/imagination, firmware rogue_22.102.54.38_v1.fw published by
+  Imagination (unofficial support, Mesa 25.3 timeframe). GE8300 is not in pvr_gpu_support_level ->
+  needs powervr.exp_hw_support=1 (or adding the BVNC). MIPS firmware processor path exists.
+  Needs: A100 dtsi gpu node + PPU power domain + clocks; binding compatible.
+- Mesa (main, 2026-10-29): device_info/ge8300.h present with simple_internal_parameter_format_v1,
+  but the driver only implements v2 (assert in rogue_hw_utils.h rogue_get_isp_samples..., plus
+  pvr_arch_job_transfer.c / pvr_arch_cmd_buffer.c, ~8 sites). Vulkan only; GL would be Zink.
+- pocketforge-os renders on the GE8300 on TSP with Linux 7.2 + powervr + that firmware using a private
+  Mesa ("gpu-um-tsp": v1 parameter format + "2x backing mitigation"), not public
+  (github.com/pocketforge-os/image issue 275, docs/A133-OPEN-GPU-SHIPPING-PLAN.md).
+
+## Route B: vendor DDK on 7.2
+- StarFive published the DDK 1.19@6345021 kernel source (exact same build as our blobs), GPL/MIT,
+  with a 6.6 port: starfive-tech/linux JH7110_VisionFive2_6.6.y_devel, drivers/gpu/drm/img/img-rogue.
+  It contains hwdefs for 22.102.54.38 (rgxcore_km_22.102.54.38.h, rgxconfig_km_22.V.54.38.h).
+- Needed: port 6.6 -> 7.2, write services/system/rogue/sunxi_a133 platform layer (clocks, PPU,
+  reset, OPP; RE from stock pvrsrvkm.ko), firmware rgx.fw/rgx.sh.22.102.54.38 from stock.
+- Catch: StarFive builds are the WS variant (DRM/GBM/Wayland, no display class); our stock blobs are
+  non-WS and present through the display-class bridge (dc_server + DC bridge + a dc_* driver), which is
+  NOT in StarFive's tree. Options: reconstruct DC server/bridge from the stock module (symbols present)
+  + a small dc driver on top of our DRM/fbdev; or render offscreen with the blobs and copy (slow);
+  bridge-table compatibility of libsrv_um vs a differently configured KM must be checked.
+- Gives GLES 1/2/3, Vulkan, OpenCL on day one if it works; needs a glibc userland (Alpine is musl:
+  glibc chroot/container or switch distro), and stays a closed blob stack.
+
+## Video decode
+- Cedrus + Hantro G2 on mainline via H6 compatibles, after adding A100 dtsi nodes (VE, G2, IOMMU),
+  checking the VE version/quirks and the A100 CCU VE/IOMMU clocks. Userspace: V4L2 stateless
+  (GStreamer v4l2codecs / FFmpeg v4l2-request). Moderate effort, mostly DT + quirks.
+
+## 2026-11-01: open route, kernel side DONE (series 0046-0048)
+- New driver drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c: vendor PPU sequence (RE'd from stock
+  gpu_pd_power_on/off: PSW_ON bits 0-7 1us apart, CLK_GATE, ISO0, switch groups 23,18,16,19..22,17,
+  ISO1, RSTN, STATE=0, UPDATE, ACTIVE; off = reverse + PSW_OFF 0xff0000/0xff, STATE=2). The stock
+  ppu_irq_handler (hardware-requested transitions via reg 0x28) is not implemented.
+- a100 dtsi: gpu_ppu @0x07001000 (R_APB1_PPU clock+reset), gpu @0x01800000 SPI 97, clocks core=CLK_GPU
+  sys=CLK_BUS_GPU, RST_BUS_GPU. compatible "allwinner,sun50i-a100-gpu","img,img-ge8300","img,img-rogue"
+  (binding not written yet). GPU clock runs at pll-gpu default 432 MHz, no OPPs yet.
+- Firmware embedded: CONFIG_EXTRA_FIRMWARE (powervr/rogue_22.102.54.38_v1.fw from
+  gitlab.freedesktop.org/imagination/linux-firmware branch powervr, + xr829 files -> WiFi up at boot).
+- cmdline powervr.exp_hw_support=1. FW v1.1 build 6976702 boots; FW trace (debugfs pvr_fw/trace_mask
+  0x80007ffe) shows KCCB commands processed, idle handling.
+- Mesa 26.2.6 (Alpine edge mesa-vulkan-imagination, in a tmpfs chroot /tmp/edge on the device):
+  vulkaninfo: "PowerVR Rogue GE8300", Vulkan 1.2 (needs PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1).
+  vkcube --wsi display: first geometry job -> GPU page fault, "Innocent lockup", context reset.
+  Kernel WARN pvr_hwrt.c:257: hwrt_init_common_fw_structure only knows simple_parameter_format v2
+  (2x2 tile-group aligned macrotiles). GE8300 = v1 (rgxconfig_km_22.V.54.38.h:
+  SIMPLE_PARAMETER_FORMAT_VERSION 1, tile 16x16, 1 cluster, MIPS FW, SLC 64K).
+- DDK 1.19 km takes TEMTILE1/2, MTileStride, ISPMerge*, ISPMtileSize from USERSPACE (rgxta3d.c
+  RGXCreateHWRTData), so the v1 rule is in the closed stock UM blobs (libsrv_um / libGLESv2 /
+  libVK_IMG) -> next: RE that from gpu_video/stock/rootfs, fix kernel pvr_hwrt.c + Mesa (v1 paths in
+  rogue_hw_utils.h, pvr_arch_job_transfer.c, pvr_arch_cmd_buffer.c).
+
+## 2026-11-01 evening: rendering works, but only the top-left quarter
+- Mesa main (01bab93) cross-built for Alpine edge aarch64 (gpu_video/mesa-patches/build_mesa.sh: native
+  stage for mesa_clc/vtn_bindgen2/pco_clc/pdsc_precomp with LLVM, cross stage with clang+lld+apk sysroot).
+  Patch: v1 branch in pvr_arch_rt_mtile_info_init (one macrotile = all tiles), no 2x2 alignment in
+  rogue_hw_utils.h for v1 (+ experiment hooks PVR_V1_RT_DOUBLE, PVR_PBE_CLIP_*, PVR_PBE_SIZE_INC).
+- Kernel pvr_hwrt.c: v1 branch (one macrotile, tile_max = n-1) + DEBUG module params dbg_*_mul + DBGHWRT
+  printk (remove before commit).
+- vendor UM decoded (libsrv_um RGXAddRenderTarget -> bridge RGXCreateHWRTDataSet): for 1x:
+  TEMTILE1/2 = tx<<18 / ty<<18, TEScreen=(tx-1)|(ty-1)<<12, ISPMtileSize=tx<<16|ty, ISPMerge*=0,
+  MTileStride=tx*ty, PPPScreen=(w-1)|(h-1)<<16, RgnHeaderSize=tx*ty (5 B each), TPC n^2*8 (n=pow2 max).
+  Ours now identical; registers sampled on GPU match (0xC08/C10/C18/F18, 0xC20/0xF28 = tile count).
+- gpu_video/vktest: offscreen test (clear red + green triangle, linear or optimal, readback map).
+  Triangle + clear are pixel-exact, NO faults, but only tiles x < ceil(tx/2), y < ceil(ty/2) are rendered
+  (64->2, 256->8, 720->23, 1280->40 tiles). Linear image proves it is not the readback.
+  vkCmdClearColorImage (transfer job, Mesa-built region headers) covers the FULL image.
+- Ruled out (each changes nothing): HWRT te_screen/te_mtile/isp_mtile x2 (verified in registers),
+  ppp_screen x2, rgn_header_size x4, whole RT dataset 2x (Mesa), PBE maxclip x2 (clip itself works, pixel
+  units), PBE size_x/y +1, render area (coverage = min(render area, image/2)).
+- regdump/ (static /dev/mem readers): full register dumps + 0xC00-0xFFF sampling on mainline (vkcube
+  720x1280 1x) and stock (opengles_demo 1280x720 4xMSAA, ran over adb with SD removed). Differences in
+  ISP_CTL upass_start (stock 0xf, ours 0), unnamed 0xF48 (stock f80007f8, ours fd0221f8), 0xC88
+  (0x303 vs 0x202), 0xC28, 0xF30. Not yet compared at equal MSAA. pocketforge's "2x backing" workaround
+  likely targets this same symptom.
+- Next ideas: stock capture at 1x (MainUI renders 1x?) for a like-for-like register diff; RE the stock
+  libGLESv2/libsrv_um 3D kick (frag regs: PBE words, ISP_CTL, bgobj) and compare field by field with Mesa.
