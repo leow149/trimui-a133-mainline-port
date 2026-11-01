@@ -1,7 +1,7 @@
 From 3388170fb1af59bd97d2339f9ad097d7ef042161 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:06:24 +0100
-Subject: [PATCH 30/30] drm/panel: otm1289a: Only reset the panel on its first
+Subject: [PATCH 30/34] drm/panel: otm1289a: Only reset the panel on its first
  power-up
 
 On the ER68576 a second reset breaks the panel: it still answers DCS
