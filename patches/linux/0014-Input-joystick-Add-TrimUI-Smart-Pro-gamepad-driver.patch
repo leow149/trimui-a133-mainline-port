@@ -1,7 +1,7 @@
 From 74ae2c0899f89694b52f4d78f7d19f32126f71d4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:30 +0100
-Subject: [PATCH 14/44] Input: joystick: Add TrimUI Smart Pro gamepad driver
+Subject: [PATCH 14/45] Input: joystick: Add TrimUI Smart Pro gamepad driver
 
 The buttons and analog sticks of the TrimUI Smart Pro are scanned by two
 microcontrollers, one per side, each streaming 8-byte frames over its own UART

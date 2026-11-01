@@ -1,0 +1,472 @@
+From 199f43aa46b580f6d340016d9da8fc4e3d64b306 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 15:26:41 +0100
+Subject: [PATCH 45/45] wifi: xradio: XR829: connect and pass traffic
+
+Port the remaining HT40 API (XR829 firmware) differences needed for
+station mode, converting from the XR819 structures at the firmware
+boundary so both chips keep sharing the driver:
+- join/start: 16-bit PHY mode word (modem, width, band, preamble) at 20 MHz
+- TX: rate retry policies as up to 6 rate entries (same 12 bytes), TX
+  request header in the new layout (policy index, first rate entry,
+  data offset, PTA priority), built from the XR819 one
+- TX confirm: rate entry and per-rate tries translated back to rate indices
+- association mode MIB: 12-byte layout with PHY mode word, renumbered flags
+- ARP reply template: 8-byte header
+- override internal TX rate MIB: two rate entries
+
+WPA2 (CCMP) station mode works: 29 Mbit/s RX and 12 Mbit/s TX in iperf3
+at MCS 7, stable over 2 minutes.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/net/wireless/xradio/ap.c   |   9 ++
+ drivers/net/wireless/xradio/scan.c |   9 +-
+ drivers/net/wireless/xradio/sta.c  |  21 +++--
+ drivers/net/wireless/xradio/tx.c   |  66 +++++++++++++++
+ drivers/net/wireless/xradio/wsm.c  | 129 ++++++++++++++++++++++++-----
+ drivers/net/wireless/xradio/wsm.h  |  64 ++++++++++++--
+ 6 files changed, 261 insertions(+), 37 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/ap.c b/drivers/net/wireless/xradio/ap.c
+index 30784e9af..d6355c4d5 100644
+--- a/drivers/net/wireless/xradio/ap.c
++++ b/drivers/net/wireless/xradio/ap.c
+@@ -346,6 +346,15 @@ static int xradio_set_btcoexinfo(struct xradio_vif *priv)
+ 	          "nonErpInternalTxRate: %x\n", priv->mode, arg.internalTxRate,
+ 	          arg.nonErpInternalTxRate);
+ 
++	if (xradio_ht40_api(xrwl_vifpriv_to_hwpriv(priv))) {
++		/* two rate entries instead of two rate indices */
++		__le16 *entry = (__le16 *)&arg;
++		u8 rate = arg.internalTxRate, non_erp = arg.nonErpInternalTxRate;
++
++		entry[0] = __cpu_to_le16(wsm_legacy_rate_entry(rate));
++		entry[1] = __cpu_to_le16(wsm_legacy_rate_entry(non_erp));
++	}
++
+ 	ret = WARN_ON(wsm_write_mib(xrwl_vifpriv_to_hwpriv(priv),
+ 	               WSM_MIB_ID_OVERRIDE_INTERNAL_TX_RATE, 
+ 	               &arg, sizeof(arg), priv->if_id));
+diff --git a/drivers/net/wireless/xradio/scan.c b/drivers/net/wireless/xradio/scan.c
+index e9e22eaae..1ee200f6f 100644
+--- a/drivers/net/wireless/xradio/scan.c
++++ b/drivers/net/wireless/xradio/scan.c
+@@ -819,7 +819,14 @@ void xradio_probe_work(struct work_struct *work)
+ 		return;
+ 	}
+ 	wsm = (struct wsm_tx *)frame.skb->data;
+-	scan.maxTransmitRate = wsm->maxTxRate;
++	if (xradio_ht40_api(hw_priv)) {
++		u8 rate = wsm_rate_entry_to_index(
++			__le16_to_cpu(((struct wsm_tx_ht40 *)wsm)->TxRateEntry));
++
++		scan.maxTransmitRate = rate < WSM_TRANSMIT_RATE_HT_6 ? rate : 0;
++	} else {
++		scan.maxTransmitRate = wsm->maxTxRate;
++	}
+ 	scan.band = (hw_priv->channel->band == NL80211_BAND_5GHZ) ?
+ 	             WSM_PHY_BAND_5G : WSM_PHY_BAND_2_4G;
+ 	if (priv->join_status == XRADIO_JOIN_STATUS_STA) {
+diff --git a/drivers/net/wireless/xradio/sta.c b/drivers/net/wireless/xradio/sta.c
+index d769b8115..eee3e6539 100644
+--- a/drivers/net/wireless/xradio/sta.c
++++ b/drivers/net/wireless/xradio/sta.c
+@@ -2094,6 +2094,7 @@ int xradio_set_arpreply(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
+ 	bool encrypt = false;
+ 	int ret = 0;
+ 	u8 *template_frame = NULL;
++	u32 tmpl_hdr_len;
+ 	struct ieee80211_hdr_3addr *dot11hdr = NULL;
+ 	struct ieee80211_snap_hdr *snaphdr = NULL;
+ 	struct arphdr *arp_hdr = NULL;
+@@ -2105,7 +2106,8 @@ int xradio_set_arpreply(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
+ 		ret = -ENOMEM;
+ 		goto exit_p;
+ 	}
+-	dot11hdr = (struct ieee80211_hdr_3addr *)&template_frame[4];
++	tmpl_hdr_len = xradio_ht40_api(hw_priv) ? 8 : 4;
++	dot11hdr = (struct ieee80211_hdr_3addr *)&template_frame[tmpl_hdr_len];
+ 	
+ 	framehdrlen = sizeof(*dot11hdr);
+ 	if ((priv->vif->type == NL80211_IFTYPE_AP) && priv->vif->p2p)
+@@ -2196,12 +2198,19 @@ int xradio_set_arpreply(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
+ 	framebdylen += encrypttailsize;
+ 	
+ 	/* Filling the Template Frame Hdr */
+-	template_frame[0] = WSM_FRAME_TYPE_ARP_REPLY; /* Template frame type */
+-	template_frame[1] = 0xFF; /* Rate to be fixed */
+-	((u16 *)&template_frame[2])[0] = framehdrlen + framebdylen;
+-	
++	if (xradio_ht40_api(hw_priv)) {
++		/* u16 type, u16 rate entry (firmware default), u32 length */
++		put_unaligned_le16(WSM_FRAME_TYPE_ARP_REPLY, &template_frame[0]);
++		put_unaligned_le16(0x00F0, &template_frame[2]);
++		put_unaligned_le32(framehdrlen + framebdylen, &template_frame[4]);
++	} else {
++		template_frame[0] = WSM_FRAME_TYPE_ARP_REPLY; /* Template frame type */
++		template_frame[1] = 0xFF; /* Rate to be fixed */
++		((u16 *)&template_frame[2])[0] = framehdrlen + framebdylen;
++	}
++
+ 	ret = WARN_ON(wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, \
+-	                              template_frame, (framehdrlen+framebdylen+4), 
++	                              template_frame, (framehdrlen+framebdylen+tmpl_hdr_len), 
+ 	                              priv->if_id));
+ 	kfree(template_frame);
+ exit_p:
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index fd31541ee..a070b6aa9 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -133,6 +133,40 @@ static void tx_policy_build(const struct xradio_common *hw_priv,
+ 		rates[j] = tmp_tx_rate;
+ 	}
+ 
++	if (xradio_ht40_api(hw_priv)) {
++		/* up to 6 rate entries, each with its own retry count */
++		__le16 *entry = (__le16 *)policy->raw;
++
++		for (i = 0; i < count && i < 6; ++i) {
++			u16 e;
++
++			if (rates[i].idx < 0)
++				break;
++			tmp_rate = (struct ieee80211_rate *)
++				   xradio_get_tx_rate(hw_priv, &rates[i]);
++			if (!tmp_rate)
++				break;
++			if (rates[i].flags & IEEE80211_TX_RC_MCS)
++				e = (WSM_RATE_ENTRY_MODEM_HT << WSM_RATE_ENTRY_MODEM_SHIFT) |
++				    ((tmp_rate->hw_value - WSM_TRANSMIT_RATE_HT_6)
++				     << WSM_RATE_ENTRY_INDEX_SHIFT);
++			else
++				e = tmp_rate->hw_value << WSM_RATE_ENTRY_INDEX_SHIFT;
++			if (rates[i].flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
++				e |= WSM_RATE_ENTRY_BW_40M << WSM_RATE_ENTRY_BW_SHIFT;
++			if (rates[i].flags & IEEE80211_TX_RC_USE_SHORT_PREAMBLE)
++				e |= WSM_RATE_ENTRY_F_SHORT_PRE;
++			if (rates[i].flags & IEEE80211_TX_RC_SHORT_GI)
++				e |= WSM_RATE_ENTRY_F_SGI;
++			if (rates[i].count > 0x0F)
++				rates[i].count = 0x0F;
++			e |= rates[i].count;
++			entry[i] = __cpu_to_le16(e);
++			policy->retry_count += rates[i].count;
++		}
++		return;
++	}
++
+ 	/* TODO: minstrel/mac80211 can set IEEE80211_TX_RC_USE_RTS_CTS for individual frames
+ 	 * this is not possible with the current firmware API, because it takes the retry counts
+ 	 * as 4 bit uints with the rate implicit through the position in the bitfield.
+@@ -819,6 +853,35 @@ xradio_tx_h_ba_stat(struct xradio_vif *priv,
+ 	spin_unlock_bh(&hw_priv->ba_lock);
+ }
+ 
++/* Rewrite the TX request in the XR829 (HT40 API) layout. */
++static void
++xradio_tx_h_ht40(struct xradio_common *hw_priv, struct xradio_txinfo *t,
++		 struct wsm_tx *wsm)
++{
++	struct wsm_tx old = *wsm;
++	struct wsm_tx_ht40 *ht = (struct wsm_tx_ht40 *)wsm;
++	u8 policy = (old.flags >> 4) & 0x7;
++	const __le16 *entries =
++		(const __le16 *)hw_priv->tx_policy_cache.cache[policy].policy.raw;
++
++	BUILD_BUG_ON(sizeof(struct wsm_tx_ht40) != sizeof(struct wsm_tx));
++
++	memset(ht, 0, sizeof(*ht));
++	ht->hdr = old.hdr;
++	ht->packetID = old.packetID;
++	ht->queueId = old.queueId;
++	ht->DataOffset = t->txpriv.offset;
++	ht->EptaPriority = (old.flags >> 1) & 0x7;
++	ht->TxPolicyIndex = policy;
++	ht->ExpireTimeSetting = old.flags & 0x1;
++	ht->expireTime = old.expireTime;
++	if (t->txpriv.use_bg_rate)
++		ht->TxRateEntry = __cpu_to_le16(
++			wsm_legacy_rate_entry(t->txpriv.use_bg_rate & 0x3f));
++	else
++		ht->TxRateEntry = entries[0];
++}
++
+ static int
+ xradio_tx_h_skb_pad(struct xradio_common *priv,
+ 		    struct wsm_tx *wsm,
+@@ -997,6 +1060,9 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
+ 		goto drop;
+ 	}
+ 
++	if (xradio_ht40_api(hw_priv))
++		xradio_tx_h_ht40(hw_priv, &t, wsm);
++
+ 	rcu_read_lock();
+ 	sta = rcu_dereference(control->sta);
+ 
+diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
+index 66ab0ad66..7b867f74b 100644
+--- a/drivers/net/wireless/xradio/wsm.c
++++ b/drivers/net/wireless/xradio/wsm.c
+@@ -433,6 +433,48 @@ static int wsm_write_mib_confirm(struct xradio_common *hw_priv,
+ 
+ /* ******************************************************************** */
+ 
++/* HT40 API (XR829) association mode: a PHY mode word instead of preamble/GF */
++struct wsm_association_mode_ht40 {
++	u8 flags;
++	u8 reserved0;
++	__le16 phy_mode;
++	u8 mpduStartSpacing;
++	u8 reserved1[3];
++	__le32 basicRateSet;
++} __packed;
++
++#define WSM_ASSOC_HT40_USE_PHY_MODE_CFG		BIT(0)
++#define WSM_ASSOC_HT40_USE_BASIC_RATE_SET	BIT(1)
++#define WSM_ASSOC_HT40_USE_MPDU_START_SPACING	BIT(2)
++
++int wsm_set_association_mode(struct xradio_common *hw_priv,
++			     struct wsm_association_mode *arg, int if_id)
++{
++	struct wsm_association_mode_ht40 ht = { };
++	u8 band;
++
++	if (!xradio_ht40_api(hw_priv))
++		return wsm_write_mib(hw_priv, WSM_MIB_ID_SET_ASSOCIATION_MODE,
++				     arg, sizeof(*arg), if_id);
++
++	band = hw_priv->channel && hw_priv->channel->band == NL80211_BAND_5GHZ ?
++	       WSM_PHY_BAND_5G : WSM_PHY_BAND_2_4G;
++	if (arg->flags & (WSM_ASSOCIATION_MODE_USE_PREAMBLE_TYPE |
++			  WSM_ASSOCIATION_MODE_USE_HT_MODE))
++		ht.flags |= WSM_ASSOC_HT40_USE_PHY_MODE_CFG;
++	if (arg->flags & WSM_ASSOCIATION_MODE_USE_BASIC_RATE_SET)
++		ht.flags |= WSM_ASSOC_HT40_USE_BASIC_RATE_SET;
++	if (arg->flags & WSM_ASSOCIATION_MODE_USE_MPDU_START_SPACING)
++		ht.flags |= WSM_ASSOC_HT40_USE_MPDU_START_SPACING;
++	ht.phy_mode = __cpu_to_le16(wsm_phy_mode_20mhz(band) |
++		(arg->preambleType << WSM_PHY_MODE_PREAMBLE_SHIFT) |
++		(arg->greenfieldMode ? WSM_PHY_MODE_GF : 0));
++	ht.mpduStartSpacing = arg->mpduStartSpacing;
++	ht.basicRateSet = arg->basicRateSet;
++	return wsm_write_mib(hw_priv, WSM_MIB_ID_SET_ASSOCIATION_MODE, &ht,
++			     sizeof(ht), if_id);
++}
++
+ int wsm_set_template_frame(struct xradio_common *hw_priv,
+ 			   struct wsm_template_frame *arg, int if_id)
+ {
+@@ -552,12 +594,39 @@ static int wsm_tx_confirm(struct xradio_common *hw_priv,
+ 
+ 	tx_confirm.packetID = WSM_GET32(buf);
+ 	tx_confirm.status = WSM_GET32(buf);
+-	tx_confirm.txedRate = WSM_GET8(buf);
+-	tx_confirm.ackFailures = WSM_GET8(buf);
+-	tx_confirm.flags = WSM_GET16(buf);
+-	tx_confirm.rate_try[0] = WSM_GET32(buf);
+-	tx_confirm.rate_try[1] = WSM_GET32(buf);
+-	tx_confirm.rate_try[2] = WSM_GET32(buf);
++	if (xradio_ht40_api(hw_priv)) {
++		int i;
++
++		/*
++		 * Rate entries instead of rate indices; translate them into
++		 * the old form (retries per rate index, 4 bits each).
++		 */
++		tx_confirm.txedRate = wsm_rate_entry_to_index(WSM_GET16(buf));
++		tx_confirm.ackFailures = WSM_GET8(buf);
++		tx_confirm.flags = WSM_GET8(buf);
++		memset(tx_confirm.rate_try, 0, sizeof(tx_confirm.rate_try));
++		for (i = 0; i < 6; i++) {
++			u16 entry = WSM_GET16(buf);
++			u8 idx = wsm_rate_entry_to_index(entry);
++			u32 tries, shift;
++
++			if (idx >= 24)		/* end of list / unused */
++				continue;
++			shift = (idx & 7) * 4;
++			tries = ((tx_confirm.rate_try[idx >> 3] >> shift) & 0xf) +
++				(entry & 0xf);
++			tries = min_t(u32, tries, 0xf);
++			tx_confirm.rate_try[idx >> 3] &= ~(0xf << shift);
++			tx_confirm.rate_try[idx >> 3] |= tries << shift;
++		}
++	} else {
++		tx_confirm.txedRate = WSM_GET8(buf);
++		tx_confirm.ackFailures = WSM_GET8(buf);
++		tx_confirm.flags = WSM_GET16(buf);
++		tx_confirm.rate_try[0] = WSM_GET32(buf);
++		tx_confirm.rate_try[1] = WSM_GET32(buf);
++		tx_confirm.rate_try[2] = WSM_GET32(buf);
++	}
+ 	tx_confirm.mediaDelay = WSM_GET32(buf);
+ 	tx_confirm.txQueueDelay = WSM_GET32(buf);
+ 
+@@ -644,12 +713,20 @@ int wsm_join(struct xradio_common *hw_priv, struct wsm_join *arg,
+ 	wsm_oper_lock(hw_priv);
+ 	wsm_cmd_lock(hw_priv);
+ 
+-	WSM_PUT8(buf, arg->mode);
+-	WSM_PUT8(buf, arg->band);
+-	WSM_PUT16(buf, arg->channelNumber);
+-	WSM_PUT(buf, &arg->bssid[0], sizeof(arg->bssid));
+-	WSM_PUT16(buf, arg->atimWindow);
+-	WSM_PUT8(buf, arg->preambleType);
++	if (xradio_ht40_api(hw_priv)) {
++		WSM_PUT16(buf, wsm_phy_mode_20mhz(arg->band));
++		WSM_PUT16(buf, arg->channelNumber);
++		WSM_PUT(buf, &arg->bssid[0], sizeof(arg->bssid));
++		WSM_PUT16(buf, arg->atimWindow);
++		WSM_PUT8(buf, arg->mode);
++	} else {
++		WSM_PUT8(buf, arg->mode);
++		WSM_PUT8(buf, arg->band);
++		WSM_PUT16(buf, arg->channelNumber);
++		WSM_PUT(buf, &arg->bssid[0], sizeof(arg->bssid));
++		WSM_PUT16(buf, arg->atimWindow);
++		WSM_PUT8(buf, arg->preambleType);
++	}
+ 	WSM_PUT8(buf, arg->probeForJoin);
+ 	WSM_PUT8(buf, arg->dtimPeriod);
+ 	WSM_PUT8(buf, arg->flags);
+@@ -896,13 +973,22 @@ int wsm_start(struct xradio_common *hw_priv, const struct wsm_start *arg,
+ 
+ 	wsm_cmd_lock(hw_priv);
+ 
+-	WSM_PUT8(buf, arg->mode);
+-	WSM_PUT8(buf, arg->band);
+-	WSM_PUT16(buf, arg->channelNumber);
+-	WSM_PUT32(buf, arg->CTWindow);
+-	WSM_PUT32(buf, arg->beaconInterval);
+-	WSM_PUT8(buf, arg->DTIMPeriod);
+-	WSM_PUT8(buf, arg->preambleType);
++	if (xradio_ht40_api(hw_priv)) {
++		WSM_PUT16(buf, wsm_phy_mode_20mhz(arg->band));
++		WSM_PUT16(buf, arg->channelNumber);
++		WSM_PUT32(buf, arg->CTWindow);
++		WSM_PUT32(buf, arg->beaconInterval);
++		WSM_PUT8(buf, arg->mode);
++		WSM_PUT8(buf, arg->DTIMPeriod);
++	} else {
++		WSM_PUT8(buf, arg->mode);
++		WSM_PUT8(buf, arg->band);
++		WSM_PUT16(buf, arg->channelNumber);
++		WSM_PUT32(buf, arg->CTWindow);
++		WSM_PUT32(buf, arg->beaconInterval);
++		WSM_PUT8(buf, arg->DTIMPeriod);
++		WSM_PUT8(buf, arg->preambleType);
++	}
+ 	WSM_PUT8(buf, arg->probeDelay);
+ 	WSM_PUT8(buf, arg->ssidLength);
+ 	WSM_PUT(buf, arg->ssid, sizeof(arg->ssid));
+@@ -1378,13 +1464,10 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
+ 		rx.channelNumber = WSM_GET16(buf);
+ 		if (xradio_ht40_api(hw_priv)) {
+ 			u16 entry = WSM_GET16(buf);
+-			u8 index = (entry >> WSM_RATE_ENTRY_INDEX_SHIFT) & 0xf;
+ 
+ 			buf->data += 3;		/* reserved */
+ 			rx.rxedRateEntry = entry;
+-			/* old rate index: legacy 0-13, HT MCS from 14 */
+-			rx.rxedRate = (entry >> WSM_RATE_ENTRY_MODEM_SHIFT) ==
+-				      WSM_RATE_ENTRY_MODEM_HT ? 14 + index : index;
++			rx.rxedRate = wsm_rate_entry_to_index(entry);
+ 		} else {
+ 			rx.rxedRateEntry = 0;
+ 			rx.rxedRate = WSM_GET8(buf);
+diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
+index 42b57b750..0d3abc5f1 100644
+--- a/drivers/net/wireless/xradio/wsm.h
++++ b/drivers/net/wireless/xradio/wsm.h
+@@ -891,6 +891,47 @@ struct wsm_tx {
+ 	/* [in] */ __le32 htTxParameters;
+ };
+ 
++/*
++ * HT40 API (XR829) layout of the TX request, same size as struct wsm_tx.
++ * The driver builds a struct wsm_tx and converts it right before queueing
++ * (xradio_tx_h_ht40); only packetID is read back afterwards, at the same
++ * offset in both layouts.
++ */
++struct wsm_tx_ht40 {
++	struct wsm_hdr hdr;
++	__le32 packetID;
++	u8 queueId;
++	u8 more;
++	u8 DataOffset;
++	u8 EptaPriority;
++	__le16 TxRateEntry;
++	u8 TxPolicyIndex;
++	u8 ExpireTimeSetting;
++	__le32 expireTime;
++	__le32 reserved;
++} __packed;
++
++/* HT40 API PHY mode word (join/start) */
++#define WSM_PHY_MODE_MODEM_B		BIT(0)	/* DSSS/CCK */
++#define WSM_PHY_MODE_MODEM_A		BIT(1)	/* OFDM */
++#define WSM_PHY_MODE_MODEM_N		BIT(2)	/* HT */
++#define WSM_PHY_MODE_WIDTH_SHIFT	4	/* 0: 20 MHz, 2: 40 MHz */
++#define WSM_PHY_MODE_PRI_CH_SHIFT	6
++#define WSM_PHY_MODE_BAND_SHIFT		8
++#define WSM_PHY_MODE_PREAMBLE_SHIFT	12
++#define WSM_PHY_MODE_SGI		BIT(14)
++#define WSM_PHY_MODE_GF			BIT(15)
++
++static inline u16 wsm_phy_mode_20mhz(u8 band)
++{
++	u16 modem = WSM_PHY_MODE_MODEM_A | WSM_PHY_MODE_MODEM_N;
++
++	if (band != WSM_PHY_BAND_5G)
++		modem |= WSM_PHY_MODE_MODEM_B;
++	/* long preamble; the association mode updates it later */
++	return modem | (band << WSM_PHY_MODE_BAND_SHIFT);
++}
++
+ /* = sizeof(generic hi hdr) + sizeof(wsm hdr) + sizeof(alignment) */
+ #define WSM_TX_EXTRA_HEADROOM (28)
+ 
+@@ -1905,6 +1946,20 @@ struct wsm_template_frame {
+ #define WSM_RATE_ENTRY_F_SHORT_PRE	BIT(8)
+ #define WSM_RATE_ENTRY_F_SGI		BIT(9)
+ 
++#define WSM_RATE_ENTRY_INDEX_DEFAULT	0xf	/* also: end of a rate list */
++
++/* Old rate index (legacy 0-13, HT MCS0-7 = 14-21) of a rate entry, 0xff if none */
++static inline u8 wsm_rate_entry_to_index(u16 entry)
++{
++	u8 index = (entry >> WSM_RATE_ENTRY_INDEX_SHIFT) & 0xf;
++
++	if (index == WSM_RATE_ENTRY_INDEX_DEFAULT)
++		return 0xff;
++	if ((entry >> WSM_RATE_ENTRY_MODEM_SHIFT) == WSM_RATE_ENTRY_MODEM_HT)
++		return 14 + index;
++	return index;
++}
++
+ /* Rate entry for a legacy (CCK/OFDM) WSM_TRANSMIT_RATE_ index at 20 MHz */
+ static inline u16 wsm_legacy_rate_entry(u8 rate)
+ {
+@@ -1969,13 +2024,8 @@ struct wsm_association_mode {
+ 	__le32 basicRateSet;
+ };
+ 
+-static inline int wsm_set_association_mode(struct xradio_common *hw_priv,
+-					   struct wsm_association_mode *arg,
+-					   int if_id)
+-{
+-	return wsm_write_mib(hw_priv, WSM_MIB_ID_SET_ASSOCIATION_MODE, arg,
+-			     sizeof(*arg), if_id);
+-}
++int wsm_set_association_mode(struct xradio_common *hw_priv,
++			     struct wsm_association_mode *arg, int if_id);
+ 
+ struct wsm_set_tx_rate_retry_policy_header {
+ 	u8 numTxRatePolicies;
+-- 
+2.56.0
+
