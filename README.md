@@ -25,6 +25,7 @@ Work in progress, not yet submitted upstream in this form.
 | Slider switch | ✅ Working (input switch event, like stock) |
 | Suspend (s2idle; firmware has no PSCI system suspend), wake on power key | ✅ Working, display and gamepad resume |
 | USB-C (charging port) device mode | ✅ Working, with TX DMA: NCM 309 Mbit/s to the host, 154 Mbit/s from it (32 MiB md5-verified each way) |
+| Network + SSH over USB | ✅ At boot: NCM gadget 10.55.0.2, dropbear (key login); `ssh trimui`, `scp`, kernel installs in ~10 s |
 | USB-C second port (host) | ✅ Working (USB 2.0; hubs, storage, HID and USB Ethernet drivers built in) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
