@@ -1,7 +1,7 @@
 From 6aa8411a261720a501bf9ee7739dd535b25b85af Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:49 +0200
-Subject: [PATCH] sunxi: add TrimUI Smart Pro (A133) board support
+Subject: [PATCH 1/2] sunxi: add TrimUI Smart Pro (A133) board support
 
 Board bring-up for the TrimUI Smart Pro handheld (Allwinner A133 Plus):
 
@@ -404,5 +404,5 @@ index 00000000..c6369a91
 + * yet.
 + */
 -- 
-2.55.0
+2.56.0
 
