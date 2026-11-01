@@ -1,7 +1,7 @@
 From a0fbacfc2e240d1098ad7325f438fbb8504a1a73 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:49 +0100
-Subject: [PATCH 36/39] usb: musb: Let other dmaengine based glue share the
+Subject: [PATCH 36/41] usb: musb: Let other dmaengine based glue share the
  ux500 DMA paths
 
 The gadget and host code have special cases for the ux500 DMA glue, which

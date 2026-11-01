@@ -1,0 +1,57 @@
+From 9a0c73ae11b33d0f8b5921db2473dfe55a202ef7 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 14:30:30 +0100
+Subject: [PATCH 41/41] arm64: dts: allwinner: trimui-smart-pro: Enable the
+ XR829 WiFi SDIO bus
+
+The XR829 sits on MMC1 (PG0-PG5), powered by BLDO1 with I/O on ALDO3,
+enabled through PL5 and clocked by the RTC's 32 kHz fanout. It enumerates as
+SDIO 0a9e:2282; there is no mainline driver for it yet.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 8259ceb56..ac78a9eaa 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -120,6 +120,15 @@ backlight: backlight {
+ 		default-brightness-level = <200>;
+ 		power-supply = <&reg_cldo4>;
+ 	};
++
++	/* XR829 WiFi: enable on PL5, 32 kHz from the RTC. */
++	wifi_pwrseq: pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		clocks = <&rtc CLK_OSC32K_FANOUT>;
++		clock-names = "ext_clock";
++		reset-gpios = <&r_pio 0 5 GPIO_ACTIVE_LOW>; /* PL5 */
++		post-power-on-delay-ms = <200>;
++	};
+ };
+ 
+ /*
+@@ -362,6 +371,17 @@ &mmc0 {
+ 	status = "okay";
+ };
+ 
++/* XR829 WiFi (SDIO) */
++&mmc1 {
++	bus-width = <4>;
++	non-removable;
++	keep-power-in-suspend;
++	mmc-pwrseq = <&wifi_pwrseq>;
++	vmmc-supply = <&reg_bldo1>;
++	vqmmc-supply = <&reg_aldo3>;
++	status = "okay";
++};
++
+ /* eMMC; the stock firmware also runs it at DDR52, not HS200/HS400. */
+ &mmc2 {
+ 	bus-width = <8>;
+-- 
+2.56.0
+
