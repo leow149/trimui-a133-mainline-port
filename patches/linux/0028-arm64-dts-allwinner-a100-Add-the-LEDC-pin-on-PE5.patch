@@ -1,7 +1,7 @@
 From b95ea63e111087f8fa51c93277e09a136bfed410 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
-Subject: [PATCH 28/44] arm64: dts: allwinner: a100: Add the LEDC pin on PE5
+Subject: [PATCH 28/45] arm64: dts: allwinner: a100: Add the LEDC pin on PE5
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -1,7 +1,7 @@
 From 9a8258be00a1ed627d2420ac8625255f1944b38f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:38 +0100
-Subject: [PATCH 26/44] ASoC: sun4i-codec: Add A100 headphone jack detection
+Subject: [PATCH 26/45] ASoC: sun4i-codec: Add A100 headphone jack detection
 
 The A100/A133 codec detects the headphone jack itself (HMIC block): with
 JACKDETEN set it raises plug-in and removal interrupts on the codec interrupt
