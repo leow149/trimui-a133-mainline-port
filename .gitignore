@@ -43,3 +43,4 @@
 !vendor-notes/**
 !tools/uboot_test_boot.py
 !board-port/audio-defaults.sh
+!tools/rainbow.sh
