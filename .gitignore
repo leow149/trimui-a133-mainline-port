@@ -45,3 +45,4 @@
 !board-port/audio-defaults.sh
 !tools/rainbow.sh
 !tools/test_gadget.sh
+!tools/ncm_gadget.sh
