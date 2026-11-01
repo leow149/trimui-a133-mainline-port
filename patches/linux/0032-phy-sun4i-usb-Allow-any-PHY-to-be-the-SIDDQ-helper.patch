@@ -1,0 +1,74 @@
+From d664e537b6d7310d0c9ad97920350f5dc292c57a Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 11:45:08 +0100
+Subject: [PATCH 32/34] phy: sun4i-usb: Allow any PHY to be the SIDDQ helper
+
+H616 PHYs need PHY2's clock, reset and SIDDQ to work. The A100/A133 has the
+same arrangement with PHY1 (the vendor driver calls it the "common PHY"), so
+turn the PHY2 flag into the index of the helper PHY.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index 839856c09..168fd89c1 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -103,7 +103,8 @@ struct sun4i_usb_phy_cfg {
+ 	u8 phyctl_offset;
+ 	bool dedicated_clocks;
+ 	bool phy0_dual_route;
+-	bool needs_phy2_siddq;
++	/* PHY whose clock, reset and SIDDQ the other PHYs need (0: none) */
++	u8 siddq_helper;
+ 	bool siddq_in_base;
+ 	bool poll_vbusen;
+ 	int missing_phys;
+@@ -277,9 +278,9 @@ static int sun4i_usb_phy_init(struct phy *_phy)
+ 		return ret;
+ 	}
+ 
+-	/* Some PHYs on some SoCs need the help of PHY2 to work. */
+-	if (data->cfg->needs_phy2_siddq && phy->index != 2) {
+-		struct sun4i_usb_phy *phy2 = &data->phys[2];
++	/* Some PHYs on some SoCs need the help of another PHY to work. */
++	if (data->cfg->siddq_helper && phy->index != data->cfg->siddq_helper) {
++		struct sun4i_usb_phy *phy2 = &data->phys[data->cfg->siddq_helper];
+ 
+ 		ret = clk_prepare_enable(phy2->clk);
+ 		if (ret) {
+@@ -300,7 +301,7 @@ static int sun4i_usb_phy_init(struct phy *_phy)
+ 
+ 		/*
+ 		 * This extra clock is just needed to access the
+-		 * REG_HCI_PHY_CTL PMU register for PHY2.
++		 * REG_HCI_PHY_CTL PMU register of the helper PHY.
+ 		 */
+ 		ret = clk_prepare_enable(phy2->clk2);
+ 		if (ret) {
+@@ -384,8 +385,8 @@ static int sun4i_usb_phy_exit(struct phy *_phy)
+ 		data->phy0_init = false;
+ 	}
+ 
+-	if (data->cfg->needs_phy2_siddq && phy->index != 2) {
+-		struct sun4i_usb_phy *phy2 = &data->phys[2];
++	if (data->cfg->siddq_helper && phy->index != data->cfg->siddq_helper) {
++		struct sun4i_usb_phy *phy2 = &data->phys[data->cfg->siddq_helper];
+ 
+ 		clk_disable_unprepare(phy2->clk);
+ 		reset_control_assert(phy2->reset);
+@@ -1009,7 +1010,7 @@ static const struct sun4i_usb_phy_cfg sun50i_h616_cfg = {
+ 	.dedicated_clocks = true,
+ 	.phy0_dual_route = true,
+ 	.hci_phy_ctl_clear = PHY_CTL_SIDDQ,
+-	.needs_phy2_siddq = true,
++	.siddq_helper = 2,
+ 	.siddq_in_base = true,
+ };
+ 
+-- 
+2.56.0
+

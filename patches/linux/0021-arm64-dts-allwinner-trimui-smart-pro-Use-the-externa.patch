@@ -1,7 +1,7 @@
 From c01c08104ea71b4a9e4702f68863532413502581 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:23 +0100
-Subject: [PATCH 21/30] arm64: dts: allwinner: trimui-smart-pro: Use the
+Subject: [PATCH 21/34] arm64: dts: allwinner: trimui-smart-pro: Use the
  external 32k crystal
 
 The board has a 32.768 kHz crystal on the RTC (the stock firmware runs from

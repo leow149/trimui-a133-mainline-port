@@ -1,0 +1,124 @@
+From 956365418fb7324d347e581807cdd067a2d6fd37 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 11:45:08 +0100
+Subject: [PATCH 33/34] phy: sun4i-usb: Add A100/A133 support
+
+The A100/A133 OTG PHY needs PHY1 as SIDDQ helper, the usual analog tuning
+(45 ohm calibration, TX amplitude, disconnect threshold) although its SIDDQ is
+in the base registers, and a pulse on PHY register 0x3c (the vendor driver's
+UsbPhyEndReset). Without the pulse the host gets -EPROTO on every descriptor
+read in peripheral mode.
+
+The tuning has to happen before PHYCTL is set up, as sun4i_usb_phy_write()
+clears PHYCTL on A33 and later PHYs, and only on PHY0, as the vendor driver
+does, so tuning another PHY later does not undo it.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 54 +++++++++++++++++++++++----
+ 1 file changed, 46 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index 168fd89c1..a09373893 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -74,6 +74,7 @@
+ #define PHY_OTG_FUNC_EN			0x28
+ #define PHY_VBUS_DET_EN			0x29
+ #define PHY_DISCON_TH_SEL		0x2a
++#define PHY_RX_RESET			0x3c
+ #define PHY_SQUELCH_DETECT		0x3c
+ 
+ /* A83T specific control bits for PHY0 */
+@@ -105,6 +106,10 @@ struct sun4i_usb_phy_cfg {
+ 	bool phy0_dual_route;
+ 	/* PHY whose clock, reset and SIDDQ the other PHYs need (0: none) */
+ 	u8 siddq_helper;
++	/* Do the analog tuning also when SIDDQ is in the base registers */
++	bool tune_siddq_in_base;
++	/* PHY0 needs the vendor "end of reset" pulse on PHY_RX_RESET */
++	bool phy0_rx_reset_pulse;
+ 	bool siddq_in_base;
+ 	bool poll_vbusen;
+ 	int missing_phys;
+@@ -328,14 +333,15 @@ static int sun4i_usb_phy_init(struct phy *_phy)
+ 		writel(val, phy->pmu + REG_HCI_PHY_CTL);
+ 	}
+ 
+-	if (data->cfg->siddq_in_base) {
+-		if (phy->index == 0) {
+-			val = readl(data->base + data->cfg->phyctl_offset);
+-			val |= PHY_CTL_VBUSVLDEXT;
+-			val &= ~PHY_CTL_SIDDQ;
+-			writel(val, data->base + data->cfg->phyctl_offset);
+-		}
+-	} else {
++	/*
++	 * Tune before setting up PHYCTL below: on A33 and later PHYs,
++	 * sun4i_usb_phy_write() clears PHYCTL first. That is also why only
++	 * PHY0 is tuned when SIDDQ is in the base registers (as the A100
++	 * vendor driver does): tuning another PHY later would clear PHY0's
++	 * PHYCTL bits.
++	 */
++	if (!data->cfg->siddq_in_base ||
++	    (data->cfg->tune_siddq_in_base && phy->index == 0)) {
+ 		/* Enable USB 45 Ohm resistor calibration */
+ 		if (phy->index == 0)
+ 			sun4i_usb_phy_write(phy, PHY_RES45_CAL_EN, 0x01, 1);
+@@ -348,6 +354,25 @@ static int sun4i_usb_phy_init(struct phy *_phy)
+ 				    data->cfg->disc_thresh, 2);
+ 	}
+ 
++	/*
++	 * Without this pulse (the vendor driver's UsbPhyEndReset) the A100/A133
++	 * OTG PHY corrupts what the device sends: every descriptor read fails
++	 * with -EPROTO on the host. Once after power-up is enough.
++	 */
++	if (phy->index == 0 && data->cfg->phy0_rx_reset_pulse) {
++		sun4i_usb_phy_write(phy, PHY_RX_RESET, 0x02, 2);
++		sun4i_usb_phy_write(phy, PHY_RX_RESET, 0x00, 2);
++	}
++
++	if (data->cfg->siddq_in_base) {
++		if (phy->index == 0) {
++			val = readl(data->base + data->cfg->phyctl_offset);
++			val |= PHY_CTL_VBUSVLDEXT;
++			val &= ~PHY_CTL_SIDDQ;
++			writel(val, data->base + data->cfg->phyctl_offset);
++		}
++	}
++
+ 	sun4i_usb_phy_passby(phy, 1);
+ 
+ 	if (phy->index == 0) {
+@@ -988,6 +1013,18 @@ static const struct sun4i_usb_phy_cfg sun20i_d1_cfg = {
+ 	.siddq_in_base = true,
+ };
+ 
++static const struct sun4i_usb_phy_cfg sun50i_a100_cfg = {
++	.disc_thresh = 3,
++	.phyctl_offset = REG_PHYCTL_A33,
++	.dedicated_clocks = true,
++	.hci_phy_ctl_clear = PHY_CTL_SIDDQ,
++	.phy0_dual_route = true,
++	.siddq_in_base = true,
++	.siddq_helper = 1,
++	.tune_siddq_in_base = true,
++	.phy0_rx_reset_pulse = true,
++};
++
+ static const struct sun4i_usb_phy_cfg sun50i_a64_cfg = {
+ 	.disc_thresh = 3,
+ 	.phyctl_offset = REG_PHYCTL_A33,
+@@ -1026,6 +1063,7 @@ static const struct of_device_id sun4i_usb_phy_of_match[] = {
+ 	{ .compatible = "allwinner,sun8i-r40-usb-phy", .data = &sun8i_r40_cfg },
+ 	{ .compatible = "allwinner,sun8i-v3s-usb-phy", .data = &sun8i_v3s_cfg },
+ 	{ .compatible = "allwinner,sun20i-d1-usb-phy", .data = &sun20i_d1_cfg },
++	{ .compatible = "allwinner,sun50i-a100-usb-phy", .data = &sun50i_a100_cfg },
+ 	{ .compatible = "allwinner,sun50i-a64-usb-phy",
+ 	  .data = &sun50i_a64_cfg},
+ 	{ .compatible = "allwinner,sun50i-h6-usb-phy", .data = &sun50i_h6_cfg },
+-- 
+2.56.0
+

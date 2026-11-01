@@ -24,7 +24,8 @@ Work in progress, not yet submitted upstream in this form.
 | Stick RGB LEDs + logo LED (23 on one chain) | ✅ Working, `/sys/class/leds/rgb:indicator-N` (0 logo, 1-11 left, 12-22 right) |
 | Slider switch | ✅ Working (input switch event, like stock) |
 | Suspend (s2idle; firmware has no PSCI system suspend), wake on power key | ✅ Working, display and gamepad resume |
-| USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
+| USB-C (charging port) device mode | ✅ Working (configfs gadgets; tested with a serial gadget, 1 MB transfer verified) |
+| USB-C second port (host) | ❌ Not yet |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
 The long-standing black-screen bug is solved. It had four independent causes, all needed:
@@ -55,6 +56,7 @@ tools/             Small standalone tools written for this port
   push_kernel.sh      installs a new kernel/DTB on the SD card over the UART, no card swap
   uboot_test_boot.py  boots a kernel/DTB installed with push_kernel.sh --test once
   reboot_loop.sh      reboot reliability test over the UART
+  test_gadget.sh      minimal USB serial gadget, to test device mode
   backup_restore/     eMMC/RAM backup & restore scripts (no dumps, scripts only)
 vendor-notes/      Our own recorded register comparisons/notes (not vendor source/binaries)
 ```
