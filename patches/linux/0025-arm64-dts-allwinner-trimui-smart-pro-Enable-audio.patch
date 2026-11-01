@@ -1,0 +1,39 @@
+From 618d5e58c68cbb49b7271e63456590b3ce5d9a36 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 01:24:52 +0100
+Subject: [PATCH 25/25] arm64: dts: allwinner: trimui-smart-pro: Enable audio
+
+The stereo speakers (amplifier enabled by PH6) and the 3.5 mm jack both hang
+off the headphone output; the line out is not used.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../dts/allwinner/sun50i-a133-trimui-smartpro.dts     | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 4ff7f1e92..509ad6461 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -99,6 +99,17 @@ backlight: backlight {
+ 	};
+ };
+ 
++/*
++ * The speaker amplifier (enabled by PH6) and the 3.5 mm jack both hang off the
++ * headphone output; the line out is not used.
++ */
++&codec {
++	allwinner,audio-routing = "Speaker", "HP",
++				  "Headphone", "HP";
++	allwinner,pa-gpios = <&pio 7 6 GPIO_ACTIVE_HIGH>; /* PH6 */
++	status = "okay";
++};
++
+ &cpu0 {
+ 	cpu-supply = <&reg_dcdc1>;
+ };
+-- 
+2.56.0
+
