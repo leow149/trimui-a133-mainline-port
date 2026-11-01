@@ -1,0 +1,244 @@
+From 9c86788b43d39a5b3d6aff7c81cecc10071a0262 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 10:42:39 +0100
+Subject: [PATCH 29/29] arm64: dts: allwinner: trimui-smart-pro: Add slider
+ switch and stick LEDs
+
+The slider on PH19 is a two-position switch; report it as SW_TABLET_MODE like
+the stock firmware. 23 RGB LEDs on the LEDC: the logo (RGB) and the two stick
+rings (GRB, 11 LEDs each).
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 207 ++++++++++++++++++
+ 1 file changed, 207 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 509ad6461..ee678ca42 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -73,6 +73,18 @@ reg_vcc5v: regulator-vcc5v {
+ 	};
+ 
+ 	/* 5 V for the stick boards: button MCUs and stick LEDs ("led_5v" on stock). */
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		/* Two-position slider; stock reports it as a tablet-mode switch. */
++		switch-slider {
++			label = "Slider";
++			gpios = <&pio 7 19 GPIO_ACTIVE_HIGH>; /* PH19 */
++			linux,input-type = <EV_SW>;
++			linux,code = <SW_TABLET_MODE>;
++		};
++	};
++
+ 	reg_vcc_pad: regulator-vcc-pad {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vcc-pad";
+@@ -119,6 +131,201 @@ &cpu0 {
+  * Volume keys on the LRADC, voltages as measured. Both pressed together
+  * reads about 471 mV and reports Volume Up.
+  */
++/*
++ * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
++ * right one. The rings are GRB (the stock DT says "RGB", but red shows green
++ * with it), the logo LED is RGB. Timings from the stock firmware. They are
++ * powered from vcc-pad, which the gamepad driver switches on.
++ */
++&ledc {
++	pinctrl-names = "default";
++	pinctrl-0 = <&ledc_pe5_pin>;
++	allwinner,t0h-ns = <400>;
++	allwinner,t0l-ns = <850>;
++	allwinner,t1h-ns = <800>;
++	allwinner,t1l-ns = <450>;
++	status = "okay";
++
++	/* Logo */
++	multi-led@0 {
++		reg = <0x0>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <0>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		led@0 {
++			reg = <0>;
++			color = <LED_COLOR_ID_GREEN>;
++		};
++
++		led@1 {
++			reg = <1>;
++			color = <LED_COLOR_ID_RED>;
++		};
++
++		led@2 {
++			reg = <2>;
++			color = <LED_COLOR_ID_BLUE>;
++		};
++	};
++
++	multi-led@1 {
++		reg = <0x1>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <1>;
++	};
++
++	multi-led@2 {
++		reg = <0x2>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <2>;
++	};
++
++	multi-led@3 {
++		reg = <0x3>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <3>;
++	};
++
++	multi-led@4 {
++		reg = <0x4>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <4>;
++	};
++
++	multi-led@5 {
++		reg = <0x5>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <5>;
++	};
++
++	multi-led@6 {
++		reg = <0x6>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <6>;
++	};
++
++	multi-led@7 {
++		reg = <0x7>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <7>;
++	};
++
++	multi-led@8 {
++		reg = <0x8>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <8>;
++	};
++
++	multi-led@9 {
++		reg = <0x9>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <9>;
++	};
++
++	multi-led@a {
++		reg = <0xa>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <10>;
++	};
++
++	multi-led@b {
++		reg = <0xb>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <11>;
++	};
++
++	multi-led@c {
++		reg = <0xc>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <12>;
++	};
++
++	multi-led@d {
++		reg = <0xd>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <13>;
++	};
++
++	multi-led@e {
++		reg = <0xe>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <14>;
++	};
++
++	multi-led@f {
++		reg = <0xf>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <15>;
++	};
++
++	multi-led@10 {
++		reg = <0x10>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <16>;
++	};
++
++	multi-led@11 {
++		reg = <0x11>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <17>;
++	};
++
++	multi-led@12 {
++		reg = <0x12>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <18>;
++	};
++
++	multi-led@13 {
++		reg = <0x13>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <19>;
++	};
++
++	multi-led@14 {
++		reg = <0x14>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <20>;
++	};
++
++	multi-led@15 {
++		reg = <0x15>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <21>;
++	};
++
++	multi-led@16 {
++		reg = <0x16>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <22>;
++	};
++};
++
+ &lradc {
+ 	vref-supply = <&reg_aldo4>;
+ 	status = "okay";
+-- 
+2.56.0
+

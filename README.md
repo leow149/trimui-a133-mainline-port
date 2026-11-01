@@ -20,8 +20,10 @@ Work in progress, not yet submitted upstream in this form.
 | CPU frequency scaling 408-1464 MHz, thermal throttling | ✅ Working |
 | SD card, eMMC, UART console, reboot | ✅ Working |
 | RTC (external 32.768 kHz crystal) | ✅ Working, keeps time across reboots |
-| Audio: stereo speakers + headphone output | ✅ Working (playback); no headphone-jack detection yet |
-| Stick RGB LEDs, suspend | ❌ Not yet |
+| Audio: stereo speakers + headphone output | ✅ Working (playback), jack detection mutes the speakers |
+| Stick RGB LEDs + logo LED (23 on one chain) | ✅ Working, `/sys/class/leds/rgb:indicator-N` (0 logo, 1-11 left, 12-22 right) |
+| Slider switch | ✅ Working (input switch event, like stock) |
+| Suspend | ❌ Not yet |
 | USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 

@@ -1,0 +1,44 @@
+From e364c0d07890e0b6106b13db6006fd61df8526c1 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 10:42:38 +0100
+Subject: [PATCH 27/29] leds: sun50i-a100: Allow a per-LED channel order
+
+The pixel format applies to the whole chain, but chains can mix LED types:
+on the TrimUI Smart Pro the stick rings are GRB and the logo LED is RGB. Let a
+multi-led node describe its channel order with led@0..2 subnodes, as the
+multicolor LED binding allows.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/leds/leds-sun50i-a100.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/leds/leds-sun50i-a100.c b/drivers/leds/leds-sun50i-a100.c
+index 7cfb4c739..24f5721c9 100644
+--- a/drivers/leds/leds-sun50i-a100.c
++++ b/drivers/leds/leds-sun50i-a100.c
+@@ -509,6 +509,20 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 		led->subled_info[2].color_index = LED_COLOR_ID_BLUE;
+ 		led->subled_info[2].channel = 2;
+ 
++		/*
++		 * A chain can mix LED types with different channel orders. An
++		 * LED can describe its own with led@0..2 subnodes, in the
++		 * channel order of the pixel format.
++		 */
++		fwnode_for_each_child_node_scoped(child, sub) {
++			u32 ch, color;
++
++			if (!fwnode_property_read_u32(sub, "reg", &ch) &&
++			    ch < LEDC_CHANNELS_PER_LED &&
++			    !fwnode_property_read_u32(sub, "color", &color))
++				led->subled_info[ch].color_index = color;
++		}
++
+ 		led->mc_cdev.num_colors = ARRAY_SIZE(led->subled_info);
+ 		led->mc_cdev.subled_info = led->subled_info;
+ 
+-- 
+2.56.0
+
