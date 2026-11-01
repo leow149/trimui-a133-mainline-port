@@ -1,7 +1,7 @@
 From cc404ebf9bec9d78b501612076be5b5be2e70497 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
-Subject: [PATCH 09/25] drm/sun4i: ui_layer: Expose a pixel blend mode property
+Subject: [PATCH 09/29] drm/sun4i: ui_layer: Expose a pixel blend mode property
 
 The UI planes advertise formats with alpha but had no pixel blend mode
 property, so DRM assumed premultiplied alpha, which the blender is never set up

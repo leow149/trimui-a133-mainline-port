@@ -1,7 +1,7 @@
 From fb836f13566b97ecb0a37b4c0aba3eeee65f7a74 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
-Subject: [PATCH 13/25] serial: 8250_dw: Configure Allwinner A100 UARTs while
+Subject: [PATCH 13/29] serial: 8250_dw: Configure Allwinner A100 UARTs while
  busy
 
 LCR/DLL/DLH writes are ignored while a DesignWare UART is busy. The driver's

@@ -1,0 +1,172 @@
+From 9a8258be00a1ed627d2420ac8625255f1944b38f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 10:42:38 +0100
+Subject: [PATCH 26/29] ASoC: sun4i-codec: Add A100 headphone jack detection
+
+The A100/A133 codec detects the headphone jack itself (HMIC block): with
+JACKDETEN set it raises plug-in and removal interrupts on the codec interrupt
+line. There is no state bit, so the state follows the events. Report the jack
+on the card and mute the speaker pin while headphones are plugged in, as both
+share the headphone output on the boards seen so far.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sound/soc/sunxi/sun4i-codec.c | 88 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 88 insertions(+)
+
+diff --git a/sound/soc/sunxi/sun4i-codec.c b/sound/soc/sunxi/sun4i-codec.c
+index f1205f52e..a8adf94a4 100644
+--- a/sound/soc/sunxi/sun4i-codec.c
++++ b/sound/soc/sunxi/sun4i-codec.c
+@@ -16,7 +16,9 @@
+ #include <linux/platform_device.h>
+ #include <linux/delay.h>
+ #include <linux/slab.h>
++#include <linux/bitfield.h>
+ #include <linux/clk.h>
++#include <linux/interrupt.h>
+ #include <linux/regmap.h>
+ #include <linux/reset.h>
+ #include <linux/gpio/consumer.h>
+@@ -274,9 +276,18 @@
+ #define SUN50I_A100_LMUTE			(12)
+ #define SUN50I_A100_LINEOUTL_DIFF		(6)
+ #define SUN50I_A100_LINEOUT_VOL			(0)
++#define SUN50I_A100_MICBIAS_REG			(0x318)
++#define SUN50I_A100_JACKDETEN			BIT(23)
+ #define SUN50I_A100_HP_REG			(0x324)
+ #define SUN50I_A100_HPPA_EN			(15)
++#define SUN50I_A100_HMIC_CTRL_REG		(0x328)
++#define SUN50I_A100_HMIC_N			GENMASK(9, 6)
++#define SUN50I_A100_JACK_OUT_IRQ_EN		BIT(2)
++#define SUN50I_A100_JACK_IN_IRQ_EN		BIT(1)
+ #define SUN50I_A100_HMIC_STS_REG		(0x32c)
++#define SUN50I_A100_MDATA_DISCARD		GENMASK(14, 13)
++#define SUN50I_A100_JACK_DET_OIRQ		BIT(4)
++#define SUN50I_A100_JACK_DET_IIRQ		BIT(3)
+ 
+ /* TODO H3 DAP (Digital Audio Processing) bits */
+ 
+@@ -346,6 +357,7 @@ struct sun4i_codec {
+ 	struct reset_control *rst;
+ 	struct gpio_desc *gpio_pa;
+ 	struct gpio_desc *gpio_hp;
++	int jack_irq;			/* codec jack detection, if > 0 */
+ 
+ 	/* ADC_FIFOC register is at different offset on different SoCs */
+ 	struct regmap_field *reg_adc_fifoc;
+@@ -1604,6 +1616,66 @@ static struct snd_soc_jack_pin sun4i_headphone_jack_pins[] = {
+ 	{ .pin = "Headphone", .mask = SND_JACK_HEADPHONE },
+ };
+ 
++/* Speaker and headphones share one output: plugging in mutes the speaker. */
++static struct snd_soc_jack_pin sun50i_a100_headphone_jack_pins[] = {
++	{ .pin = "Headphone", .mask = SND_JACK_HEADPHONE },
++	{ .pin = "Speaker", .mask = SND_JACK_HEADPHONE, .invert = 1 },
++};
++
++static irqreturn_t sun50i_a100_codec_jack_irq(int irq, void *dev_id)
++{
++	struct sun4i_codec *scodec = dev_id;
++	unsigned int sts;
++
++	regmap_read(scodec->regmap, SUN50I_A100_HMIC_STS_REG, &sts);
++	regmap_write(scodec->regmap, SUN50I_A100_HMIC_STS_REG,
++		     sts & (SUN50I_A100_MDATA_DISCARD |
++			    SUN50I_A100_JACK_DET_OIRQ |
++			    SUN50I_A100_JACK_DET_IIRQ));
++
++	/* There is no state bit, only plug-in and removal events. */
++	if (sts & SUN50I_A100_JACK_DET_IIRQ)
++		snd_soc_jack_report(&sun4i_headphone_jack, SND_JACK_HEADPHONE,
++				    SND_JACK_HEADPHONE);
++	if (sts & SUN50I_A100_JACK_DET_OIRQ)
++		snd_soc_jack_report(&sun4i_headphone_jack, 0,
++				    SND_JACK_HEADPHONE);
++
++	return IRQ_HANDLED;
++}
++
++static int sun50i_a100_codec_jack_init(struct snd_soc_card *card,
++				       struct sun4i_codec *scodec)
++{
++	int ret;
++
++	ret = snd_soc_card_jack_new_pins(card, "Headphone Jack",
++					 SND_JACK_HEADPHONE,
++					 &sun4i_headphone_jack,
++					 sun50i_a100_headphone_jack_pins,
++					 ARRAY_SIZE(sun50i_a100_headphone_jack_pins));
++	if (ret)
++		return ret;
++
++	/* 375 ms plug debounce, interrupts on plug-in and removal */
++	regmap_update_bits(scodec->regmap, SUN50I_A100_HMIC_CTRL_REG,
++			   SUN50I_A100_HMIC_N | SUN50I_A100_JACK_OUT_IRQ_EN |
++			   SUN50I_A100_JACK_IN_IRQ_EN,
++			   FIELD_PREP(SUN50I_A100_HMIC_N, 2) |
++			   SUN50I_A100_JACK_OUT_IRQ_EN |
++			   SUN50I_A100_JACK_IN_IRQ_EN);
++	regmap_write(scodec->regmap, SUN50I_A100_HMIC_STS_REG,
++		     SUN50I_A100_MDATA_DISCARD | SUN50I_A100_JACK_DET_OIRQ |
++		     SUN50I_A100_JACK_DET_IIRQ);
++	regmap_set_bits(scodec->regmap, SUN50I_A100_MICBIAS_REG,
++			SUN50I_A100_JACKDETEN);
++
++	return devm_request_threaded_irq(scodec->dev, scodec->jack_irq, NULL,
++					 sun50i_a100_codec_jack_irq,
++					 IRQF_ONESHOT, "sun4i-codec-jack",
++					 scodec);
++}
++
+ static struct snd_soc_jack_gpio sun4i_headphone_jack_gpio = {
+ 	.name = "hp-det",
+ 	.report = SND_JACK_HEADPHONE,
+@@ -1616,6 +1688,14 @@ static int sun4i_codec_machine_init(struct snd_soc_pcm_runtime *rtd)
+ 	struct sun4i_codec *scodec = snd_soc_card_get_drvdata(card);
+ 	int ret;
+ 
++	if (scodec->jack_irq > 0) {
++		ret = sun50i_a100_codec_jack_init(card, scodec);
++		if (ret) {
++			dev_err(rtd->dev, "Jack detection setup failed: %d\n", ret);
++			return ret;
++		}
++	}
++
+ 	if (scodec->gpio_hp) {
+ 		ret = snd_soc_card_jack_new_pins(card, "Headphone Jack",
+ 						 SND_JACK_HEADPHONE,
+@@ -2279,6 +2359,7 @@ struct sun4i_codec_quirks {
+ 	unsigned int reg_adc_rxdata;	/* RX FIFO offset for DMA config */
+ 	bool has_reset;
+ 	bool playback_only;
++	bool has_jack_detect;	/* jack detection in the codec (HMIC block) */
+ 	u32 dma_max_burst;
+ };
+ 
+@@ -2380,6 +2461,7 @@ static const struct sun4i_codec_quirks sun50i_a100_codec_quirks = {
+ 	.reg_dac_txdata	= SUN8I_H3_CODEC_DAC_TXDATA,
+ 	.has_reset	= true,
+ 	.playback_only	= true,
++	.has_jack_detect = true,
+ 	.dma_max_burst	= SUN4I_DMA_MAX_BURST,
+ };
+ 
+@@ -2492,6 +2574,12 @@ static int sun4i_codec_probe(struct platform_device *pdev)
+ 				     "Failed to get pa gpio\n");
+ 
+ 
++	if (quirks->has_jack_detect) {
++		scodec->jack_irq = platform_get_irq(pdev, 0);
++		if (scodec->jack_irq < 0)
++			return scodec->jack_irq;
++	}
++
+ 	scodec->gpio_hp = devm_gpiod_get_optional(&pdev->dev, "hp-det", GPIOD_IN);
+ 	if (IS_ERR(scodec->gpio_hp))
+ 		return dev_err_probe(&pdev->dev, PTR_ERR(scodec->gpio_hp),
+-- 
+2.56.0
+
