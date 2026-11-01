@@ -1,7 +1,7 @@
 From 957d9f165fd44bc356acb38d12cacb8efe5dce5c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:28 +0100
-Subject: [PATCH 10/41] drm/sun4i: dsi: Decode DCS long read responses
+Subject: [PATCH 10/44] drm/sun4i: dsi: Decode DCS long read responses
 
 Some panels answer even a one-byte DCS read with a long read response. The
 driver returned byte 1 of the header (the word count) as data. Check the RX

@@ -1,7 +1,7 @@
 From b80b9ad6463f0c76c481276bf175fbcabca3c457 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:59:18 +0100
-Subject: [PATCH 35/41] arm64: dts: allwinner: trimui-smart-pro: Enable the
+Subject: [PATCH 35/44] arm64: dts: allwinner: trimui-smart-pro: Enable the
  second USB-C port
 
 The second USB-C port is host only: EHCI1/OHCI1 on PHY1, with its 5 V

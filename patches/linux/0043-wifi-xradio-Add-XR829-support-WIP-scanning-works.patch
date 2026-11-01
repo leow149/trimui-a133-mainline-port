@@ -1,0 +1,478 @@
+From 9acdfca7459db0129f9dfb799209efd8c7e31c6a Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 15:03:41 +0100
+Subject: [PATCH 43/44] wifi: xradio: Add XR829 support (WIP: scanning works)
+
+The XR829 (SDIO 0a9e:2282) runs a newer firmware ("HT40" API) that uses
+16-bit rate entries (modem type, bandwidth, flags, rate index) instead of
+8-bit rate indices. Select it at runtime from the SDIO ID:
+- firmware files xr829/{boot,fw,sdd}_xr829.bin, DPLL sync with the BT core
+- start scan: scan type in the flags byte, rate entry
+- template frames: 8-byte header with a rate entry
+- receive indication: rate entry + 3 reserved bytes; map back to the old
+  rate index, report 40 MHz / short GI
+
+Also fixes: HT frames were flagged RX_ENC_HT in hdr->flag (= MMIC error)
+instead of hdr->encoding; a cached RX skb was reused without resetting its
+data pointer (skb_over_panic on a 520-byte frame); a WARN on debug-only
+message names.
+
+Not done yet: join, TX rate policy, TX, AP mode.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/net/wireless/xradio/.gitignore |  9 ++++
+ drivers/net/wireless/xradio/bh.c       | 16 ++++++-
+ drivers/net/wireless/xradio/fwio.c     | 64 +++++++++++++++++++++++++-
+ drivers/net/wireless/xradio/fwio.h     |  5 ++
+ drivers/net/wireless/xradio/hwio.h     | 18 ++++++++
+ drivers/net/wireless/xradio/rx.c       |  7 ++-
+ drivers/net/wireless/xradio/sdio.c     |  4 ++
+ drivers/net/wireless/xradio/wsm.c      | 60 ++++++++++++++++++++++--
+ drivers/net/wireless/xradio/wsm.h      | 40 ++++++++++------
+ drivers/net/wireless/xradio/xradio.h   | 14 +++++-
+ 10 files changed, 213 insertions(+), 24 deletions(-)
+ create mode 100644 drivers/net/wireless/xradio/.gitignore
+
+diff --git a/drivers/net/wireless/xradio/.gitignore b/drivers/net/wireless/xradio/.gitignore
+new file mode 100644
+index 000000000..dd3739ff8
+--- /dev/null
++++ b/drivers/net/wireless/xradio/.gitignore
+@@ -0,0 +1,9 @@
++*.cmd
++*.o
++Module.symvers
++modules.order
++.tmp_versions
++*.ko
++*.mod
++*.mod.c
++tags
+diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
+index 592fad2d4..7442e47db 100644
+--- a/drivers/net/wireless/xradio/bh.c
++++ b/drivers/net/wireless/xradio/bh.c
+@@ -336,6 +336,21 @@ static struct sk_buff *xradio_get_skb(struct xradio_common *hw_priv, size_t len)
+ 	} else {
+ 		skb = hw_priv->skb_cache;
+ 		hw_priv->skb_cache = NULL;
++		/*
++		 * The cached skb was pulled/pushed while it was processed;
++		 * reset it to the layout of a fresh one.
++		 */
++		skb->data = skb->head;
++		skb->len = 0;
++		skb_reset_tail_pointer(skb);
++		skb_reserve(skb, WSM_TX_EXTRA_HEADROOM + 8 /* TKIP IV */
++				 - WSM_RX_EXTRA_HEADROOM);
++		if (skb_tailroom(skb) < len) {
++			dev_kfree_skb(skb);
++			hw_priv->skb_cache = NULL;
++			return xradio_get_skb(hw_priv, SDIO_BLOCK_SIZE + 1 > len ?
++					      SDIO_BLOCK_SIZE + 1 : len);
++		}
+ 	}
+ 	return skb;
+ }
+@@ -625,7 +640,6 @@ static void xradio_bh_tx_dump(struct device *dev, u8 *data, size_t len){
+ 	ifid &= 0xF;
+ 	mib = *(p + 2);
+ 
+-	WARN_ON(msgnames[msgid] == NULL);
+ 
+ 	if (msgid == 0x0006) {
+ 		dev_dbg(dev, "vif %d: sdio tx, msgid %s(0x%.4X) len %d MIB %s(0x%.4X)\n",
+diff --git a/drivers/net/wireless/xradio/fwio.c b/drivers/net/wireless/xradio/fwio.c
+index 91958dd90..7f9ffe02f 100644
+--- a/drivers/net/wireless/xradio/fwio.c
++++ b/drivers/net/wireless/xradio/fwio.c
+@@ -15,6 +15,8 @@
+ #include <linux/firmware.h>
+ 
+ #include "xradio.h"
++#include <linux/mmc/sdio_func.h>
++
+ #include "fwio.h"
+ #include "hwio.h"
+ #include "bh.h"
+@@ -98,6 +100,9 @@ static int xradio_parse_sdd(struct xradio_common *hw_priv, u32 *dpll)
+ 	case XR819_HW_REV0:
+ 		sdd_path = XR819_SDD_FILE;
+ 		break;
++	case XR829_HW_REV0:
++		sdd_path = XR829_SDD_FILE;
++		break;
+ 	default:
+ 		dev_dbg(hw_priv->pdev, "unknown hardware version.\n");
+ 		return ret;
+@@ -197,6 +202,9 @@ static int xradio_firmware(struct xradio_common *hw_priv)
+ 	case XR819_HW_REV0:
+ 		fw_path = XR819_FIRMWARE;
+ 		break;
++	case XR829_HW_REV0:
++		fw_path = XR829_FIRMWARE;
++		break;
+ 	default:
+ 		dev_dbg(hw_priv->pdev, "invalid silicon revision %d.\n",
+ 				hw_priv->hw_revision);
+@@ -330,9 +338,53 @@ static int xradio_firmware(struct xradio_common *hw_priv)
+ 	return ret;
+ }
+ 
++/*
++ * XR829: the WLAN and BT cores share the DPLL; take the arbitration and
++ * make its control register match the reference clock from the SDD file.
++ */
++static int xradio_update_dpllctrl(struct xradio_common *hw_priv, u32 dpll_update)
++{
++	u32 val32 = 0, dpll_read = 0;
++	int ret = 0, i = 0;
++
++	xradio_ahb_read_32(hw_priv, PWRCTRL_WLAN_START_CFG, &val32);
++	for (;;) {
++		xradio_ahb_read_32(hw_priv, PWRCTRL_WLAN_COMMON_CFG, &val32);
++		if (val32 & PWRCTRL_COMMON_REG_DONE) {
++			xradio_ahb_read_32(hw_priv, PWRCTRL_WLAN_DPLL_CTRL, &dpll_read);
++			if (dpll_read == dpll_update)
++				break;
++			dev_warn(hw_priv->pdev, "DPLL 0x%08x, want 0x%08x\n",
++				 dpll_read, dpll_update);
++		}
++		/* Arbitration over and BT not holding it: WLAN may write. */
++		if ((val32 & PWRCTRL_COMMON_REG_ARBT) &&
++		    !(val32 & PWRCTRL_COMMON_REG_BT)) {
++			xradio_ahb_read_32(hw_priv, PWRCTRL_WLAN_DPLL_CTRL, &dpll_read);
++			if (dpll_read != dpll_update) {
++				xradio_ahb_write_32(hw_priv, PWRCTRL_WLAN_DPLL_CTRL,
++						    dpll_update | 0x1);
++				msleep(5);
++			}
++			xradio_ahb_write_32(hw_priv, PWRCTRL_WLAN_COMMON_CFG,
++					    PWRCTRL_COMMON_REG_DONE);
++			break;
++		}
++		if (i >= 100) {
++			dev_err(hw_priv->pdev, "DPLL access timeout, 0x%08x\n", val32);
++			ret = -ETIMEDOUT;
++			break;
++		}
++		msleep(i++);
++	}
++	xradio_ahb_write_32(hw_priv, PWRCTRL_WLAN_START_CFG, 0);
++	return ret;
++}
++
+ static int xradio_bootloader(struct xradio_common *hw_priv)
+ {
+-	const char *bl_path = XR819_BOOTLOADER;
++	const char *bl_path = hw_priv->hw_revision == XR829_HW_REV0 ?
++			      XR829_BOOTLOADER : XR819_BOOTLOADER;
+ 	u32  addr = AHB_MEMORY_ADDRESS;
+ 	int ret;
+ 	u32 i;
+@@ -392,7 +444,9 @@ int xradio_load_firmware(struct xradio_common *hw_priv)
+ 		return -ENOTSUPP;
+ 	}
+ 	if (major_revision == 4) {
+-		hw_priv->hw_revision = XR819_HW_REV0;
++		/* Both report revision 4; the SDIO device ID tells them apart. */
++		hw_priv->hw_revision = hw_priv->sdio_func->device == 0x2282 ?
++				       XR829_HW_REV0 : XR819_HW_REV0;
+ 		dev_dbg(hw_priv->pdev, "XRADIO_HW_REV 1.0 detected.\n");
+ 	} else {
+ 		dev_dbg(hw_priv->pdev, "Unsupported major revision %d.\n",
+@@ -468,6 +522,12 @@ int xradio_load_firmware(struct xradio_common *hw_priv)
+ 		goto out;
+ 	}
+ 	if (val32 & HIF_CONFIG_ACCESS_MODE_BIT) {
++		if (hw_priv->hw_revision == XR829_HW_REV0) {
++			ret = xradio_update_dpllctrl(hw_priv,
++						     xradio_dllctrl_convert(dpll));
++			if (ret < 0)
++				goto out;
++		}
+ 		/* Down bootloader. */
+ 		ret = xradio_bootloader(hw_priv);
+ 		if (ret < 0) {
+diff --git a/drivers/net/wireless/xradio/fwio.h b/drivers/net/wireless/xradio/fwio.h
+index b5efeb15d..d24c12e39 100644
+--- a/drivers/net/wireless/xradio/fwio.h
++++ b/drivers/net/wireless/xradio/fwio.h
+@@ -16,6 +16,11 @@
+ #define XR819_FIRMWARE      ("xr819/fw_xr819.bin")
+ #define XR819_SDD_FILE      ("xr819/sdd_xr819.bin")
+ 
++#define XR829_HW_REV0       (8290)
++#define XR829_BOOTLOADER    ("xr829/boot_xr829.bin")
++#define XR829_FIRMWARE      ("xr829/fw_xr829.bin")
++#define XR829_SDD_FILE      ("xr829/sdd_xr829.bin")
++
+ #define SDD_PTA_CFG_ELT_ID             0xEB
+ #define SDD_REFERENCE_FREQUENCY_ELT_ID 0xC5
+ #define FIELD_OFFSET(type, field) ((u8 *)&((type *)0)->field - (u8 *)0)
+diff --git a/drivers/net/wireless/xradio/hwio.h b/drivers/net/wireless/xradio/hwio.h
+index 531c2b8c8..2f00cfacf 100644
+--- a/drivers/net/wireless/xradio/hwio.h
++++ b/drivers/net/wireless/xradio/hwio.h
+@@ -87,6 +87,15 @@ struct download_cntl_t {
+ 
+ #define SYS_BASE_ADDR_SILICON      (0)
+ #define AHB_MEMORY_ADDRESS         (SYS_BASE_ADDR_SILICON + 0x08000000)
++
++/* XR829: DPLL control shared with the BT core */
++#define PWRCTRL_WLAN_ADDRESS       (SYS_BASE_ADDR_SILICON + 0x0AC80000)
++#define PWRCTRL_WLAN_START_CFG     (PWRCTRL_WLAN_ADDRESS + 0x18)
++#define PWRCTRL_WLAN_COMMON_CFG    (PWRCTRL_WLAN_ADDRESS + 0x178)
++#define PWRCTRL_COMMON_REG_DONE    (0x1)
++#define PWRCTRL_COMMON_REG_BT      (0x4)
++#define PWRCTRL_COMMON_REG_ARBT    (0x8)
++#define PWRCTRL_WLAN_DPLL_CTRL     (PWRCTRL_WLAN_ADDRESS + 0x154)
+ #define PAC_BASE_ADDRESS_SILICON   (SYS_BASE_ADDR_SILICON + 0x09000000)
+ #define PAC_SHARED_MEMORY_SILICON  (PAC_BASE_ADDRESS_SILICON)
+ #define APB_ADDR(addr)             (PAC_SHARED_MEMORY_SILICON + (addr))
+@@ -226,4 +235,13 @@ static inline int xradio_ahb_write_32(struct xradio_common *hw_priv,
+ 	return xradio_ahb_write(hw_priv, addr, &val, sizeof(val));
+ }
+ 
++static inline u32 xradio_dllctrl_convert(u32 dpll)
++{
++	return ((((dpll >> 31) & 0x1) << 0) |		/* config */
++		(((dpll >> 29) & 0x3) << 1) |		/* dither */
++		(((dpll >> 12) & 0x1) << 3) |		/* frac ctrl */
++		(((dpll >> 13) & 0xffff) << 4) |	/* frac */
++		(((dpll >> 4) & 0xff) << 20));		/* divn */
++}
++
+ #endif /* XRADIO_HWIO_H_INCLUDED */
+diff --git a/drivers/net/wireless/xradio/rx.c b/drivers/net/wireless/xradio/rx.c
+index 24be4f321..77fd37e62 100644
+--- a/drivers/net/wireless/xradio/rx.c
++++ b/drivers/net/wireless/xradio/rx.c
+@@ -216,8 +216,13 @@ void xradio_rx_cb(struct xradio_vif *priv,
+ #endif
+        
+ 	if (arg->rxedRate >= 14) {
+-		hdr->flag |= RX_ENC_HT;
++		hdr->encoding = RX_ENC_HT;
+ 		hdr->rate_idx = arg->rxedRate - 14;
++		if (((arg->rxedRateEntry >> WSM_RATE_ENTRY_BW_SHIFT) & 0x3) ==
++		    WSM_RATE_ENTRY_BW_40M)
++			hdr->bw = RATE_INFO_BW_40;
++		if (arg->rxedRateEntry & WSM_RATE_ENTRY_F_SGI)
++			hdr->enc_flags |= RX_ENC_FLAG_SHORT_GI;
+ 	} else if (arg->rxedRate >= 4) {
+ 		if (hdr->band == NL80211_BAND_5GHZ)
+ 			hdr->rate_idx = arg->rxedRate - 6;
+diff --git a/drivers/net/wireless/xradio/sdio.c b/drivers/net/wireless/xradio/sdio.c
+index cdc3ae09d..587c59416 100644
+--- a/drivers/net/wireless/xradio/sdio.c
++++ b/drivers/net/wireless/xradio/sdio.c
+@@ -25,8 +25,11 @@
+ /* sdio vendor id and device id*/
+ #define SDIO_VENDOR_ID_XRADIO 0x0020
+ #define SDIO_DEVICE_ID_XRADIO 0x2281
++#define SDIO_VENDOR_ID_XR829  0x0a9e
++#define SDIO_DEVICE_ID_XR829  0x2282
+ static const struct sdio_device_id xradio_sdio_ids[] = {
+ 	{ SDIO_DEVICE(SDIO_VENDOR_ID_XRADIO, SDIO_DEVICE_ID_XRADIO) },
++	{ SDIO_DEVICE(SDIO_VENDOR_ID_XR829, SDIO_DEVICE_ID_XR829) },
+ 	//{ SDIO_DEVICE(SDIO_ANY_ID, SDIO_ANY_ID) },
+ 	{ /* end: all zeroes */			},
+ };
+@@ -136,6 +139,7 @@ int sdio_pm(struct xradio_common *self, bool  suspend)
+ 
+ static const struct of_device_id xradio_sdio_of_match_table[] = {
+ 	{ .compatible = "xradio,xr819" },
++	{ .compatible = "xradio,xr829" },
+ 	{ }
+ };
+ 
+diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
+index ea737709e..66ab0ad66 100644
+--- a/drivers/net/wireless/xradio/wsm.c
++++ b/drivers/net/wireless/xradio/wsm.c
+@@ -433,6 +433,40 @@ static int wsm_write_mib_confirm(struct xradio_common *hw_priv,
+ 
+ /* ******************************************************************** */
+ 
++int wsm_set_template_frame(struct xradio_common *hw_priv,
++			   struct wsm_template_frame *arg, int if_id)
++{
++	int ret;
++	u8 *p;
++
++	if (xradio_ht40_api(hw_priv)) {
++		/* u16 frame type, u16 rate entry, u32 length */
++		__le32 len = arg->disable ? 0 :
++			     __cpu_to_le32(arg->skb->len);
++
++		p = skb_push(arg->skb, 8);
++		put_unaligned_le16(arg->frame_type, p);
++		put_unaligned_le16(wsm_legacy_rate_entry(arg->rate), p + 2);
++		memcpy(p + 4, &len, 4);
++		ret = wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, p,
++				    arg->skb->len, if_id);
++		skb_pull(arg->skb, 8);
++		return ret;
++	}
++
++	p = skb_push(arg->skb, 4);
++	p[0] = arg->frame_type;
++	p[1] = arg->rate;
++	if (arg->disable)
++		((u16 *) p)[1] = 0;
++	else
++		((u16 *) p)[1] = __cpu_to_le16(arg->skb->len - 4);
++	ret = wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, p,
++			    arg->skb->len, if_id);
++	skb_pull(arg->skb, 4);
++	return ret;
++}
++
+ int wsm_scan(struct xradio_common *hw_priv, const struct wsm_scan *arg,
+ 		int if_id)
+ {
+@@ -453,9 +487,15 @@ int wsm_scan(struct xradio_common *hw_priv, const struct wsm_scan *arg,
+ 	wsm_cmd_lock(hw_priv);
+ 
+ 	WSM_PUT8(buf, arg->band);
+-	WSM_PUT8(buf, arg->scanType);
+-	WSM_PUT8(buf, arg->scanFlags);
+-	WSM_PUT8(buf, arg->maxTransmitRate);
++	if (xradio_ht40_api(hw_priv)) {
++		/* scan type in bits 7:6, flags in 5:0, then a rate entry */
++		WSM_PUT8(buf, (arg->scanType << 6) | (arg->scanFlags & 0x3f));
++		WSM_PUT16(buf, wsm_legacy_rate_entry(arg->maxTransmitRate));
++	} else {
++		WSM_PUT8(buf, arg->scanType);
++		WSM_PUT8(buf, arg->scanFlags);
++		WSM_PUT8(buf, arg->maxTransmitRate);
++	}
+ 	WSM_PUT32(buf, arg->autoScanInterval);
+ 	WSM_PUT8(buf, arg->numOfProbeRequests);
+ 	WSM_PUT8(buf, arg->numOfChannels);
+@@ -1336,7 +1376,19 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
+ 
+ 		rx.status = WSM_GET32(buf);
+ 		rx.channelNumber = WSM_GET16(buf);
+-		rx.rxedRate = WSM_GET8(buf);
++		if (xradio_ht40_api(hw_priv)) {
++			u16 entry = WSM_GET16(buf);
++			u8 index = (entry >> WSM_RATE_ENTRY_INDEX_SHIFT) & 0xf;
++
++			buf->data += 3;		/* reserved */
++			rx.rxedRateEntry = entry;
++			/* old rate index: legacy 0-13, HT MCS from 14 */
++			rx.rxedRate = (entry >> WSM_RATE_ENTRY_MODEM_SHIFT) ==
++				      WSM_RATE_ENTRY_MODEM_HT ? 14 + index : index;
++		} else {
++			rx.rxedRateEntry = 0;
++			rx.rxedRate = WSM_GET8(buf);
++		}
+ 		rx.rcpiRssi = WSM_GET8(buf);
+ 		rx.flags = WSM_GET32(buf);
+ 
+diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
+index cec208271..42b57b750 100644
+--- a/drivers/net/wireless/xradio/wsm.h
++++ b/drivers/net/wireless/xradio/wsm.h
+@@ -13,6 +13,7 @@
+ #define XRADIO_WSM_H_INCLUDED
+ 
+ #include <linux/spinlock.h>
++#include <linux/unaligned.h>
+ 
+ struct xradio_common;
+ 
+@@ -904,6 +905,9 @@ struct wsm_rx {
+ 	/* WSM_TRANSMIT_RATE_... */
+ 	/* [out] */ u8 rxedRate;
+ 
++	/* HT40 API only (XR829): the firmware's rate entry */
++	/* [out] */ u16 rxedRateEntry;
++
+ 	/* This value is expressed in signed Q8.0 format for */
+ 	/* RSSI and unsigned Q7.1 format for RCPI. */
+ 	/* [out] */ u8 rcpiRssi;
+@@ -1890,24 +1894,30 @@ struct wsm_template_frame {
+ 	struct sk_buff *skb;
+ };
+ 
+-static inline int wsm_set_template_frame(struct xradio_common *hw_priv,
+-					 struct wsm_template_frame *arg,
+-					 int if_id)
++/* HT40 API rate entry: modem type, bandwidth, format flags, rate index */
++#define WSM_RATE_ENTRY_MODEM_SHIFT	14
++#define WSM_RATE_ENTRY_MODEM_LEGACY	0
++#define WSM_RATE_ENTRY_MODEM_HT		1
++#define WSM_RATE_ENTRY_BW_SHIFT		12
++#define WSM_RATE_ENTRY_BW_20M		0
++#define WSM_RATE_ENTRY_BW_40M		1
++#define WSM_RATE_ENTRY_INDEX_SHIFT	4
++#define WSM_RATE_ENTRY_F_SHORT_PRE	BIT(8)
++#define WSM_RATE_ENTRY_F_SGI		BIT(9)
++
++/* Rate entry for a legacy (CCK/OFDM) WSM_TRANSMIT_RATE_ index at 20 MHz */
++static inline u16 wsm_legacy_rate_entry(u8 rate)
+ {
+-	int ret;
+-	u8 *p = skb_push(arg->skb, 4);
+-	p[0] = arg->frame_type;
+-	p[1] = arg->rate;
+-	if (arg->disable)
+-		((u16 *) p)[1] = 0;
+-	else
+-		((u16 *) p)[1] = __cpu_to_le16(arg->skb->len - 4);
+-	ret = wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, p,
+-			    arg->skb->len, if_id);
+-	skb_pull(arg->skb, 4);
+-	return ret;
++	if (rate == 0xFF)	/* firmware default */
++		return 0xFF;
++	return (WSM_RATE_ENTRY_MODEM_LEGACY << WSM_RATE_ENTRY_MODEM_SHIFT) |
++	       (WSM_RATE_ENTRY_BW_20M << WSM_RATE_ENTRY_BW_SHIFT) |
++	       (rate << WSM_RATE_ENTRY_INDEX_SHIFT);
+ }
+ 
++int wsm_set_template_frame(struct xradio_common *hw_priv,
++			   struct wsm_template_frame *arg, int if_id);
++
+ 
+ struct wsm_protected_mgmt_policy {
+ 	bool protectedMgmtEnable;
+diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
+index 950698613..fa67a6279 100644
+--- a/drivers/net/wireless/xradio/xradio.h
++++ b/drivers/net/wireless/xradio/xradio.h
+@@ -544,13 +544,25 @@ struct xradio_vif *xrwl_get_activevif(struct xradio_common *hw_priv)
+ 
+ static inline bool is_hardware_xradio(struct xradio_common *hw_priv)
+ {
+-	return (hw_priv->hw_revision == XR819_HW_REV0);
++	return (hw_priv->hw_revision == XR819_HW_REV0 ||
++		hw_priv->hw_revision == XR829_HW_REV0);
++}
++
++/*
++ * The XR829 firmware ("HT40" API) describes rates with 16-bit rate entries
++ * instead of 8-bit rate indices, which changes the layout of several
++ * commands.
++ */
++static inline bool xradio_ht40_api(struct xradio_common *hw_priv)
++{
++	return hw_priv->hw_revision == XR829_HW_REV0;
+ }
+ 
+ static inline int xrwl_get_nr_hw_ifaces(struct xradio_common *hw_priv)
+ {
+ 	switch(hw_priv->hw_revision) {
+ 		case XR819_HW_REV0:
++		case XR829_HW_REV0:
+ 		default:
+ 			return 1;
+ 	}
+-- 
+2.56.0
+

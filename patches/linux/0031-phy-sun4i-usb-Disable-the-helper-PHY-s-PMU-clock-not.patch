@@ -1,7 +1,7 @@
 From 58bee238c7d00402f627163944af554b6bcc3eb7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:07 +0100
-Subject: [PATCH 31/41] phy: sun4i-usb: Disable the helper PHY's PMU clock, not
+Subject: [PATCH 31/44] phy: sun4i-usb: Disable the helper PHY's PMU clock, not
  our own
 
 The PMU clock of PHY2 is only enabled to clear its SIDDQ bit, but the code

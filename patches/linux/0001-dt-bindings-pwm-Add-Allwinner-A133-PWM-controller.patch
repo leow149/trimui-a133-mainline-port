@@ -1,7 +1,7 @@
 From 644bfdd96071c00c9206d48af24d3b8e1885373a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:23 +0100
-Subject: [PATCH 01/41] dt-bindings: pwm: Add Allwinner A133 PWM controller
+Subject: [PATCH 01/44] dt-bindings: pwm: Add Allwinner A133 PWM controller
 
 The A133 (sun50iw10) PWM block differs from the sun4i-style PWM handled by
 pwm-sun4i: per-pair clock configuration and a separate gate/bypass register.

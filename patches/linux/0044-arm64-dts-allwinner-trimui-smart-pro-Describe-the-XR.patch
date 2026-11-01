@@ -1,0 +1,36 @@
+From 74d8ade4ac6169aad6d2c0f9390ec3df9725a37f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 15:04:00 +0100
+Subject: [PATCH 44/44] arm64: dts: allwinner: trimui-smart-pro: Describe the
+ XR829 WiFi function
+
+Child node for the xradio driver, with the WL_HOSTWAKE interrupt on PL6.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts    | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index ac78a9eaa..1f76c1bb4 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -380,6 +380,14 @@ &mmc1 {
+ 	vmmc-supply = <&reg_bldo1>;
+ 	vqmmc-supply = <&reg_aldo3>;
+ 	status = "okay";
++
++	wifi@1 {
++		reg = <1>;
++		compatible = "xradio,xr829";
++		interrupt-parent = <&r_pio>;
++		interrupts = <0 6 IRQ_TYPE_EDGE_RISING>; /* PL6 */
++		interrupt-names = "host-wake";
++	};
+ };
+ 
+ /* eMMC; the stock firmware also runs it at DDR52, not HS200/HS400. */
+-- 
+2.56.0
+
