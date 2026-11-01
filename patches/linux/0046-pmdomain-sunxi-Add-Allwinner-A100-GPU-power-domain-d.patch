@@ -1,0 +1,232 @@
+From f46ef0744e0e807b36edc19baed6e61a101c82fc Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 19:17:48 +0100
+Subject: [PATCH 46/48] pmdomain: sunxi: Add Allwinner A100 GPU power domain
+ driver
+
+The A100/A133 GPU sits in a power domain controlled by a small PPU block
+at 0x07001000 (R_PPU). Unlike the D1 PPU, the vendor kernel sequences it
+in software: close the power switches group by group, open the clock,
+release isolation and reset, then mark the domain as on; and the reverse
+for power off. Do the same, with the vendor's order and delays.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/pmdomain/sunxi/Kconfig               |   9 +
+ drivers/pmdomain/sunxi/Makefile              |   1 +
+ drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c | 172 +++++++++++++++++++
+ 3 files changed, 182 insertions(+)
+ create mode 100644 drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
+
+diff --git a/drivers/pmdomain/sunxi/Kconfig b/drivers/pmdomain/sunxi/Kconfig
+index 858446594..644c66cc9 100644
+--- a/drivers/pmdomain/sunxi/Kconfig
++++ b/drivers/pmdomain/sunxi/Kconfig
+@@ -11,6 +11,15 @@ config SUN20I_PPU
+ 	  to enable power to certain peripherals, such as the display
+ 	  engine.
+ 
++config SUN50I_A100_GPU_PPU
++	bool "Allwinner A100 GPU power domain driver"
++	depends on ARCH_SUNXI || COMPILE_TEST
++	depends on PM
++	select PM_GENERIC_DOMAINS
++	help
++	  Say y to enable the power domain driver for the GPU of the
++	  Allwinner A100/A133.
++
+ config SUN50I_H6_PRCM_PPU
+ 	tristate "Allwinner H6 PRCM power domain driver"
+ 	depends on ARCH_SUNXI || COMPILE_TEST
+diff --git a/drivers/pmdomain/sunxi/Makefile b/drivers/pmdomain/sunxi/Makefile
+index e344b232f..a35d208c6 100644
+--- a/drivers/pmdomain/sunxi/Makefile
++++ b/drivers/pmdomain/sunxi/Makefile
+@@ -1,4 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+ obj-$(CONFIG_SUN20I_PPU)		+= sun20i-ppu.o
++obj-$(CONFIG_SUN50I_A100_GPU_PPU)	+= sun50i-a100-gpu-ppu.o
+ obj-$(CONFIG_SUN50I_H6_PRCM_PPU)	+= sun50i-h6-prcm-ppu.o
+ obj-$(CONFIG_SUN55I_PCK600)		+= sun55i-pck600.o
+diff --git a/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c b/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
+new file mode 100644
+index 000000000..ac7304b81
+--- /dev/null
++++ b/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
+@@ -0,0 +1,172 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Allwinner A100/A133 GPU power domain (R_PPU)
++ *
++ * A single power domain for the GPU. The power switch, isolation, clock and
++ * reset are sequenced by software, in the order and with the delays the
++ * vendor kernel uses.
++ */
++
++#include <linux/clk.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/pm_domain.h>
++#include <linux/reset.h>
++
++#define PPU_RSTN_REG		0x00
++#define PPU_CLK_GATE_REG	0x04
++#define PPU_PWROFF_GATE_REG	0x08
++#define PPU_PWROFF_GATE_ISO0		BIT(0)
++#define PPU_PWROFF_GATE_ISO1		BIT(1)
++#define PPU_PSW_ON_REG		0x0c
++#define PPU_PSW_OFF_REG		0x10
++#define PPU_STATE_REG		0x20
++#define PPU_STATE_MASK			GENMASK(1, 0)
++#define PPU_STATE_ON			0
++#define PPU_STATE_OFF			2
++#define PPU_STATE_UPDATE_REG	0x28
++#define PPU_ACTIVE_REG		0x2c
++
++struct sun50i_a100_gpu_ppu {
++	struct generic_pm_domain genpd;
++	void __iomem *base;
++};
++
++#define to_gpu_ppu(_genpd) container_of(_genpd, struct sun50i_a100_gpu_ppu, genpd)
++
++static bool sun50i_a100_gpu_ppu_is_off(struct sun50i_a100_gpu_ppu *ppu)
++{
++	return (readl(ppu->base + PPU_STATE_REG) & PPU_STATE_MASK) == PPU_STATE_OFF;
++}
++
++static void sun50i_a100_gpu_ppu_clrbits(struct sun50i_a100_gpu_ppu *ppu, u32 reg, u32 bits)
++{
++	writel(readl(ppu->base + reg) & ~bits, ppu->base + reg);
++}
++
++static int sun50i_a100_gpu_ppu_power_on(struct generic_pm_domain *genpd)
++{
++	/* Remaining switch groups, in vendor order, with their settle time */
++	static const struct { u32 sw; unsigned int delay_us; } seq[] = {
++		{ BIT(23), 10 }, { BIT(18), 10 }, { BIT(16), 5 }, { BIT(19), 5 },
++		{ BIT(20), 5 }, { BIT(21), 5 }, { BIT(22), 5 }, { BIT(17), 5 },
++	};
++	struct sun50i_a100_gpu_ppu *ppu = to_gpu_ppu(genpd);
++	int i;
++
++	if (!sun50i_a100_gpu_ppu_is_off(ppu))
++		return 0;
++
++	/* Close the small switches one by one to limit inrush current. */
++	for (i = 0; i < 8; i++) {
++		writel(BIT(i), ppu->base + PPU_PSW_ON_REG);
++		udelay(1);
++	}
++	writel(1, ppu->base + PPU_CLK_GATE_REG);
++	udelay(1);
++	sun50i_a100_gpu_ppu_clrbits(ppu, PPU_PWROFF_GATE_REG, PPU_PWROFF_GATE_ISO0);
++
++	for (i = 0; i < ARRAY_SIZE(seq); i++) {
++		writel(seq[i].sw, ppu->base + PPU_PSW_ON_REG);
++		udelay(seq[i].delay_us);
++	}
++
++	sun50i_a100_gpu_ppu_clrbits(ppu, PPU_PWROFF_GATE_REG, PPU_PWROFF_GATE_ISO1);
++	udelay(1);
++	writel(1, ppu->base + PPU_RSTN_REG);
++	udelay(10);
++
++	writel(PPU_STATE_ON, ppu->base + PPU_STATE_REG);
++	writel(1, ppu->base + PPU_STATE_UPDATE_REG);
++	writel(1, ppu->base + PPU_ACTIVE_REG);
++
++	return 0;
++}
++
++static int sun50i_a100_gpu_ppu_power_off(struct generic_pm_domain *genpd)
++{
++	struct sun50i_a100_gpu_ppu *ppu = to_gpu_ppu(genpd);
++
++	if (sun50i_a100_gpu_ppu_is_off(ppu))
++		return 0;
++
++	writel(readl(ppu->base + PPU_PWROFF_GATE_REG) | PPU_PWROFF_GATE_ISO1,
++	       ppu->base + PPU_PWROFF_GATE_REG);
++	writel(readl(ppu->base + PPU_PWROFF_GATE_REG) | PPU_PWROFF_GATE_ISO0,
++	       ppu->base + PPU_PWROFF_GATE_REG);
++	writel(0, ppu->base + PPU_CLK_GATE_REG);
++	udelay(2);
++	writel(0, ppu->base + PPU_RSTN_REG);
++
++	writel(0xff0000, ppu->base + PPU_PSW_OFF_REG);
++	writel(0xff, ppu->base + PPU_PSW_OFF_REG);
++
++	writel(PPU_STATE_OFF, ppu->base + PPU_STATE_REG);
++	writel(1, ppu->base + PPU_STATE_UPDATE_REG);
++	writel(0, ppu->base + PPU_ACTIVE_REG);
++
++	return 0;
++}
++
++static int sun50i_a100_gpu_ppu_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct sun50i_a100_gpu_ppu *ppu;
++	struct reset_control *rst;
++	struct clk *clk;
++	int ret;
++
++	ppu = devm_kzalloc(dev, sizeof(*ppu), GFP_KERNEL);
++	if (!ppu)
++		return -ENOMEM;
++
++	ppu->base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(ppu->base))
++		return PTR_ERR(ppu->base);
++
++	/* The registers are only accessible with the bus clock and reset released. */
++	clk = devm_clk_get_enabled(dev, NULL);
++	if (IS_ERR(clk))
++		return dev_err_probe(dev, PTR_ERR(clk), "failed to get clock\n");
++
++	rst = devm_reset_control_get_exclusive_deasserted(dev, NULL);
++	if (IS_ERR(rst))
++		return dev_err_probe(dev, PTR_ERR(rst), "failed to get reset\n");
++
++	ppu->genpd.name = "gpu";
++	ppu->genpd.power_on = sun50i_a100_gpu_ppu_power_on;
++	ppu->genpd.power_off = sun50i_a100_gpu_ppu_power_off;
++
++	ret = pm_genpd_init(&ppu->genpd, NULL, sun50i_a100_gpu_ppu_is_off(ppu));
++	if (ret)
++		return ret;
++
++	ret = of_genpd_add_provider_simple(dev->of_node, &ppu->genpd);
++	if (ret)
++		pm_genpd_remove(&ppu->genpd);
++
++	return ret;
++}
++
++static const struct of_device_id sun50i_a100_gpu_ppu_of_match[] = {
++	{ .compatible = "allwinner,sun50i-a100-gpu-ppu" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, sun50i_a100_gpu_ppu_of_match);
++
++static struct platform_driver sun50i_a100_gpu_ppu_driver = {
++	.probe = sun50i_a100_gpu_ppu_probe,
++	.driver = {
++		.name = "sun50i-a100-gpu-ppu",
++		.of_match_table = sun50i_a100_gpu_ppu_of_match,
++		/* Power domain provider, must stay */
++		.suppress_bind_attrs = true,
++	},
++};
++builtin_platform_driver(sun50i_a100_gpu_ppu_driver);
++
++MODULE_DESCRIPTION("Allwinner A100 GPU power domain driver");
++MODULE_LICENSE("GPL");
+-- 
+2.56.0
+
