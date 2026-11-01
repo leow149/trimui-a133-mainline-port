@@ -23,7 +23,7 @@ Work in progress, not yet submitted upstream in this form.
 | Audio: stereo speakers + headphone output | ✅ Working (playback), jack detection mutes the speakers |
 | Stick RGB LEDs + logo LED (23 on one chain) | ✅ Working, `/sys/class/leds/rgb:indicator-N` (0 logo, 1-11 left, 12-22 right) |
 | Slider switch | ✅ Working (input switch event, like stock) |
-| Suspend | ❌ Not yet |
+| Suspend (s2idle; firmware has no PSCI system suspend), wake on power key | ✅ Working, display and gamepad resume |
 | USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
