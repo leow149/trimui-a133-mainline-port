@@ -1,7 +1,7 @@
 From d49533ef985b6b4b8065035932f33c03f1f143b6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:22 +0100
-Subject: [PATCH 19/21] clk: sunxi-ng: sun6i-rtc: Add A100 support
+Subject: [PATCH 19/25] clk: sunxi-ng: sun6i-rtc: Add A100 support
 
 The A100/A133 RTC has the same clock tree as the A523 one: an external 32k
 crystal with automatic fallback to the internal oscillator, and IOSC

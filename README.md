@@ -20,7 +20,8 @@ Work in progress, not yet submitted upstream in this form.
 | CPU frequency scaling 408-1464 MHz, thermal throttling | ✅ Working |
 | SD card, eMMC, UART console, reboot | ✅ Working |
 | RTC (external 32.768 kHz crystal) | ✅ Working, keeps time across reboots |
-| Audio, stick RGB LEDs, suspend | ❌ Not yet |
+| Audio: stereo speakers + headphone output | ✅ Working (playback); no headphone-jack detection yet |
+| Stick RGB LEDs, suspend | ❌ Not yet |
 | USB-C gadget/host | ❌ Gadget mode enumerates but every descriptor read fails (-71) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
@@ -38,6 +39,9 @@ patches/linux/     Kernel patch series against a named upstream commit, one chan
                    patch (clk, drm/sun4i, panel, pwm, 8250_dw, gamepad, DT), + defconfig
 patches/u-boot/    Board DTS + defconfig for mainline U-Boot
 board-port/        Board bring-up scripts/configs used day-to-day (not raw patches)
+  audio-defaults.sh   sysinit script: quiet mixer levels at boot (the codec resets to full volume).
+                      Playback/mixer tools: aplay, amixer, speaker-test from Alpine's alsa-utils
+                      (only those three + libasound and /usr/share/alsa are needed).
 tools/             Small standalone tools written for this port
   padview/            framebuffer gamepad viewer (buttons, sticks, last events)
   devmem.c            minimal statically-linked /dev/mem peek/poke tool

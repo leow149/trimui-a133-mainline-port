@@ -21,10 +21,10 @@ FIFO=uart_logs/uart.fifo
 LOG=uart_logs/ana1_polarity_test_20261030.log
 IMG=build-artifacts/Image
 DTB=build-artifacts/sun50i-a133-trimui-smartpro.dtb
-CARD_IMG=Image; CARD_DTB=sun50i-a133-trimui-smartpro.dtb; WITH_DTB=
+CARD_IMG=Image; CARD_DTB=sun50i-a133-trimui-smartpro.dtb; WITH_DTB=; TEST_MODE=
 for a in "$@"; do
   case $a in
-  --test) CARD_IMG=Image.test; CARD_DTB=test.dtb ;;
+  --test) CARD_IMG=Image.test; CARD_DTB=test.dtb; TEST_MODE=1 ;;
   --dtb) WITH_DTB=1 ;;
   esac
 done
@@ -60,9 +60,22 @@ PUSH_CHUNK=65536 python3 -I tools/uart_push.py "$IMG.xz" /tmp/Image.xz "$FIFO" "
 echo "transfer took $(( $(date +%s) - t0 )) s"
 got=$(ask IMGMD5 'unxz -f /tmp/Image.xz && echo IMGMD5 $(md5sum < /tmp/Image | cut -c1-32)' 300)
 [ "$got" = "$want" ] || { echo "decompressed md5 $got != $want"; exit 1; }
-cmd='P=$(findfs LABEL=TRIMUIBOOT) && mkdir -p /mnt/boot && mount $P /mnt/boot && cp /tmp/Image /mnt/boot/'$CARD_IMG
-[ -n "$WITH_DTB" ] && cmd="$cmd && cp /tmp/new.dtb /mnt/boot/$CARD_DTB"
-cmd="$cmd && sync && echo CARDMD5 \$(md5sum < /mnt/boot/$CARD_IMG | cut -c1-32); umount /mnt/boot; rm -f /tmp/Image /tmp/Image.xz"
+# The 64 MB boot partition fits only about one and a half kernels. A normal install
+# drops a leftover test kernel first, then copies under a temporary name and renames
+# it into place when there is room; otherwise it has to replace the old file in place.
+# /tmp/Image is only deleted once the card copy verifies, so a failure can be retried
+# without pushing again. --test refuses when the test kernel does not fit.
+B=/mnt/boot
+put="put() { f=\$1; t=\$2; rm -f \$t.new; \
+need=\$(( \$(stat -c %s \$f) / 1024 + 64 )); free=\$(df -k $B | tail -1 | awk '{print \$4}'); \
+if [ \$free -ge \$need ]; then cp \$f \$t.new && mv \$t.new \$t; \
+elif [ -n \"$TEST_MODE\" ]; then echo NO_SPACE_FOR_TEST; return 1; \
+else rm -f \$t && cp \$f \$t; fi; }"
+cmd="$put; P=\$(findfs LABEL=TRIMUIBOOT) && mkdir -p $B && mount \$P $B"
+[ "$CARD_IMG" = Image ] && cmd="$cmd && rm -f $B/Image.test $B/test.dtb"
+cmd="$cmd && put /tmp/Image $B/$CARD_IMG"
+[ -n "$WITH_DTB" ] && cmd="$cmd && put /tmp/new.dtb $B/$CARD_DTB"
+cmd="$cmd && sync && echo CARDMD5 \$(md5sum < $B/$CARD_IMG | cut -c1-32) && rm -f /tmp/Image /tmp/Image.xz; umount $B"
 got=$(ask CARDMD5 "$cmd" 300)
 [ "$got" = "$want" ] || { echo "card md5 $got != $want"; exit 1; }
 echo "kernel $want installed on the SD boot partition as /$CARD_IMG"

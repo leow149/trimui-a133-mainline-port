@@ -99,6 +99,17 @@
 	};
 };
 
+/*
+ * The speaker amplifier (enabled by PH6) and the 3.5 mm jack both hang off the
+ * headphone output; the line out is not used.
+ */
+&codec {
+	allwinner,audio-routing = "Speaker", "HP",
+				  "Headphone", "HP";
+	allwinner,pa-gpios = <&pio 7 6 GPIO_ACTIVE_HIGH>; /* PH6 */
+	status = "okay";
+};
+
 &cpu0 {
 	cpu-supply = <&reg_dcdc1>;
 };

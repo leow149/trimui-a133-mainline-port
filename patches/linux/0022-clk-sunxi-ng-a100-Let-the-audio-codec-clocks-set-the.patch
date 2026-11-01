@@ -1,0 +1,41 @@
+From 00bf03044f832bdc82f4b121c0ce0a808d9ea36c Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 01:24:51 +0100
+Subject: [PATCH 22/25] clk: sunxi-ng: a100: Let the audio codec clocks set
+ their parent rate
+
+The codec needs 22.5792 MHz for the 44.1 kHz family and 24.576 MHz for 48 kHz,
+which the audio PLL only provides by changing its own rate. Without
+CLK_SET_RATE_PARENT the codec clocks could only divide whatever rate the PLL
+happened to run at.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+index 758a1446d..85b948fff 100644
+--- a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
++++ b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+@@ -617,14 +617,14 @@ static SUNXI_CCU_M_WITH_MUX_GATE(audio_codec_dac_clk, "audio-codec-dac",
+ 				 0, 4,		/* M */
+ 				 24, 2,		/* mux */
+ 				 BIT(31),	/* gate */
+-				 0);
++				 CLK_SET_RATE_PARENT);
+ 
+ static SUNXI_CCU_M_WITH_MUX_GATE(audio_codec_adc_clk, "audio-codec-adc",
+ 				 audio_parents, 0xa54,
+ 				 0, 4,		/* M */
+ 				 24, 2,		/* mux */
+ 				 BIT(31),	/* gate */
+-				 0);
++				 CLK_SET_RATE_PARENT);
+ 
+ static SUNXI_CCU_M_WITH_MUX_GATE(audio_codec_4x_clk, "audio-codec-4x",
+ 				 audio_parents, 0xa58,
+-- 
+2.56.0
+
