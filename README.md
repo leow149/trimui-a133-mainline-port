@@ -25,7 +25,7 @@ Work in progress, not yet submitted upstream in this form.
 | Slider switch | ✅ Working (input switch event, like stock) |
 | Suspend (s2idle; firmware has no PSCI system suspend), wake on power key | ✅ Working, display and gamepad resume |
 | USB-C (charging port) device mode | ✅ Working (configfs gadgets; tested with a serial gadget, 1 MB transfer verified) |
-| USB-C second port (host) | ❌ Not yet |
+| USB-C second port (host) | ✅ Working (USB 2.0; hubs, storage, HID and USB Ethernet drivers built in) |
 | Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
 
 The long-standing black-screen bug is solved. It had four independent causes, all needed:

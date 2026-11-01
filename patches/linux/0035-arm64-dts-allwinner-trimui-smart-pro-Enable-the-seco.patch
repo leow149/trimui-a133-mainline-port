@@ -1,0 +1,58 @@
+From b80b9ad6463f0c76c481276bf175fbcabca3c457 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 11:59:18 +0100
+Subject: [PATCH 35/35] arm64: dts: allwinner: trimui-smart-pro: Enable the
+ second USB-C port
+
+The second USB-C port is host only: EHCI1/OHCI1 on PHY1, with its 5 V
+switched by PL8 (as in the stock DT). Tested with a USB 2.0 hub and an
+Ethernet adapter behind it.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 21 +++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index ee678ca42..8259ceb56 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -85,6 +85,17 @@ switch-slider {
+ 		};
+ 	};
+ 
++	/* 5 V switch for the second USB-C port (host only) */
++	reg_usb1_vbus: regulator-usb1-vbus {
++		compatible = "regulator-fixed";
++		regulator-name = "usb1-vbus";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&r_pio 0 8 GPIO_ACTIVE_HIGH>; /* PL8 */
++		enable-active-high;
++		vin-supply = <&reg_vcc5v>;
++	};
++
+ 	reg_vcc_pad: regulator-vcc-pad {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vcc-pad";
+@@ -537,6 +548,16 @@ &usb_otg {
+ };
+ 
+ &usbphy {
++	usb1_vbus-supply = <&reg_usb1_vbus>;
++	status = "okay";
++};
++
++/* Second USB-C port: host only */
++&ehci1 {
++	status = "okay";
++};
++
++&ohci1 {
+ 	status = "okay";
+ };
+ 
+-- 
+2.56.0
+
