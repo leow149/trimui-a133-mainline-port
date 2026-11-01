@@ -99,3 +99,30 @@
   likely targets this same symptom.
 - Next ideas: stock capture at 1x (MainUI renders 1x?) for a like-for-like register diff; RE the stock
   libGLESv2/libsrv_um 3D kick (frag regs: PBE words, ISP_CTL, bgobj) and compare field by field with Mesa.
+
+## 2026-11-02: GPU works -- vkcube renders correctly (Mesa series in mesa-patches/0001-0004)
+(Coordinates note: "top-left quarter" above means image coordinates; the panel is mounted rotated, so on
+the screen it appeared top-right.)
+- Quarter coverage = TA terminate clip (TA_STATE_TERMINATE0/1 in pvr_arch_framebuffer.c) hard-coded in
+  32 px units; 16x16-tile cores read 16 px units. Found by dumping region headers (PVR_DUMP_RGN hook):
+  TE marked exactly ceil(w/32)*ceil(h/32) headers valid, independent of every HWRT value.
+- Depth tests against the cleared depth failed for D16/D24: ISP_BGOBJDEPTH must be F32 on v1 cores
+  (stock writes 0x3f800000 too). D32F worked.
+- Mesa queue bug (all cores): signals of a submission without command buffers ignored its waits ->
+  WSI imported a stub fence (dma_buf bufinfo "fence:0:0") into the scan-out dma-buf.
+- Verified: vktest (clear, triangle, 2 triangles depth, D16/D24/D32F, linear+optimal+copy), vkmulti
+  (16 pipelined 720x1280 frames into separate images), scan-out buffers sampled per column during
+  vkcube: 2400/2400 clean. Tools: vktest/vkmulti, frames/fbgrab.c, colgrab.c, fliptest/fliptest.c.
+- Kernel: series 0049 "drm/imagination: Support the v1 simple internal parameter format" (clean).
+- Mesa build: persistent image trimui-mesa-build:latest on bodenserver (CDN stalled once).
+
+## Remaining visible glitches = DISPLAY underrun under memory load (not GPU)
+- fliptest (CPU-drawn moving bar, KMS flips, no GPU) is clean idle but glitches (vertical lines) while
+  the GPU renders offscreen. TCON GINT0 bit 9 LCD_TRI_UNDERFLOW_FLAG fires only under GPU load
+  (2/50 x 20 ms windows), LCD_DEBUG fifo underflow never seen.
+- Ruled out with stock register reads (SD removed, adb): MBUS QoS (0x04810000 master cfg all zero on
+  BOTH; 0x047fa000 all zero on both), DE clock 300 MHz both, DSI mod clock 150 MHz both, DRAM 792 both.
+  Stock GPU runs 702 MHz (ours 432). CCU dumps: regdump/ccu_stock.txt, ccu_mainline.txt.
+- Next: mainline drives the DSI panel in TCON CPU/trigger mode with "suspicious" block_space/start_delay
+  timing (sun4i_tcon0_mode_set_cpu). Compare with the vendor's DSI/TCON setup (video vs command mode,
+  TRI timing, DE/TCON FIFO thresholds) -- see earlier display RE in CURRENT_STATE.md.

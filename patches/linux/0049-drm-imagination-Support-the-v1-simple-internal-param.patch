@@ -1,0 +1,67 @@
+From 3877c73ae9b0956aa8fe9d17abc9cf3cc3d44ca1 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:22:57 +0100
+Subject: [PATCH 49/49] drm/imagination: Support the v1 simple internal
+ parameter format
+
+Series 8XE cores such as the GE8300 (22.102.54.38) use version 1 of the
+simple internal parameter format, which the HWRT setup only warned about.
+Program them like the vendor driver does: a single macrotile covering the
+whole render target and the last tile as screen maximum, without the 2x2
+tile group alignment of version 2.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/gpu/drm/imagination/pvr_hwrt.c | 31 +++++++++++++++++---------
+ 1 file changed, 21 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/gpu/drm/imagination/pvr_hwrt.c b/drivers/gpu/drm/imagination/pvr_hwrt.c
+index 05c68c78d..b34d2a170 100644
+--- a/drivers/gpu/drm/imagination/pvr_hwrt.c
++++ b/drivers/gpu/drm/imagination/pvr_hwrt.c
+@@ -254,20 +254,31 @@ hwrt_init_common_fw_structure(struct pvr_file *pvr_file,
+ 		if (WARN_ON(err))
+ 			return err;
+ 
+-		WARN_ON(parameter_format != 2);
+-
+-		/*
+-		 * Set up 16 macrotiles with a multiple of 2x2 tiles per macrotile, which is
+-		 * aligned to a tile group.
+-		 */
+-		info.mtile_x[0] = DIV_ROUND_UP(info.num_tiles_x, 8) * 2;
+-		info.mtile_y[0] = DIV_ROUND_UP(info.num_tiles_y, 8) * 2;
++		if (parameter_format == 1) {
++			/*
++			 * One macrotile covering the whole render target, as the
++			 * vendor driver sets up for Series 8XE cores.
++			 */
++			info.mtile_x[0] = info.num_tiles_x;
++			info.mtile_y[0] = info.num_tiles_y;
++			info.tile_max_x = info.num_tiles_x - 1;
++			info.tile_max_y = info.num_tiles_y - 1;
++		} else {
++			WARN_ON(parameter_format != 2);
++
++			/*
++			 * Set up 16 macrotiles with a multiple of 2x2 tiles per
++			 * macrotile, which is aligned to a tile group.
++			 */
++			info.mtile_x[0] = DIV_ROUND_UP(info.num_tiles_x, 8) * 2;
++			info.mtile_y[0] = DIV_ROUND_UP(info.num_tiles_y, 8) * 2;
++			info.tile_max_x = round_up(info.num_tiles_x, 2) - 1;
++			info.tile_max_y = round_up(info.num_tiles_y, 2) - 1;
++		}
+ 		info.mtile_x[1] = 0;
+ 		info.mtile_y[1] = 0;
+ 		info.mtile_x[2] = 0;
+ 		info.mtile_y[2] = 0;
+-		info.tile_max_x = round_up(info.num_tiles_x, 2) - 1;
+-		info.tile_max_y = round_up(info.num_tiles_y, 2) - 1;
+ 	} else {
+ 		/* Set up 16 macrotiles with a multiple of 4x4 tiles per macrotile. */
+ 		info.mtile_x[0] = round_up(DIV_ROUND_UP(info.num_tiles_x, 4), 4);
+-- 
+2.56.0
+

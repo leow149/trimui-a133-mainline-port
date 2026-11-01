@@ -1,0 +1,222 @@
+diff --git a/src/imagination/include/hwdef/rogue_hw_utils.h b/src/imagination/include/hwdef/rogue_hw_utils.h
+index a859059..892587e 100644
+--- a/src/imagination/include/hwdef/rogue_hw_utils.h
++++ b/src/imagination/include/hwdef/rogue_hw_utils.h
+@@ -154,10 +154,9 @@ rogue_get_isp_num_tiles_xy(const struct pvr_device_info *dev_info,
+    *x_out = DIV_ROUND_UP(width * scale_x, tile_samples_x);
+    *y_out = DIV_ROUND_UP(height * scale_y, tile_samples_y);
+ 
+-   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
+-      assert(PVR_GET_FEATURE_VALUE(dev_info,
+-                                   simple_parameter_format_version,
+-                                   0U) == 2U);
++   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0U) ==
++          2U) {
+       /* Align to a 2x2 tile block. */
+       *x_out = ALIGN_POT(*x_out, 2);
+       *y_out = ALIGN_POT(*y_out, 2);
+diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+index a029859..54090d8 100644
+--- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
++++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+@@ -28,6 +28,7 @@
+ #include <stdbool.h>
+ #include <stddef.h>
+ #include <stdint.h>
++#include <stdlib.h>
+ #include <string.h>
+ #include <vulkan/vulkan.h>
+ 
+@@ -7317,6 +7318,9 @@ static inline uint32_t
+ pvr_get_geom_region_clip_align_size(struct pvr_device_info *const dev_info)
+ {
+    /* TODO: This should come from rogue_ppp.xml. */
++   /* EXPERIMENT (GE8300) */
++   if (getenv("PVR_RCLIP_ALIGN"))
++      return atoi(getenv("PVR_RCLIP_ALIGN"));
+    return 16U + 16U * (!PVR_HAS_FEATURE(dev_info, tile_size_16x16));
+ }
+ 
+diff --git a/src/imagination/vulkan/pvr_arch_framebuffer.c b/src/imagination/vulkan/pvr_arch_framebuffer.c
+index e0bc337..03de20d 100644
+--- a/src/imagination/vulkan/pvr_arch_framebuffer.c
++++ b/src/imagination/vulkan/pvr_arch_framebuffer.c
+@@ -35,6 +35,13 @@ VkResult PVR_PER_ARCH(ppp_state_create)(struct pvr_device *device,
+ {
+    const uint32_t cache_line_size =
+       pvr_get_slc_cache_line_size(&device->pdevice->dev_info);
++   /* The clip region is in tile units: 32 pixels, or 16 on cores with 16x16
++    * tiles (e.g. GE8300), like the region clip.
++    */
++   const uint32_t clip_block_size =
++      PVR_HAS_FEATURE(&device->pdevice->dev_info, tile_size_16x16)
++         ? 16U
++         : ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS;
+    uint32_t ppp_state[3];
+    VkResult result;
+ 
+@@ -43,16 +50,8 @@ VkResult PVR_PER_ARCH(ppp_state_create)(struct pvr_device *device,
+    }
+ 
+    pvr_csb_pack (&ppp_state[1], TA_STATE_TERMINATE0, term0) {
+-      term0.clip_right =
+-         DIV_ROUND_UP(
+-            width,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS) -
+-         1;
+-      term0.clip_bottom =
+-         DIV_ROUND_UP(
+-            height,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_BOTTOM_BLOCK_SIZE_IN_PIXELS) -
+-         1;
++      term0.clip_right = DIV_ROUND_UP(width, clip_block_size) - 1;
++      term0.clip_bottom = DIV_ROUND_UP(height, clip_block_size) - 1;
+    }
+ 
+    pvr_csb_pack (&ppp_state[2], TA_STATE_TERMINATE1, term1) {
+diff --git a/src/imagination/vulkan/pvr_arch_job_common.c b/src/imagination/vulkan/pvr_arch_job_common.c
+index f420deb..ee05811 100644
+--- a/src/imagination/vulkan/pvr_arch_job_common.c
++++ b/src/imagination/vulkan/pvr_arch_job_common.c
+@@ -23,6 +23,7 @@
+ 
+ #include <stdbool.h>
+ #include <stdint.h>
++#include <stdlib.h>
+ 
+ #include "hwdef/rogue_hw_defs.h"
+ #include "hwdef/rogue_hw_utils.h"
+@@ -293,6 +294,19 @@ void pvr_arch_pbe_pack_state(
+       reg.maxclip_x = render_params->max_x_clip;
+       reg.zslice = render_params->slice;
+       reg.maxclip_y = render_params->max_y_clip;
++      /* EXPERIMENT (GE8300): clip in 2-pixel units? */
++      if (getenv("PVR_PBE_SIZE_INC")) {
++         reg.size_x += 1;
++         reg.size_y += 1;
++      }
++      if (getenv("PVR_PBE_CLIP_SMALL")) {
++         reg.maxclip_x = 20;
++         reg.maxclip_y = 20;
++      }
++      if (getenv("PVR_PBE_CLIP_X2")) {
++         reg.maxclip_x = render_params->max_x_clip * 2 + 1;
++         reg.maxclip_y = render_params->max_y_clip * 2 + 1;
++      }
+    }
+ }
+ 
+diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
+index f1cc515..61bdd1b 100644
+--- a/src/imagination/vulkan/pvr_arch_job_render.c
++++ b/src/imagination/vulkan/pvr_arch_job_render.c
+@@ -24,6 +24,8 @@
+ #include <assert.h>
+ #include <stdbool.h>
+ #include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
+ #include <vulkan/vulkan.h>
+ 
+ #include "hwdef/rogue_hw_defs.h"
+@@ -55,6 +57,20 @@
+ #include "vk_log.h"
+ #include "vk_util.h"
+ 
++static const void *pvr_dbg_rgn_map;
++static uint64_t pvr_dbg_rgn_size;
++
++static void pvr_dbg_rgn_dump(void)
++{
++   FILE *f = fopen(getenv("PVR_DUMP_RGN"), "wb");
++
++   if (f && pvr_dbg_rgn_map) {
++      fwrite(pvr_dbg_rgn_map, 1, pvr_dbg_rgn_size, f);
++      fclose(f);
++   }
++}
++
++
+ static_assert(pvr_cmd_length(PBESTATE_REG_WORD0) == 2,
+               "PBESTATE_REG_WORD0 cannot be stored in uint64_t");
+ static_assert(pvr_cmd_length(PBESTATE_REG_WORD1) == 2,
+@@ -126,7 +142,19 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
+ 
+    rogue_get_num_macrotiles_xy(dev_info, &info->mtiles_x, &info->mtiles_y);
+ 
+-   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
++   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0) ==
++          1) {
++      /* A single macrotile covering the whole render target. */
++      info->mtile_x1 = info->num_tiles_x;
++      info->mtile_y1 = info->num_tiles_y;
++      info->mtile_x2 = 0;
++      info->mtile_y2 = 0;
++      info->mtile_x3 = 0;
++      info->mtile_y3 = 0;
++      info->x_tile_max = info->num_tiles_x - 1;
++      info->y_tile_max = info->num_tiles_y - 1;
++   } else if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
+       assert(PVR_GET_FEATURE_VALUE(dev_info,
+                                    simple_parameter_format_version,
+                                    0) == 2);
+@@ -482,11 +510,23 @@ pvr_rt_rgn_headers_data_init(struct pvr_device *device,
+                          device->heaps.rgn_hdr_heap,
+                          rgn_headers_size * num_rt_datas,
+                          ROGUE_CR_TE_PSGREGION_ADDR_BASE_ALIGNMENT,
+-                         PVR_BO_ALLOC_FLAG_GPU_UNCACHED,
++                         PVR_BO_ALLOC_FLAG_GPU_UNCACHED |
++                            (getenv("PVR_DUMP_RGN") ? PVR_BO_ALLOC_FLAG_CPU_MAPPED : 0),
+                          &rt_dataset->rgn_headers_bo);
+    if (result != VK_SUCCESS)
+       return result;
+ 
++   /* EXPERIMENT: dump the region headers of the last dataset at exit */
++   if (getenv("PVR_DUMP_RGN")) {
++      static bool registered;
++      pvr_dbg_rgn_map = rt_dataset->rgn_headers_bo->bo->map;
++      pvr_dbg_rgn_size = rt_dataset->rgn_headers_bo->bo->size;
++      if (!registered) {
++         registered = true;
++         atexit(pvr_dbg_rgn_dump);
++      }
++   }
++
+    dev_addr = rt_dataset->rgn_headers_bo->vma->dev_addr;
+ 
+    for (uint32_t i = 0; i < num_rt_datas; i++) {
+@@ -631,6 +671,13 @@ VkResult pvr_arch_render_target_dataset_create(
+    assert(height <= rogue_get_render_size_max_y(dev_info));
+    assert(layers > 0 && layers <= PVR_MAX_FRAMEBUFFER_LAYERS);
+ 
++   /* EXPERIMENT (GE8300): declare a 2x render target, see vktest */
++   if (getenv("PVR_V1_RT_DOUBLE") &&
++       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0) == 1) {
++      width = MIN2(width * 2, rogue_get_render_size_max_x(dev_info));
++      height = MIN2(height * 2, rogue_get_render_size_max_y(dev_info));
++   }
++
+    pvr_arch_rt_mtile_info_init(dev_info, &mtile_info, width, height, samples);
+ 
+    rt_dataset = vk_zalloc(&device->vk.alloc,
+@@ -755,6 +802,9 @@ static void pvr_geom_state_stream_init(struct pvr_render_ctx *ctx,
+ 
+       value.region_stride = rt_dataset->rgn_headers_stride /
+                             ROGUE_CR_TE_PSG_REGION_STRIDE_UNIT_SIZE;
++      /* EXPERIMENT (GE8300) */
++      if (getenv("PVR_PSG_STRIDE0"))
++         value.region_stride = 0;
+ 
+       value.forcenewstate = PVR_HAS_QUIRK(dev_info, 52942);
+    }
+@@ -1101,6 +1151,8 @@ static void pvr_frag_state_stream_init(struct pvr_render_ctx *ctx,
+        *  - zload_format is set to a sensible default above, and
+        *  - job->depth_clear_value is set to a sensible default in that case.
+        */
++      if (getenv("PVR_BGDEPTH_FLOAT"))	/* EXPERIMENT (GE8300) */
++         zload_format = ROGUE_CR_ZLS_FORMAT_TYPE_F32Z;
+       switch (zload_format) {
+       case ROGUE_CR_ZLS_FORMAT_TYPE_F32Z:
+       case ROGUE_CR_ZLS_FORMAT_TYPE_F64Z:

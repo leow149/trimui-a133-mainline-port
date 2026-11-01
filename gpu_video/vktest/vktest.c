@@ -90,6 +90,33 @@ int main(int argc, char **argv)
 	VkImageView view;
 	CHECK(vkCreateImageView(dev, &ivci, NULL, &view));
 
+	/* optional depth attachment */
+	int depth = getenv("VKTEST_DEPTH") != NULL;
+	VkFormat dfmt = getenv("VKTEST_D32F") ? VK_FORMAT_D32_SFLOAT :
+			getenv("VKTEST_D24") ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D16_UNORM;
+	VkImageView dview = VK_NULL_HANDLE;
+	if (depth) {
+		VkImageCreateInfo dci = imci;
+		dci.format = dfmt;
+		dci.tiling = VK_IMAGE_TILING_OPTIMAL;
+		dci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		VkImage dimg;
+		CHECK(vkCreateImage(dev, &dci, NULL, &dimg));
+		VkMemoryRequirements dmr;
+		vkGetImageMemoryRequirements(dev, dimg, &dmr);
+		VkMemoryAllocateInfo dmai = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			.allocationSize = dmr.size,
+			.memoryTypeIndex = mem_type(pd, dmr.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) };
+		VkDeviceMemory dmem;
+		CHECK(vkAllocateMemory(dev, &dmai, NULL, &dmem));
+		CHECK(vkBindImageMemory(dev, dimg, dmem, 0));
+		VkImageViewCreateInfo dvci = ivci;
+		dvci.image = dimg;
+		dvci.format = dfmt;
+		dvci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		CHECK(vkCreateImageView(dev, &dvci, NULL, &dview));
+	}
+
 	/* readback buffer */
 	VkDeviceSize bsize = (VkDeviceSize)W * H * 4;
 	VkBufferCreateInfo bci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -114,15 +141,25 @@ int main(int argc, char **argv)
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = linear ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL };
+	VkAttachmentDescription atts[2] = { att, {
+		.format = dfmt, .samples = VK_SAMPLE_COUNT_1_BIT,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL } };
 	VkAttachmentReference aref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+	VkAttachmentReference dref = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 	VkSubpassDescription sp = { .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.colorAttachmentCount = 1, .pColorAttachments = &aref };
+		.colorAttachmentCount = 1, .pColorAttachments = &aref,
+		.pDepthStencilAttachment = depth ? &dref : NULL };
 	VkRenderPassCreateInfo rpci = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		.attachmentCount = 1, .pAttachments = &att, .subpassCount = 1, .pSubpasses = &sp };
+		.attachmentCount = depth ? 2 : 1, .pAttachments = atts, .subpassCount = 1, .pSubpasses = &sp };
 	VkRenderPass rp;
 	CHECK(vkCreateRenderPass(dev, &rpci, NULL, &rp));
 	VkFramebufferCreateInfo fbci = { .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-		.renderPass = rp, .attachmentCount = 1, .pAttachments = &view,
+		.renderPass = rp, .attachmentCount = depth ? 2 : 1,
+		.pAttachments = (VkImageView[]){ view, dview },
 		.width = W, .height = H, .layers = 1 };
 	VkFramebuffer fb;
 	CHECK(vkCreateFramebuffer(dev, &fbci, NULL, &fb));
@@ -161,13 +198,19 @@ int main(int argc, char **argv)
 	VkPipelineColorBlendStateCreateInfo cb = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		.attachmentCount = 1, .pAttachments = &cba };
-	VkPipelineLayoutCreateInfo plci = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkPushConstantRange pcr = { VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 24 };
+	VkPipelineLayoutCreateInfo plci = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.pushConstantRangeCount = 1, .pPushConstantRanges = &pcr };
 	VkPipelineLayout pl;
 	CHECK(vkCreatePipelineLayout(dev, &plci, NULL, &pl));
 	VkGraphicsPipelineCreateInfo gpci = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.stageCount = 2, .pStages = st, .pVertexInputState = &vi,
 		.pInputAssemblyState = &ia, .pViewportState = &vps, .pRasterizationState = &rs,
 		.pMultisampleState = &ms, .pColorBlendState = &cb, .layout = pl,
+		.pDepthStencilState = &(VkPipelineDepthStencilStateCreateInfo){
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.depthTestEnable = VK_TRUE, .depthWriteEnable = VK_TRUE,
+			.depthCompareOp = VK_COMPARE_OP_LESS },
 		.renderPass = rp, .subpass = 0 };
 	VkPipeline pipe;
 	CHECK(vkCreateGraphicsPipelines(dev, VK_NULL_HANDLE, 1, &gpci, NULL, &pipe));
@@ -183,12 +226,13 @@ int main(int argc, char **argv)
 	CHECK(vkAllocateCommandBuffers(dev, &cbai, &cmd));
 	VkCommandBufferBeginInfo cbbi = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	CHECK(vkBeginCommandBuffer(cmd, &cbbi));
-	VkClearValue clear = { .color = { .float32 = { 1, 0, 0, 1 } } };
+	VkClearValue clears[2] = { { .color = { .float32 = { 1, 0, 0, 1 } } },
+				   { .depthStencil = { 1.0f, 0 } } };
 	VkRenderPassBeginInfo rpbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 		.renderPass = rp, .framebuffer = fb,
 		.renderArea = { { 0, 0 }, { getenv("VKTEST_RA_W") ? (uint32_t)atoi(getenv("VKTEST_RA_W")) : W,
 					     getenv("VKTEST_RA_H") ? (uint32_t)atoi(getenv("VKTEST_RA_H")) : H } },
-		.clearValueCount = 1, .pClearValues = &clear };
+		.clearValueCount = depth ? 2 : 1, .pClearValues = clears };
 	if (getenv("VKTEST_CLEARIMG")) {	/* transfer-job clear instead of a render pass */
 		VkImageMemoryBarrier ib = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -206,7 +250,19 @@ int main(int argc, char **argv)
 	vkCmdBeginRenderPass(cmd, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
 	if (!getenv("VKTEST_NO_DRAW")) {
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
+		/* green near (z 0.3); with VKTEST_TWO also blue far (z 0.6), drawn
+		 * last and shifted right: where they overlap green must win */
+		float pc_g[6] = { 0, 1, 0, 1, 0.3f, 0 };
+		vkCmdPushConstants(cmd, pl, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				   0, 24, pc_g);
 		vkCmdDraw(cmd, 3, 1, 0, 0);
+		if (getenv("VKTEST_TWO")) {
+			float pc_b[6] = { 0, 0, 1, 1, 0.6f, 0.4f };
+			vkCmdPushConstants(cmd, pl,
+					   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+					   0, 24, pc_b);
+			vkCmdDraw(cmd, 3, 1, 0, 0);
+		}
 	}
 	vkCmdEndRenderPass(cmd);
 recorded:
@@ -256,6 +312,8 @@ recorded:
 				c = 'R';
 			else if (p[0] < 50 && p[1] > 200 && p[2] < 50)
 				c = 'G';
+			else if (p[0] < 50 && p[1] < 50 && p[2] > 200)
+				c = 'B';
 			putchar(c);
 		}
 		putchar('\n');

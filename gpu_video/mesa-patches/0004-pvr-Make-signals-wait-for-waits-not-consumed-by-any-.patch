@@ -1,0 +1,68 @@
+From 9cf80e29b7699b569d75e0bed435b8924a490db8 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 00:23:17 +0100
+Subject: [PATCH 4/4] pvr: Make signals wait for waits not consumed by any job
+
+Waits are parked per stage for the next job, and signals only depended on
+jobs of the same submission. A submission without command buffers, as WSI
+uses to chain the application's semaphore to the present, therefore
+signalled immediately (a stub fence on the dma-buf), and the display
+flipped buffers before the GPU had finished them. Also wait on the parked
+waits when processing the signals.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/imagination/vulkan/pvr_arch_queue.c | 28 ++++++++++++++++++-------
+ 1 file changed, 20 insertions(+), 8 deletions(-)
+
+diff --git a/src/imagination/vulkan/pvr_arch_queue.c b/src/imagination/vulkan/pvr_arch_queue.c
+index cb6203e..7475275 100644
+--- a/src/imagination/vulkan/pvr_arch_queue.c
++++ b/src/imagination/vulkan/pvr_arch_queue.c
+@@ -950,7 +950,7 @@ static VkResult pvr_process_queue_signals(struct pvr_queue *queue,
+                                           struct vk_sync_signal *signals,
+                                           uint32_t signal_count)
+ {
+-   struct vk_sync_wait signal_waits[PVR_JOB_TYPE_MAX];
++   struct vk_sync_wait signal_waits[PVR_JOB_TYPE_MAX * 2];
+    struct pvr_device *device = queue->device;
+    VkResult result;
+ 
+@@ -967,14 +967,26 @@ static VkResult pvr_process_queue_signals(struct pvr_queue *queue,
+          if (!(signal_stage_src & BITFIELD_BIT(i)) && i != PVR_JOB_TYPE_QUERY)
+             continue;
+ 
+-         if (!queue->last_job_signal_sync[i])
+-            continue;
++         if (queue->last_job_signal_sync[i]) {
++            signal_waits[wait_count++] = (struct vk_sync_wait){
++               .sync = queue->last_job_signal_sync[i],
++               .stage_mask = ~(VkPipelineStageFlags2)0,
++               .wait_value = 0,
++            };
++         }
+ 
+-         signal_waits[wait_count++] = (struct vk_sync_wait){
+-            .sync = queue->last_job_signal_sync[i],
+-            .stage_mask = ~(VkPipelineStageFlags2)0,
+-            .wait_value = 0,
+-         };
++         /* Waits that no job of this submission consumed (e.g. a submission
++          * without command buffers, as WSI uses to chain the app's
++          * semaphore to the present) still have to complete before the
++          * signal.
++          */
++         if (queue->next_job_wait_sync[i]) {
++            signal_waits[wait_count++] = (struct vk_sync_wait){
++               .sync = queue->next_job_wait_sync[i],
++               .stage_mask = ~(VkPipelineStageFlags2)0,
++               .wait_value = 0,
++            };
++         }
+       }
+ 
+       result = device->ws->ops->null_job_submit(device->ws,
+-- 
+2.56.0
+
