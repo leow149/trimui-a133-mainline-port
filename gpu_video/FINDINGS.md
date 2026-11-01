@@ -126,3 +126,19 @@ the screen it appeared top-right.)
 - Next: mainline drives the DSI panel in TCON CPU/trigger mode with "suspicious" block_space/start_delay
   timing (sun4i_tcon0_mode_set_cpu). Compare with the vendor's DSI/TCON setup (video vs command mode,
   TRI timing, DE/TCON FIFO thresholds) -- see earlier display RE in CURRENT_STATE.md.
+
+## 2026-11-02 (night): display underrun SOLVED -- NSI (DRAM arbiter) port priorities
+- A133 moved DRAM port arbitration out of MBUS into the "NSI" @0x03100000 (undocumented in the
+  manual; stock DT node `nsi-controller@03100000`, BSP driver). Per port p: base+p*0x200,
+  +0x10 mode, +0x14 pri (rd<<2|wr, 0..3), +0x18 qos sel, +0xc0 enable. Ports: CPU GPU SD1 MSTG
+  GMAC0 GMAC1 USB0 USB1 NDFC DMAC CE DE0(11) DE1 VE CSI ISP G2D EINK IOMMU CPUS.
+- Mainline boot left everything 0 (all LOWEST). BSP: DE0/DE1/CSI/ISP HIGH, IOMMU HIGHEST.
+- Measured with gpu_video/display/uflow.c (polls TCON GINT0 bit 9 TRI underflow every 1 ms):
+  vkcube 30 s: 861 underflows with DE LOWEST -> 0 with DE HIGH; 60 s vkcube after boot fix: 0.
+  TCON TRI0/1/2, SAFE_PERIOD, CPU_IF, DSI HSA/VBLK packet stock values made NO difference.
+- Fix: u-boot commit "sunxi: a133: dram: Set the NSI port priorities" (port of the upstream
+  U-Boot series by Paul Kocialkowski, not yet in our base). Image built:
+  build-artifacts/u-boot-sunxi-with-spl-nsi-20261102.bin (= 10-30 tree incl. uncommitted FEL hook
+  + NSI). NOT flashed yet (needs user present). Interim: board-port/nsi-qos.sh as /etc/nsi-qos.sh
+  sysinit (inittab backup /etc/inittab.bak-20261102). Gotcha: /root/devmem parses VALUES as hex.
+- SD layout fact: our U-Boot lives at sector 16 (8 KB), not 256 as assemble_image.sh says.
