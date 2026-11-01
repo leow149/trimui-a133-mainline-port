@@ -1,7 +1,7 @@
 From a54b904594fe07eb16c99184e29960cc10c2ef17 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:22 +0100
-Subject: [PATCH 20/39] arm64: dts: allwinner: a100: Add the RTC
+Subject: [PATCH 20/41] arm64: dts: allwinner: a100: Add the RTC
 
 Describe the RTC and make it the provider of the 32k and internal oscillator
 clocks instead of fixed-clock placeholders, as on H616. Its bus clock is gated
