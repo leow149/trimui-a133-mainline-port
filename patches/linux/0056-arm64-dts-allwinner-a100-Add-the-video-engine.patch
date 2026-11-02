@@ -1,7 +1,7 @@
 From c288b4fa873322769332c50a9ba8f2ff8c1bdb0f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
-Subject: [PATCH 56/56] arm64: dts: allwinner: a100: Add the video engine
+Subject: [PATCH 56/60] arm64: dts: allwinner: a100: Add the video engine
 
 Add the VE SRAM section and the video engine. It isn't behind the IOMMU
 here (the driver for it does not support the A100 yet), so the decoder

@@ -231,3 +231,18 @@ the screen it appeared top-right.)
   build-artifacts/u-boot-sunxi-with-spl-nsi-mac-wdtfix-20261102.bin FLASHED (SD was mmcblk1 that
   boot). Verified: sysrq 'b' -> straight into U-Boot SPL; sysrq 'c' panic -> reboot after 10 s.
 - The VE-stuck hang of 11-02 night was very likely this same bug (the watchdog daemon was running).
+
+## 2026-11-02: IOMMU (series 0057-0060) -- 4K with the default 64 MB CMA
+- A133 IOMMU @0x030f0000 = H6/H616 IP (register offsets match sun50i-iommu; manual 3.11):
+  master 0 DE0, 2 VE, 3 CSI, 4 ISP, 5 G2D. SPI 66. CCU 0x7BC has only a gate, NO reset -> driver
+  reset made optional + own compatible "allwinner,sun50i-a100-iommu" (no h616 fallback, as an old
+  kernel would fail without the reset). Internal IOMMU_RESET_REG defaults to released.
+- sun8i_mixer already sets itself as the DRM DMA device -> mixer iommus = <&iommu 0> is enough.
+- Verified: real 4K BBB 1802/1802 bit-exact with cma 64 MB (CMA min free 63 MB), decode 33.2 fps
+  (= without IOMMU), on-screen ~23 fps sync=false, user: looks correct; 720p H.264/H.265
+  bit-exact; vkcube 0 underflows, user: clean. No IOMMU faults. Default boot now uses it.
+- dtschema: new nodes clean; PRE-EXISTING warnings to polish: root compatible (trimui,smart-pro not
+  in arm/sunxi.yaml), gpu clock-names (binding wants core/mem/sys?), allwinner,sun50i-a100-uart +
+  'gamepad' child under serial@5000c00.
+- Gotcha (again): pkill -f / pgrep -f patterns that occur in the ssh command line kill the ssh
+  shell itself; use a bracket pattern like "cma[.]log" and skip $$.

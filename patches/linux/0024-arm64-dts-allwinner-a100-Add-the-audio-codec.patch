@@ -1,7 +1,7 @@
 From d15eda6881915929aae19e4cd7820de1984118fc Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:52 +0100
-Subject: [PATCH 24/56] arm64: dts: allwinner: a100: Add the audio codec
+Subject: [PATCH 24/60] arm64: dts: allwinner: a100: Add the audio codec
 
 Interrupt and DMA request line from the A133 user manual (GIC 57, DRQ port 7).
 

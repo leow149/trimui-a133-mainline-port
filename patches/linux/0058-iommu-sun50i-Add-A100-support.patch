@@ -1,0 +1,43 @@
+From a4b855f6374535f30cac85a34fd07f06f99e9126 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 09:12:25 +0100
+Subject: [PATCH 58/60] iommu: sun50i: Add A100 support
+
+The A100 IOMMU is programmed like the H6 one but has no reset line, so
+make the reset optional.
+
+Tested on the A133 TrimUI Smart Pro with the display engine and the video
+engine behind it: 4K H.264 decodes bit-exact with 64 MB of CMA (it needed
+more than 256 MB of CMA without the IOMMU), at the same speed.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/iommu/sun50i-iommu.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/sun50i-iommu.c b/drivers/iommu/sun50i-iommu.c
+index be3f1ce69..590a5ba9d 100644
+--- a/drivers/iommu/sun50i-iommu.c
++++ b/drivers/iommu/sun50i-iommu.c
+@@ -1035,7 +1035,8 @@ static int sun50i_iommu_probe(struct platform_device *pdev)
+ 		goto err_free_cache;
+ 	}
+ 
+-	iommu->reset = devm_reset_control_get(&pdev->dev, NULL);
++	/* The A100 IOMMU has no reset line, only a bus clock gate */
++	iommu->reset = devm_reset_control_get_optional_exclusive(&pdev->dev, NULL);
+ 	if (IS_ERR(iommu->reset)) {
+ 		dev_err(&pdev->dev, "Couldn't get our reset line.\n");
+ 		ret = PTR_ERR(iommu->reset);
+@@ -1071,6 +1072,7 @@ static int sun50i_iommu_probe(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id sun50i_iommu_dt[] = {
++	{ .compatible = "allwinner,sun50i-a100-iommu", },
+ 	{ .compatible = "allwinner,sun50i-h6-iommu", },
+ 	{ .compatible = "allwinner,sun50i-h616-iommu", },
+ 	{ /* sentinel */ },
+-- 
+2.56.0
+

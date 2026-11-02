@@ -1,7 +1,7 @@
 From 647e2d8065c2f548d5ce43865b089738d2ebf414 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:45 +0100
-Subject: [PATCH 54/56] dt-bindings: sram: sunxi-sram: Add the A100 SRAM C and
+Subject: [PATCH 54/60] dt-bindings: sram: sunxi-sram: Add the A100 SRAM C and
  VE SRAM
 
 The A100 maps its SRAM C between the CPU and the display engine like the

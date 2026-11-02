@@ -1,7 +1,7 @@
 From 3877c73ae9b0956aa8fe9d17abc9cf3cc3d44ca1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:22:57 +0100
-Subject: [PATCH 49/56] drm/imagination: Support the v1 simple internal
+Subject: [PATCH 49/60] drm/imagination: Support the v1 simple internal
  parameter format
 
 Series 8XE cores such as the GE8300 (22.102.54.38) use version 1 of the
