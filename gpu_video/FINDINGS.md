@@ -142,3 +142,14 @@ the screen it appeared top-right.)
   + NSI). NOT flashed yet (needs user present). Interim: board-port/nsi-qos.sh as /etc/nsi-qos.sh
   sysinit (inittab backup /etc/inittab.bak-20261102). Gotcha: /root/devmem parses VALUES as hex.
 - SD layout fact: our U-Boot lives at sector 16 (8 KB), not 256 as assemble_image.sh says.
+
+## 2026-11-02 (night): GPU at 696 MHz + watchdog
+- Stock DT: GPU OPPs 700/400/228 MHz but no supply -> vendor never scales voltage; stock DCDC2
+  (vdd-gpu-sys) read 0.90 V with GPU at 702 MHz. Mainline: 1.00 V. Series 0050 (gpu clk
+  CLK_SET_RATE_PARENT) + 0051 (board DT assigned-clock-rates 696 MHz on CLK_GPU; CLK_PLL_GPU is
+  not in the dt-bindings header). Verified: 30x vkmulti all correct, 5 min vkcube 0 underflows,
+  no GPU errors, GPU 55 C.
+- Watchdog: CONFIG_SUNXI_WATCHDOG=y, PANIC_TIMEOUT=10, busybox `watchdog -T 16 -t 5` in inittab
+  (board-port/inittab). Verified: SIGKILL of the daemon -> board reset after 16 s, boots normally.
+- Boot partition (64 MB) cannot hold a test kernel next to the 36.8 MB Image; use
+  TEST_KERNEL=/Image tools/uboot_test_boot.py for DTB-only one-shot tests.
