@@ -187,3 +187,8 @@ the screen it appeared top-right.)
 3. tools/push_kernel.sh (new Image), test-ve.dtb as /test.dtb, TEST_KERNEL=/Image
    tools/uboot_test_boot.py, then gpu_video/video/ve_test.sh.
 - 2026-11-02 morning: user VISUALLY confirmed vkcube clean (no lines, no duplication) with the NSI boot script; 0 underflows/30 s.
+- 2026-11-02 morning: U-Boot (NSI + wifi alias) FLASHED to SD sector 16 (the SD is /dev/mmcblk2 this
+  boot -- always resolve via findfs LABEL=TRIMUIBOOT). Backup of the old boot area:
+  backups/uboot_sd/sd_sector16_1MiB_before_nsi_flash_20261102.bin. Verified: NSI table set by
+  U-Boot with the boot script disabled (script + inittab line now removed); WiFi MAC
+  <SID-derived, locally administered> from local-mac-address, stable across reboots. Default DTB has NO VE node yet.

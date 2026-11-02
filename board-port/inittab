@@ -9,7 +9,6 @@
 ::sysinit:/bin/mount -t devtmpfs devtmpfs /dev
 ::sysinit:/bin/mkdir -p /dev/pts
 ::sysinit:/bin/mount -t devpts devpts /dev/pts
-::sysinit:/etc/nsi-qos.sh
 ::sysinit:/sbin/watchdog -T 16 -t 5 /dev/watchdog
 ::sysinit:/etc/audio-defaults.sh
 ::sysinit:/etc/usb-net.sh
