@@ -1,7 +1,7 @@
 From f2f1bad679db74a278c22de50ec11ac585c13615 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:44:47 +0100
-Subject: [PATCH 2/2] sunxi: a133: dram: Set the NSI port priorities
+Subject: [PATCH 2/3] sunxi: a133: dram: Set the NSI port priorities
 
 Since the A133 the DRAM port arbitration is done by a separate block, the
 NSI, which nothing programmed: all masters had the same priority, and the

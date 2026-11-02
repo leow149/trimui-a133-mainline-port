@@ -153,3 +153,36 @@ the screen it appeared top-right.)
   (board-port/inittab). Verified: SIGKILL of the daemon -> board reset after 16 s, boots normally.
 - Boot partition (64 MB) cannot hold a test kernel next to the 36.8 MB Image; use
   TEST_KERNEL=/Image tools/uboot_test_boot.py for DTB-only one-shot tests.
+
+## 2026-11-02 (night): video engine (Cedrus) -- probes, decode hung; fix prepared, untested
+- DT (WIP, uncommitted, gpu_video/display/WIP-a100-dtsi-video-engine.patch): VE SRAM section +
+  video-codec@1c0e000 (H6 fallback compatible, clocks bus-ve/ve/mbus-ve, RST_BUS_VE, SPI 94,
+  no IOMMU; CMA raised to 64 MB). Kernel config: MEDIA/VIDEO_DEV built in, STAGING_MEDIA, CEDRUS.
+- First try used the generic sun4i-a10-sram-c1 claim (writes SYS_CFG+0 = 0x7fffffff): cedrus
+  registered /dev/video0, GStreamer v4l2slh264dec then spun forever in cedrus_skip_bits
+  (VE_H264_STATUS VLD_BUSY never cleared; no VE irq ever). sysrq reset -> BL31 "PANIC at PC
+  0x40006550" = sunxi_system_reset: the watchdog reset did not happen with the VE stuck, and the
+  hardware watchdog did not fire either -> board needs a POWER CYCLE (as with the 11-01 VE hang).
+- Vendor sunxi_cedar_probe (vendor_symbolized.txt @ffffff80084fa0f4) unconditionally does
+  SYS_CFG+0x0 &= ~BIT(0) and SYS_CFG+0x4 &= ~BIT(24): on A133 bit 0 = 0 maps the VE SRAM to the VE
+  (H616 semantics; mainline has "allwinner,sun50i-h616-ve-sram" for exactly that). DT now uses
+  "allwinner,sun50i-a100-ve-sram", "allwinner,sun50i-h616-ve-sram". enable_cedar_hw_clk only does
+  reset deassert + clk_enable -> nothing else A133-specific in the kernel driver.
+- Series 0052: cedrus h264 skip-bits wait bounded with cedrus_wait_for() (was an unkillable spin).
+- Test: gpu_video/video/ve_test.sh (+ clips) compares HW vs SW per-frame checksums with timeouts.
+  ONLY test with the DTB as one-shot test.dtb (a stuck VE blocks even the reset).
+
+## 2026-11-02 (night): stable WiFi MAC prepared (untested)
+- Series 0053 (kernel DT alias ethernet0 = &wifi) + U-Boot commit e05abc51 (same alias as a path
+  string in U-Boot's control DT): U-Boot derives ethaddr from the SID, fdt_fixup_ethernet sets
+  local-mac-address, xradio already reads it (of_get_mac_address). Needs the new U-Boot.
+
+## MORNING CHECKLIST (device needs a power cycle first)
+1. Power cycle; default boot = Image aba222ed... NOT installed yet (SD has the earlier cedrus build,
+   default DTB without VE, NSI script + watchdog in inittab).
+2. Flash U-Boot (user present): build-artifacts/u-boot-sunxi-with-spl-nsi-mac-20261102.bin at SD
+   sector 16 (8 KB) -- that is where the running one is (verified byte-identical to the 10-30 build;
+   includes the uncommitted FEL-hook board.c like the running one). Then check NSI regs set without
+   the script, ethaddr/local-mac-address present, remove /etc/nsi-qos.sh from inittab.
+3. tools/push_kernel.sh (new Image), test-ve.dtb as /test.dtb, TEST_KERNEL=/Image
+   tools/uboot_test_boot.py, then gpu_video/video/ve_test.sh.

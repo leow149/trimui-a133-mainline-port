@@ -1,7 +1,7 @@
 From 5268b031861dbd8696aecbb317c91b78b3895ddf Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 19:17:49 +0100
-Subject: [PATCH 47/51] arm64: dts: allwinner: a100: Add the GPU and its power
+Subject: [PATCH 47/53] arm64: dts: allwinner: a100: Add the GPU and its power
  domain
 
 PowerVR GE8300 (Rogue, BVNC 22.102.54.38) at 0x01800000 behind the R_PPU

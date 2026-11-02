@@ -1,0 +1,48 @@
+From 2553d33327440bf5cf60ee2438e571b472748712 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 01:41:02 +0100
+Subject: [PATCH 52/53] media: cedrus: h264: Don't wait forever for the bits to
+ be skipped
+
+When the VLD never becomes idle, as seen while bringing up the A133 VE,
+cedrus_skip_bits() spins in the decode setup with the
+request lock held: the task can't be killed, every other user of the
+device blocks, and the system reset hangs too. Bound the wait like the
+other VLD waits do, using cedrus_wait_for().
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/staging/media/sunxi/cedrus/cedrus_h264.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/staging/media/sunxi/cedrus/cedrus_h264.c b/drivers/staging/media/sunxi/cedrus/cedrus_h264.c
+index fc54d993b..4540d9fe4 100644
+--- a/drivers/staging/media/sunxi/cedrus/cedrus_h264.c
++++ b/drivers/staging/media/sunxi/cedrus/cedrus_h264.c
+@@ -6,7 +6,6 @@
+  * Copyright (c) 2018 Bootlin
+  */
+ 
+-#include <linux/delay.h>
+ #include <linux/types.h>
+ 
+ #include <media/videobuf2-dma-contig.h>
+@@ -334,8 +333,12 @@ static void cedrus_skip_bits(struct cedrus_dev *dev, int num)
+ 		cedrus_write(dev, VE_H264_TRIGGER_TYPE,
+ 			     VE_H264_TRIGGER_TYPE_FLUSH_BITS |
+ 			     VE_H264_TRIGGER_TYPE_N_BITS(tmp));
+-		while (cedrus_read(dev, VE_H264_STATUS) & VE_H264_STATUS_VLD_BUSY)
+-			udelay(1);
++		if (cedrus_wait_for(dev, VE_H264_STATUS,
++				    VE_H264_STATUS_VLD_BUSY)) {
++			dev_err_ratelimited(dev->dev,
++					    "timed out waiting to skip bits\n");
++			return;
++		}
+ 
+ 		count += tmp;
+ 	}
+-- 
+2.56.0
+

@@ -1,7 +1,7 @@
 From 9c86788b43d39a5b3d6aff7c81cecc10071a0262 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
-Subject: [PATCH 29/51] arm64: dts: allwinner: trimui-smart-pro: Add slider
+Subject: [PATCH 29/53] arm64: dts: allwinner: trimui-smart-pro: Add slider
  switch and stick LEDs
 
 The slider on PH19 is a two-position switch; report it as SW_TABLET_MODE like
