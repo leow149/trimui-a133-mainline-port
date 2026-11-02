@@ -1,0 +1,41 @@
+From 58b0fabcd85d2d362d12da3888ff5f3588dd49d0 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 08:49:38 +0100
+Subject: [PATCH] fix(allwinner): restart the watchdog counter on system reset
+
+The system reset only switches the watchdog to its shortest interval.
+When the OS has left the watchdog running with a longer one, e.g. Linux
+with a watchdog daemon on a panic or sysrq reset, the counter is already
+past 0.5 seconds and the reset never fires: "PSCI: System reset failed"
+and the system hangs until power cycled. Restart the counter as well.
+
+Seen on an A133 (TrimUI Smart Pro), and reproduced from Linux by writing
+the same configuration over a running 16 s watchdog: no reset until the
+counter was restarted.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ plat/allwinner/common/sunxi_native_pm.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/plat/allwinner/common/sunxi_native_pm.c b/plat/allwinner/common/sunxi_native_pm.c
+index 28abd3c..53e8248 100644
+--- a/plat/allwinner/common/sunxi_native_pm.c
++++ b/plat/allwinner/common/sunxi_native_pm.c
+@@ -58,6 +58,12 @@ static void __dead2 sunxi_system_reset(void)
+ 	mmio_write_32(SUNXI_WDOG0_CFG_REG, 1);
+ 	/* Enable the watchdog with the shortest timeout (0.5 seconds) */
+ 	mmio_write_32(SUNXI_WDOG0_MODE_REG, (0 << 4) | 1);
++	/*
++	 * Restart the counter: if the OS left the watchdog running with a
++	 * longer timeout, its counter is already past the new one and the
++	 * reset would never happen.
++	 */
++	mmio_write_32(SUNXI_WDOG0_CTRL_REG, (0xa57 << 1) | 1);
+ 	/* Wait for twice the watchdog timeout before panicking */
+ 	mdelay(1000);
+ 
+-- 
+2.56.0
+

@@ -219,3 +219,15 @@ the screen it appeared top-right.)
 - Fix: SD partition 3 (29.4 GB ext4, LABEL=TRIMUIDATA, from sector 657408; MBR backup in
   backups/uboot_sd/sd_mbr_before_p3_20261102.bin); board-port/edge-chroot.sh now keeps the chroot
   there (persistent, bind-mounted at /tmp/edge).
+
+## 2026-11-02: emergency reset hang FIXED (TF-A)
+- Root cause: TF-A sunxi_system_reset only sets WDOG CFG=1, MODE=(0<<4)|1 without restarting the
+  counter. With Linux's 16 s watchdog running (busybox daemon; on panic/sysrq it is never stopped),
+  the counter is already past 0.5 s -> no reset ever ("PSCI: System reset failed", hang). Normal
+  reboot worked because the daemon stops the watchdog first. Reproduced from Linux with devmem
+  (ATF-style write over the running watchdog: still alive 5 s later; CTRL=(0xa57<<1)|1 -> reset).
+- Fix: patches/atf/0001 (branch tsp-wdt-reset in arm-trusted-firmware/), BL31 rebuilt
+  reproducibly (unmodified rebuild differs only in the build timestamp), U-Boot image
+  build-artifacts/u-boot-sunxi-with-spl-nsi-mac-wdtfix-20261102.bin FLASHED (SD was mmcblk1 that
+  boot). Verified: sysrq 'b' -> straight into U-Boot SPL; sysrq 'c' panic -> reboot after 10 s.
+- The VE-stuck hang of 11-02 night was very likely this same bug (the watchdog daemon was running).
