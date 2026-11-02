@@ -1,7 +1,7 @@
 From 73367ea2074d44546b7e7952699730713d99c6f9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:51 +0100
-Subject: [PATCH 39/51] arm64: dts: allwinner: a100: Add the USB OTG DMA
+Subject: [PATCH 39/53] arm64: dts: allwinner: a100: Add the USB OTG DMA
  channels
 
 DMA request lines 30-34 are the OTG endpoints 1-5, in both directions.

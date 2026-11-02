@@ -1,7 +1,7 @@
 From 6be5348df3b7dd434e9eef0128b208be6c3e8ccb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:28 +0100
-Subject: [PATCH 11/51] drm/sun4i: dsi: Set the panel orientation at bind time
+Subject: [PATCH 11/53] drm/sun4i: dsi: Set the panel orientation at bind time
 
 The orientation property has to exist before the connector is registered,
 but the panel has usually not attached to the DSI host yet when the DSI binds.

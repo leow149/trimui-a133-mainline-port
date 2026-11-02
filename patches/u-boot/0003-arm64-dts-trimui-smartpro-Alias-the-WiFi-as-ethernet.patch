@@ -1,0 +1,34 @@
+From e05abc51e5b656fb7b402c335a43f24437f5e573 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 01:44:42 +0100
+Subject: [PATCH 3/3] arm64: dts: trimui-smartpro: Alias the WiFi as ethernet0
+
+U-Boot then derives a MAC address from the SID and sets it as the
+kernel DT's local-mac-address, so the XR829 keeps its MAC across boots
+instead of using a random one.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts     | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
+index c6369a91..54c4961c 100644
+--- a/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -42,6 +42,12 @@
+ 	compatible = "trimui,smart-pro", "allwinner,sun50i-a100";
+ 
+ 	aliases {
++		/*
++		 * The WiFi (only described in the kernel DT): makes U-Boot
++		 * derive ethaddr from the SID and set it as the kernel DT's
++		 * local-mac-address, so the MAC stays the same across boots.
++		 */
++		ethernet0 = "/soc/mmc@4021000/wifi@1";
+ 		serial0 = &uart0;
+ 	};
+ 
+-- 
+2.56.0
+
