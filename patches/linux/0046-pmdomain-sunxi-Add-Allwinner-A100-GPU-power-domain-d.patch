@@ -1,7 +1,7 @@
 From f46ef0744e0e807b36edc19baed6e61a101c82fc Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 19:17:48 +0100
-Subject: [PATCH 46/53] pmdomain: sunxi: Add Allwinner A100 GPU power domain
+Subject: [PATCH 46/56] pmdomain: sunxi: Add Allwinner A100 GPU power domain
  driver
 
 The A100/A133 GPU sits in a power domain controlled by a small PPU block

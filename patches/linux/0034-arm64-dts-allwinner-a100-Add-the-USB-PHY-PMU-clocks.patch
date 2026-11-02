@@ -1,7 +1,7 @@
 From c4ca18a2857d73b5588a0d89656ad767cf18faa5 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:09 +0100
-Subject: [PATCH 34/53] arm64: dts: allwinner: a100: Add the USB PHY PMU clocks
+Subject: [PATCH 34/56] arm64: dts: allwinner: a100: Add the USB PHY PMU clocks
 
 The SIDDQ bits of PHY0 and PHY1 sit in the EHCI0/EHCI1 register blocks, which
 are only writable with their bus clocks running.
