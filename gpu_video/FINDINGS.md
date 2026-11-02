@@ -281,3 +281,8 @@ the screen it appeared top-right.)
   simple-egl 71->22%, cage compositing vkcube 42->14%, vkcube display 22->12%.
   vktest/vkmulti correct, user: triangle + cube fine. Tool: board-port/cpuload.sh.
 - Upstream polish: split into 3 commits (program caches / shared render targets / SPM EOT).
+- Benchmarks (2026-11-02, GPU 696 MHz, Mesa 0001-0005): vkmark 2025.01 headless 1280x720 score 208
+  (vertex 262, texture 242, shading 108-187, effect2d blur 37 / edge 70, desktop 81, cube 357,
+  clear 609 fps), no GPU errors, GPU 49 -> 60 C. weston-simple-egl -b (Zink, no vsync, cage,
+  fullscreen) ~240 fps at 65% of a core. glmark2 isn't packaged in Alpine; building it from
+  GitHub on the device was blocked by the permission check (external code) -> not run.
