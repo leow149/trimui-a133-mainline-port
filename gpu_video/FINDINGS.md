@@ -199,3 +199,23 @@ the screen it appeared top-right.)
   a100 dtsi VE); bindings + DTB validated with dtschema (venv in scratchpad). VE DTB is now the
   default. Not done: IOMMU (sun50i-iommu has no A100 support; buffers from 64 MB CMA), Hantro G2
   (VP9) at 0x01c00000, encode.
+
+## 2026-11-02: real 4K test (Big Buck Bunny 2160p30, H.264 High@5.1, 7.5 Mbit/s, B-frames)
+- Source: download.blender.org/demo/movies/BBB/bbb_sunflower_2160p_30fps_normal.mp4.zip; 60 s cut
+  without re-encode: gpu_video/video/download/bbb4k_60s.mp4 (1902 frames, from 120 s).
+- Needs CMA > 64 MB: 64 -> "Not enough memory to allocate source buffers"; 256 MB ok but H.264 4K
+  left only 24 MB free; tested with cma=320M (one-shot TEST_ARGS). Synthetic 4K: H.264/H.265 90/90
+  bit-exact, 30.9 / 48.9 fps decode-only.
+- Real clip decode speed: 26-33 fps depending on scene (avg 33 over the clip, ~26 first 20 s) ->
+  right at the A133's 4K@30 H.264 spec, NOT reliably real time. VE runs 600 MHz (stock: 432).
+- Display: kmssink zero-copy (prime import), DE VI plane 35 scales 3840x2160 -> 720x405 fine.
+  Gotchas: (1) plane 35 has zpos 0 under the fbcon primary -> plane-properties="s,zpos=(int)3";
+  (2) with sync=true basesink silently drops late frames (max-lateness 20 ms) -> ~1 fps visible
+  (verified by counting DE VI TOP_LADDR changes, gpu_video/display/regwatch.c); sync=false shows
+  every frame (~25 fps on screen). User confirmed the picture looks correct.
+- OOM incident: tmpfs chroot (537 MB) + 256 MB CMA ran the 1 GB board out of memory -> kernel
+  panic -> the panic reboot hung in BL31 sunxi_system_reset (PANIC at PC 0x40006550) like the
+  sysrq reset with the stuck VE: EMERGENCY RESETS DON'T WORK (normal reboot does) -> TODO.
+- Fix: SD partition 3 (29.4 GB ext4, LABEL=TRIMUIDATA, from sector 657408; MBR backup in
+  backups/uboot_sd/sd_mbr_before_p3_20261102.bin); board-port/edge-chroot.sh now keeps the chroot
+  there (persistent, bind-mounted at /tmp/edge).
