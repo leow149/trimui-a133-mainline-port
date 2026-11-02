@@ -186,3 +186,4 @@ the screen it appeared top-right.)
    the script, ethaddr/local-mac-address present, remove /etc/nsi-qos.sh from inittab.
 3. tools/push_kernel.sh (new Image), test-ve.dtb as /test.dtb, TEST_KERNEL=/Image
    tools/uboot_test_boot.py, then gpu_video/video/ve_test.sh.
+- 2026-11-02 morning: user VISUALLY confirmed vkcube clean (no lines, no duplication) with the NSI boot script; 0 underflows/30 s.
