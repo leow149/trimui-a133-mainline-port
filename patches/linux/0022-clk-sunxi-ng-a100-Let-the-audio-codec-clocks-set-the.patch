@@ -1,7 +1,7 @@
 From 00bf03044f832bdc82f4b121c0ce0a808d9ea36c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:51 +0100
-Subject: [PATCH 22/49] clk: sunxi-ng: a100: Let the audio codec clocks set
+Subject: [PATCH 22/51] clk: sunxi-ng: a100: Let the audio codec clocks set
  their parent rate
 
 The codec needs 22.5792 MHz for the 44.1 kHz family and 24.576 MHz for 48 kHz,

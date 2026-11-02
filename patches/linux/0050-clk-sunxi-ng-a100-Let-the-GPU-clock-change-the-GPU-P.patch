@@ -1,0 +1,32 @@
+From 027808c3d08b0a59c3d05fc1cc3e650face78b29 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 01:05:59 +0100
+Subject: [PATCH 50/51] clk: sunxi-ng: a100: Let the GPU clock change the GPU
+ PLL rate
+
+The GPU module clock only divides pll-gpu by up to 4, so a GPU rate above
+the PLL's boot rate can only be reached by changing the PLL. Allow that,
+as the other sunxi-ng drivers do for their GPU clocks.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+index 85b948fff..7e31ae3db 100644
+--- a/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
++++ b/drivers/clk/sunxi-ng/ccu-sun50i-a100.c
+@@ -340,7 +340,7 @@ static SUNXI_CCU_M_WITH_MUX_GATE(gpu_clk, "gpu", gpu_parents, 0x670,
+ 				       0, 2,	/* M */
+ 				       24, 1,	/* mux */
+ 				       BIT(31),	/* gate */
+-				       0);
++				       CLK_SET_RATE_PARENT);
+ 
+ static SUNXI_CCU_GATE(bus_gpu_clk, "bus-gpu", "psi-ahb1-ahb2",
+ 		      0x67c, BIT(0), 0);
+-- 
+2.56.0
+

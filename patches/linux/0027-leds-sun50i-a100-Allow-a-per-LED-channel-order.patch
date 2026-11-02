@@ -1,7 +1,7 @@
 From e364c0d07890e0b6106b13db6006fd61df8526c1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:38 +0100
-Subject: [PATCH 27/49] leds: sun50i-a100: Allow a per-LED channel order
+Subject: [PATCH 27/51] leds: sun50i-a100: Allow a per-LED channel order
 
 The pixel format applies to the whole chain, but chains can mix LED types:
 on the TrimUI Smart Pro the stick rings are GRB and the logo LED is RGB. Let a

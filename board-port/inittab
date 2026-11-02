@@ -1,0 +1,19 @@
+# Minimal inittab for first mainline-boot hardware test on the TrimUI Smart Pro.
+# Deliberately skips OpenRC's full service sequence for now — just mounts the
+# basics and drops straight to an interactive shell on the UART console, to
+# keep this test's moving parts to a minimum. Alpine's real busybox/apk
+# userland is still fully present; can layer OpenRC back in once this is
+# confirmed working.
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mount -t sysfs sysfs /sys
+::sysinit:/bin/mount -t devtmpfs devtmpfs /dev
+::sysinit:/bin/mkdir -p /dev/pts
+::sysinit:/bin/mount -t devpts devpts /dev/pts
+::sysinit:/etc/nsi-qos.sh
+::sysinit:/sbin/watchdog -T 16 -t 5 /dev/watchdog
+::sysinit:/etc/audio-defaults.sh
+::sysinit:/etc/usb-net.sh
+::sysinit:/bin/echo "=== Alpine minimal boot test — TrimUI Smart Pro mainline port ==="
+ttyS0::respawn:/bin/ash
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r

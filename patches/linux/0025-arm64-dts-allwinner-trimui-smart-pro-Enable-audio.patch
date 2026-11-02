@@ -1,7 +1,7 @@
 From 618d5e58c68cbb49b7271e63456590b3ce5d9a36 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:52 +0100
-Subject: [PATCH 25/49] arm64: dts: allwinner: trimui-smart-pro: Enable audio
+Subject: [PATCH 25/51] arm64: dts: allwinner: trimui-smart-pro: Enable audio
 
 The stereo speakers (amplifier enabled by PH6) and the 3.5 mm jack both hang
 off the headphone output; the line out is not used.

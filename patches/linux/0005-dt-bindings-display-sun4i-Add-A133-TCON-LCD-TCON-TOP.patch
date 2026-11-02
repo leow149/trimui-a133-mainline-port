@@ -1,7 +1,7 @@
 From e4dfb4fe709ccf36489f1e97932cf75660d7b7b7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
-Subject: [PATCH 05/49] dt-bindings: display: sun4i: Add A133 TCON LCD, TCON
+Subject: [PATCH 05/51] dt-bindings: display: sun4i: Add A133 TCON LCD, TCON
  TOP and DE2 mixers
 
 Add the A133 compatibles for the LCD TCON, the TCON TOP (no TV/HDMI path, but a

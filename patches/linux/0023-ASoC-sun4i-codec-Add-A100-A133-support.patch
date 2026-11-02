@@ -1,7 +1,7 @@
 From 169879444e982e4bd87c5b57e391db012d405337 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:51 +0100
-Subject: [PATCH 23/49] ASoC: sun4i-codec: Add A100/A133 support
+Subject: [PATCH 23/51] ASoC: sun4i-codec: Add A100/A133 support
 
 The A100/A133 codec has the H616 digital part (same FIFO, DMA and DAC control
 registers) but a different analog part: a single (left) line out, no output
