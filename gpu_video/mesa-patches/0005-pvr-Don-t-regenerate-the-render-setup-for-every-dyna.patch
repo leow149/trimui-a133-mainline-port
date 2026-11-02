@@ -1,0 +1,906 @@
+From 8a1be81cd642701b6e7b4caaa7c01cba8934f584 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 09:53:12 +0100
+Subject: [PATCH] pvr: Don't regenerate the render setup for every dynamic
+ render
+
+With dynamic rendering, which Zink uses, every vkCmdBeginRendering set
+up its render state from scratch: the load op programs, the SPM end of
+tile program and new RT datasets (with their free lists) were compiled,
+uploaded and created again for every render, and the end of tile
+program for every job, whatever API was used.
+
+Cache them in the device instead:
+- the load op programs, by the clears/loads state and the render target
+  resources they are generated from,
+- the end of tile programs (per job and SPM), by their properties,
+- the render targets, by render size, shared by all the dynamic renders
+  of that size as the renders of a framebuffer share them.
+
+Each cache is bounded; once full, things are set up per render as
+before.
+
+On a GE8300 (TrimUI Smart Pro), CPU use of one core at 60 fps:
+weston-simple-egl on Zink 71% -> 22%, the cage compositor (Zink)
+compositing vkcube 42% -> 14%, vkcube on VK_KHR_display 22% -> 12%.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  73 ++++++--
+ src/imagination/vulkan/pvr_arch_device.c      |   3 +
+ src/imagination/vulkan/pvr_arch_framebuffer.c |  89 ++++++++-
+ src/imagination/vulkan/pvr_arch_mrt.c         | 119 +++++++++++-
+ src/imagination/vulkan/pvr_arch_spm.c         |  61 +++++--
+ src/imagination/vulkan/pvr_device.c           | 172 +++++++++++++++++-
+ src/imagination/vulkan/pvr_device.h           |  69 +++++++
+ src/imagination/vulkan/pvr_framebuffer.h      |  10 +-
+ src/imagination/vulkan/pvr_mrt.h              |   3 +
+ src/imagination/vulkan/pvr_spm.c              |   3 +-
+ src/imagination/vulkan/pvr_spm.h              |   2 +
+ 11 files changed, 567 insertions(+), 37 deletions(-)
+
+diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+index a029859..87b70dd 100644
+--- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
++++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+@@ -583,6 +583,10 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
+    const struct pvr_device_tile_buffer_state *tile_buffer_state =
+       &device->tile_buffer_state;
+    struct pvr_suballoc_bo *usc_eot_program = NULL;
++   uint32_t key[PVR_EOT_CACHE_KEY_MAX_DWORDS];
++   const struct pvr_eot_prog *cached;
++   bool eot_program_cached = false;
++   uint32_t key_size;
+    struct pvr_eot_props props = {
+       .emit_count = emit_count,
+       .shared_words = false,
+@@ -614,20 +618,58 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
+          props.msaa_samples = 1;
+    }
+ 
+-   eot =
+-      pvr_usc_eot(device->pdevice->pco_ctx, &props, &device->pdevice->dev_info);
+-   usc_temp_count = pco_shader_data(eot)->common.temps;
++   /* The end of tile program only depends on its properties, take it from the
++    * device's cache rather than compiling it for every job.
++    */
++   key_size = pvr_eot_cache_key(&props, PVR_EOT_CACHE_KIND_JOB, key);
+ 
+-   result = pvr_cmd_buffer_upload_usc(cmd_buffer,
+-                                      pco_shader_binary_data(eot),
+-                                      pco_shader_binary_size(eot),
+-                                      4,
+-                                      &usc_eot_program);
++   simple_mtx_lock(&device->prog_cache.mtx);
+ 
+-   ralloc_free(eot);
++   cached = pvr_device_prog_cache_lookup(device->prog_cache.eots,
++                                         key,
++                                         key_size);
++   if (cached) {
++      usc_eot_program = cached->usc_bo;
++      usc_temp_count = cached->temps_count;
++   } else {
++      eot = pvr_usc_eot(device->pdevice->pco_ctx,
++                        &props,
++                        &device->pdevice->dev_info);
++      usc_temp_count = pco_shader_data(eot)->common.temps;
+ 
+-   if (result != VK_SUCCESS)
+-      return result;
++      result = pvr_cmd_buffer_upload_usc(cmd_buffer,
++                                         pco_shader_binary_data(eot),
++                                         pco_shader_binary_size(eot),
++                                         4,
++                                         &usc_eot_program);
++
++      ralloc_free(eot);
++
++      if (result != VK_SUCCESS) {
++         simple_mtx_unlock(&device->prog_cache.mtx);
++         return result;
++      }
++
++      const struct pvr_eot_prog prog = {
++         .usc_bo = usc_eot_program,
++         .temps_count = usc_temp_count,
++      };
++
++      /* When the cache takes the program, the command buffer mustn't free
++       * it. Otherwise it stays on the command buffer's list as before.
++       */
++      if (pvr_device_prog_cache_insert(device,
++                                       &device->prog_cache.eots,
++                                       key,
++                                       key_size,
++                                       &prog,
++                                       sizeof(prog))) {
++         list_del(&usc_eot_program->link);
++         eot_program_cached = true;
++      }
++   }
++
++   simple_mtx_unlock(&device->prog_cache.mtx);
+ 
+    pvr_pds_setup_doutu(&pixel_event_program.task_control,
+                        usc_eot_program->dev_addr.addr,
+@@ -667,8 +709,10 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
+    return result;
+ 
+ err_free_usc_pixel_program:
+-   list_del(&usc_eot_program->link);
+-   pvr_bo_suballoc_free(usc_eot_program);
++   if (!cached && !eot_program_cached) {
++      list_del(&usc_eot_program->link);
++      pvr_bo_suballoc_free(usc_eot_program);
++   }
+ 
+    return result;
+ }
+@@ -5048,7 +5092,8 @@ void PVR_PER_ARCH(CmdBeginRendering)(VkCommandBuffer commandBuffer,
+                                         NULL,
+                                         state->render_pass_info.rstate,
+                                         1,
+-                                        &dr_info->hw_render);
++                                        &dr_info->hw_render,
++                                        true);
+    if (result != VK_SUCCESS) {
+       vk_command_buffer_set_error(&cmd_buffer->vk, result);
+       goto err_cleanup_tile_buffers;
+diff --git a/src/imagination/vulkan/pvr_arch_device.c b/src/imagination/vulkan/pvr_arch_device.c
+index 89e8139..319cafb 100644
+--- a/src/imagination/vulkan/pvr_arch_device.c
++++ b/src/imagination/vulkan/pvr_arch_device.c
+@@ -914,6 +914,7 @@ VkResult PVR_PER_ARCH(create_device)(struct pvr_physical_device *pdevice,
+       goto err_pvr_finish_graphics_static_clear_state;
+ 
+    pvr_device_init_tile_buffer_state(device);
++   pvr_device_prog_cache_init(device);
+ 
+    result = pvr_arch_queues_create(device, pCreateInfo);
+    if (result != VK_SUCCESS)
+@@ -969,6 +970,7 @@ err_pvr_spm_finish_scratch_buffer_store:
+    pvr_arch_queues_destroy(device);
+ 
+ err_pvr_finish_tile_buffer_state:
++   pvr_device_prog_cache_finish(device);
+    pvr_device_finish_tile_buffer_state(device);
+    pvr_arch_device_finish_spm_load_state(device);
+ 
+@@ -1052,6 +1054,7 @@ void PVR_PER_ARCH(destroy_device)(struct pvr_device *device,
+    pvr_robustness_buffer_finish(device);
+    pvr_spm_finish_scratch_buffer_store(device);
+    pvr_arch_queues_destroy(device);
++   pvr_device_prog_cache_finish(device);
+    pvr_device_finish_tile_buffer_state(device);
+    pvr_arch_device_finish_spm_load_state(device);
+    pvr_device_finish_graphics_static_clear_state(device);
+diff --git a/src/imagination/vulkan/pvr_arch_framebuffer.c b/src/imagination/vulkan/pvr_arch_framebuffer.c
+index 22fdd71..efb8c26 100644
+--- a/src/imagination/vulkan/pvr_arch_framebuffer.c
++++ b/src/imagination/vulkan/pvr_arch_framebuffer.c
+@@ -93,12 +93,71 @@ err_mutex_destroy:
+    return false;
+ }
+ 
++/* Returns the device's render targets for renders of rstate's size, creating
++ * them when needed, or NULL when the cache is full.
++ */
++static struct pvr_render_target *
++pvr_render_targets_cache_get(struct pvr_device *device,
++                             const struct pvr_render_state *rstate,
++                             uint32_t render_targets_count)
++{
++   const uint32_t key[] = { rstate->width, rstate->height, rstate->layers };
++   const struct pvr_cached_render_targets *cached;
++   struct pvr_cached_render_targets rts = {
++      .count = render_targets_count,
++   };
++
++   simple_mtx_lock(&device->prog_cache.mtx);
++
++   cached = pvr_device_prog_cache_lookup(device->prog_cache.render_targets,
++                                         key,
++                                         sizeof(key));
++   if (cached) {
++      simple_mtx_unlock(&device->prog_cache.mtx);
++      return cached->render_targets;
++   }
++
++   rts.render_targets = vk_zalloc(&device->vk.alloc,
++                                  sizeof(*rts.render_targets) *
++                                     render_targets_count,
++                                  8,
++                                  VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
++   if (!rts.render_targets)
++      goto err_unlock;
++
++   if (!pvr_render_targets_init(rts.render_targets, render_targets_count))
++      goto err_free_render_targets;
++
++   if (!pvr_device_prog_cache_insert(device,
++                                     &device->prog_cache.render_targets,
++                                     key,
++                                     sizeof(key),
++                                     &rts,
++                                     sizeof(rts))) {
++      pvr_render_targets_fini(rts.render_targets, render_targets_count);
++      goto err_free_render_targets;
++   }
++
++   simple_mtx_unlock(&device->prog_cache.mtx);
++
++   return rts.render_targets;
++
++err_free_render_targets:
++   vk_free(&device->vk.alloc, rts.render_targets);
++
++err_unlock:
++   simple_mtx_unlock(&device->prog_cache.mtx);
++
++   return NULL;
++}
++
+ VkResult
+ pvr_arch_render_state_setup(struct pvr_device *device,
+                             const VkAllocationCallbacks *pAllocator,
+                             struct pvr_render_state *rstate,
+                             uint32_t render_count,
+-                            const struct pvr_renderpass_hwsetup_render *renders)
++                            const struct pvr_renderpass_hwsetup_render *renders,
++                            bool cache_render_targets)
+ {
+    struct pvr_spm_bgobj_state *spm_bgobj_state_per_render;
+    struct pvr_spm_eot_state *spm_eot_state_per_render;
+@@ -130,9 +189,27 @@ pvr_arch_render_state_setup(struct pvr_device *device,
+       return vk_error(device, VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+ 
++   rstate->mem = render_targets;
+    rstate->render_targets = render_targets;
+    rstate->render_targets_count = render_targets_count;
+-   if (!pvr_render_targets_init(rstate->render_targets, render_targets_count)) {
++   rstate->render_targets_cached = false;
++
++   /* Dynamic renders of the same size share their render targets (and with
++    * them the RT datasets, which are expensive to create), as the renders of
++    * a framebuffer do.
++    */
++   if (cache_render_targets) {
++      struct pvr_render_target *cached =
++         pvr_render_targets_cache_get(device, rstate, render_targets_count);
++
++      if (cached) {
++         rstate->render_targets = cached;
++         rstate->render_targets_cached = true;
++      }
++   }
++
++   if (!rstate->render_targets_cached &&
++       !pvr_render_targets_init(rstate->render_targets, render_targets_count)) {
+       result = vk_error(device, VK_ERROR_OUT_OF_HOST_MEMORY);
+       goto err_free_render_targets;
+    }
+@@ -195,10 +272,11 @@ err_release_scratch_buffer:
+    pvr_spm_scratch_buffer_release(device, rstate->scratch_buffer);
+ 
+ err_finish_render_targets:
+-   pvr_render_targets_fini(rstate->render_targets, render_targets_count);
++   if (!rstate->render_targets_cached)
++      pvr_render_targets_fini(rstate->render_targets, render_targets_count);
+ 
+ err_free_render_targets:
+-   vk_free2(&device->vk.alloc, pAllocator, rstate->render_targets);
++   vk_free2(&device->vk.alloc, pAllocator, rstate->mem);
+ 
+    return result;
+ }
+@@ -277,7 +355,8 @@ PVR_PER_ARCH(CreateFramebuffer)(VkDevice _device,
+                                         pAllocator,
+                                         rstate,
+                                         pass->hw_setup->render_count,
+-                                        pass->hw_setup->renders);
++                                        pass->hw_setup->renders,
++                                        false);
+    if (result != VK_SUCCESS)
+       goto err_free_framebuffer;
+ 
+diff --git a/src/imagination/vulkan/pvr_arch_mrt.c b/src/imagination/vulkan/pvr_arch_mrt.c
+index bd59ccd..61f677f 100644
+--- a/src/imagination/vulkan/pvr_arch_mrt.c
++++ b/src/imagination/vulkan/pvr_arch_mrt.c
+@@ -296,6 +296,120 @@ pvr_rendering_info_needs_load(const struct pvr_dynamic_render_info *dr_info)
+    return false;
+ }
+ 
++/* Builds the cache key of a load op from what its programs are generated
++ * from: the clears/loads state and the render target resources it uses.
++ */
++static uint32_t pvr_load_op_cache_key(const struct pvr_load_op *load_op,
++                                      uint32_t *key)
++{
++   const struct usc_mrt_setup *mrt_setup =
++      load_op->clears_loads_state.mrt_setup;
++   const int32_t depth_idx = load_op->clears_loads_state.depth_clear_to_reg;
++   uint32_t rt_mask = load_op->clears_loads_state.rt_clear_mask |
++                      load_op->clears_loads_state.rt_load_mask;
++   uint32_t n = 0;
++
++   key[n++] = load_op->clears_loads_state.rt_clear_mask;
++   key[n++] = load_op->clears_loads_state.rt_load_mask;
++   key[n++] = load_op->clears_loads_state.rt_2d_view_3d_mask;
++   key[n++] = load_op->clears_loads_state.unresolved_msaa_mask;
++   key[n++] = depth_idx;
++
++   if (depth_idx != PVR_NO_DEPTH_CLEAR_TO_REG)
++      rt_mask |= BITFIELD_BIT(depth_idx);
++
++   u_foreach_bit (rt_idx, rt_mask) {
++      const struct usc_mrt_resource *res = &mrt_setup->mrt_resources[rt_idx];
++      const bool reg = res->type == USC_MRT_RESOURCE_TYPE_OUTPUT_REG;
++
++      key[n++] = rt_idx;
++      key[n++] = load_op->clears_loads_state.dest_vk_format[rt_idx];
++      key[n++] = res->type;
++      key[n++] = res->intermediate_size;
++      key[n++] = reg ? res->reg.output_reg : res->mem.tile_buffer;
++      key[n++] = reg ? res->reg.offset : res->mem.offset_dw;
++   }
++
++   return n * sizeof(*key);
++}
++
++#define PVR_LOAD_OP_CACHE_KEY_MAX_DWORDS (5U + 6U * 32U)
++
++static void pvr_load_op_progs_get(struct pvr_load_op *load_op,
++                                  struct pvr_load_op_progs *progs)
++{
++   *progs = (struct pvr_load_op_progs){
++      .usc_frag_prog_bo = load_op->usc_frag_prog_bo,
++      .pds_frag_prog = load_op->pds_frag_prog,
++      .pds_tex_state_prog = load_op->pds_tex_state_prog,
++      .temps_count = load_op->temps_count,
++      .num_tile_buffers = load_op->num_tile_buffers,
++      .const_shareds_count = load_op->const_shareds_count,
++      .shareds_count = load_op->shareds_count,
++   };
++}
++
++static void pvr_load_op_progs_set(struct pvr_load_op *load_op,
++                                  const struct pvr_load_op_progs *progs)
++{
++   load_op->usc_frag_prog_bo = progs->usc_frag_prog_bo;
++   load_op->pds_frag_prog = progs->pds_frag_prog;
++   load_op->pds_tex_state_prog = progs->pds_tex_state_prog;
++   load_op->temps_count = progs->temps_count;
++   load_op->num_tile_buffers = progs->num_tile_buffers;
++   load_op->const_shareds_count = progs->const_shareds_count;
++   load_op->shareds_count = progs->shareds_count;
++   load_op->progs_cached = true;
++}
++
++/* With dynamic rendering the load ops are set up again for every render, so
++ * take their programs from the device's cache instead of generating them
++ * each time.
++ */
++static VkResult pvr_load_op_shader_get(struct pvr_device *device,
++                                       const VkAllocationCallbacks *alloc,
++                                       struct pvr_load_op *load_op)
++{
++   uint32_t key[PVR_LOAD_OP_CACHE_KEY_MAX_DWORDS];
++   const struct pvr_load_op_progs *cached;
++   struct pvr_load_op_progs progs;
++   uint32_t key_size;
++   VkResult result;
++
++   assert(util_bitcount(load_op->clears_loads_state.rt_clear_mask |
++                        load_op->clears_loads_state.rt_load_mask) + 1U <=
++          32U);
++   key_size = pvr_load_op_cache_key(load_op, key);
++
++   simple_mtx_lock(&device->prog_cache.mtx);
++
++   cached = pvr_device_prog_cache_lookup(device->prog_cache.load_ops,
++                                         key,
++                                         key_size);
++   if (cached) {
++      pvr_load_op_progs_set(load_op, cached);
++      simple_mtx_unlock(&device->prog_cache.mtx);
++      return VK_SUCCESS;
++   }
++
++   result = pvr_arch_load_op_shader_generate(device, alloc, load_op);
++   if (result == VK_SUCCESS) {
++      pvr_load_op_progs_get(load_op, &progs);
++      if (pvr_device_prog_cache_insert(device,
++                                       &device->prog_cache.load_ops,
++                                       key,
++                                       key_size,
++                                       &progs,
++                                       sizeof(progs))) {
++         load_op->progs_cached = true;
++      }
++   }
++
++   simple_mtx_unlock(&device->prog_cache.mtx);
++
++   return result;
++}
++
+ static VkResult pvr_mrt_load_op_init(struct pvr_device *device,
+                                      const VkAllocationCallbacks *alloc,
+                                      const struct pvr_render_pass_info *rp_info,
+@@ -345,7 +459,7 @@ static VkResult pvr_mrt_load_op_init(struct pvr_device *device,
+ 
+    load_op->clears_loads_state.mrt_setup = &dr_info->hw_render.init_setup;
+ 
+-   result = pvr_arch_load_op_shader_generate(device, alloc, load_op);
++   result = pvr_load_op_shader_get(device, alloc, load_op);
+    if (result != VK_SUCCESS) {
+       vk_free2(&device->vk.alloc, alloc, load_op);
+       return result;
+@@ -362,6 +476,9 @@ static VkResult pvr_mrt_load_op_init(struct pvr_device *device,
+ 
+ static void pvr_load_op_fini(struct pvr_load_op *load_op)
+ {
++   if (load_op->progs_cached)
++      return;
++
+    pvr_bo_suballoc_free(load_op->pds_tex_state_prog.pvr_bo);
+    pvr_bo_suballoc_free(load_op->pds_frag_prog.pvr_bo);
+    pvr_bo_suballoc_free(load_op->usc_frag_prog_bo);
+diff --git a/src/imagination/vulkan/pvr_arch_spm.c b/src/imagination/vulkan/pvr_arch_spm.c
+index 73808e4..40cb596 100644
+--- a/src/imagination/vulkan/pvr_arch_spm.c
++++ b/src/imagination/vulkan/pvr_arch_spm.c
+@@ -476,7 +476,10 @@ VkResult pvr_arch_spm_init_eot_state(
+    uint32_t total_render_target_used = 0;
+    struct pvr_pds_upload pds_eot_program;
+    struct pvr_eot_props props;
++   uint32_t key[PVR_EOT_CACHE_KEY_MAX_DWORDS];
++   const struct pvr_eot_prog *cached;
+    uint32_t usc_temp_count;
++   uint32_t key_size;
+    pco_shader *eot;
+    VkResult result;
+ 
+@@ -592,20 +595,53 @@ VkResult pvr_arch_spm_init_eot_state(
+ 
+    memcpy(props.tile_buffer_addrs, tile_buffer_addrs, sizeof(tile_buffer_addrs));
+ 
+-   eot = pvr_usc_eot(device->pdevice->pco_ctx, &props, dev_info);
+-   usc_temp_count = pco_shader_data(eot)->common.temps;
++   /* The program only depends on its properties: the scratch buffer comes
++    * from a shared store, so renders of the same size get the same one.
++    */
++   key_size = pvr_eot_cache_key(&props, PVR_EOT_CACHE_KIND_SPM, key);
+ 
+-   /* TODO: Create a #define in the compiler code to replace the 16. */
+-   result = pvr_gpu_upload_usc(device,
+-                               pco_shader_binary_data(eot),
+-                               pco_shader_binary_size(eot),
+-                               16,
+-                               &spm_eot_state->usc_eot_program);
++   simple_mtx_lock(&device->prog_cache.mtx);
+ 
+-   ralloc_free(eot);
++   cached = pvr_device_prog_cache_lookup(device->prog_cache.eots,
++                                         key,
++                                         key_size);
++   if (cached) {
++      spm_eot_state->usc_eot_program = cached->usc_bo;
++      spm_eot_state->usc_eot_program_cached = true;
++      usc_temp_count = cached->temps_count;
++   } else {
++      eot = pvr_usc_eot(device->pdevice->pco_ctx, &props, dev_info);
++      usc_temp_count = pco_shader_data(eot)->common.temps;
+ 
+-   if (result != VK_SUCCESS)
+-      return result;
++      /* TODO: Create a #define in the compiler code to replace the 16. */
++      result = pvr_gpu_upload_usc(device,
++                                  pco_shader_binary_data(eot),
++                                  pco_shader_binary_size(eot),
++                                  16,
++                                  &spm_eot_state->usc_eot_program);
++
++      ralloc_free(eot);
++
++      if (result != VK_SUCCESS) {
++         simple_mtx_unlock(&device->prog_cache.mtx);
++         return result;
++      }
++
++      const struct pvr_eot_prog prog = {
++         .usc_bo = spm_eot_state->usc_eot_program,
++         .temps_count = usc_temp_count,
++      };
++
++      spm_eot_state->usc_eot_program_cached =
++         pvr_device_prog_cache_insert(device,
++                                      &device->prog_cache.eots,
++                                      key,
++                                      key_size,
++                                      &prog,
++                                      sizeof(prog));
++   }
++
++   simple_mtx_unlock(&device->prog_cache.mtx);
+ 
+    result = pvr_pds_pixel_event_program_create_and_upload(
+       device,
+@@ -613,7 +649,8 @@ VkResult pvr_arch_spm_init_eot_state(
+       usc_temp_count,
+       &pds_eot_program);
+    if (result != VK_SUCCESS) {
+-      pvr_bo_suballoc_free(spm_eot_state->usc_eot_program);
++      if (!spm_eot_state->usc_eot_program_cached)
++         pvr_bo_suballoc_free(spm_eot_state->usc_eot_program);
+       return result;
+    }
+ 
+diff --git a/src/imagination/vulkan/pvr_device.c b/src/imagination/vulkan/pvr_device.c
+index 7ba4fb8..9cea11d 100644
+--- a/src/imagination/vulkan/pvr_device.c
++++ b/src/imagination/vulkan/pvr_device.c
+@@ -59,6 +59,7 @@
+ #include "pvr_util.h"
+ #include "pvr_winsys.h"
+ #include "pvr_wsi.h"
++#include "util/hash_table.h"
+ #include "util/log.h"
+ #include "util/macros.h"
+ #include "util/mesa-blake3.h"
+@@ -820,6 +821,169 @@ VkResult pvr_gpu_upload(struct pvr_device *device,
+    return VK_SUCCESS;
+ }
+ 
++/* Bounds the memory held by the cache: entries are only freed with the
++ * device, and the end of tile programs depend on render target addresses.
++ */
++#define PVR_PROG_CACHE_MAX_ENTRIES 256U
++
++struct pvr_prog_cache_key {
++   uint32_t size;
++   const void *data;
++};
++
++static uint32_t pvr_prog_cache_key_hash(const void *key)
++{
++   const struct pvr_prog_cache_key *k = key;
++
++   return _mesa_hash_data(k->data, k->size);
++}
++
++static bool pvr_prog_cache_key_equal(const void *a, const void *b)
++{
++   const struct pvr_prog_cache_key *ka = a;
++   const struct pvr_prog_cache_key *kb = b;
++
++   return ka->size == kb->size && !memcmp(ka->data, kb->data, ka->size);
++}
++
++uint32_t pvr_eot_cache_key(const struct pvr_eot_props *props,
++                           uint32_t kind,
++                           uint32_t key[static PVR_EOT_CACHE_KEY_MAX_DWORDS])
++{
++   uint32_t n = 0;
++
++   assert(!props->shared_words);
++   assert(props->emit_count <= PVR_MAX_COLOR_ATTACHMENTS);
++
++   key[n++] = kind;
++   key[n++] = props->emit_count;
++   key[n++] = props->num_output_regs;
++   key[n++] = props->msaa_samples;
++   for (unsigned u = 0; u < props->emit_count * ROGUE_NUM_PBESTATE_STATE_WORDS;
++        ++u) {
++      key[n++] = props->state_words[u];
++   }
++   for (unsigned u = 0; u < props->emit_count; ++u) {
++      key[n++] = props->tile_buffer_addrs[u];
++      key[n++] = props->tile_buffer_addrs[u] >> 32;
++   }
++
++   return n * sizeof(*key);
++}
++
++void pvr_device_prog_cache_init(struct pvr_device *device)
++{
++   simple_mtx_init(&device->prog_cache.mtx, mtx_plain);
++   device->prog_cache.load_ops = NULL;
++   device->prog_cache.eots = NULL;
++   device->prog_cache.render_targets = NULL;
++}
++
++void pvr_device_prog_cache_finish(struct pvr_device *device)
++{
++   simple_mtx_destroy(&device->prog_cache.mtx);
++
++   if (device->prog_cache.load_ops) {
++      hash_table_foreach (device->prog_cache.load_ops, entry) {
++         struct pvr_load_op_progs *progs = entry->data;
++
++         pvr_bo_suballoc_free(progs->pds_tex_state_prog.pvr_bo);
++         pvr_bo_suballoc_free(progs->pds_frag_prog.pvr_bo);
++         pvr_bo_suballoc_free(progs->usc_frag_prog_bo);
++         vk_free(&device->vk.alloc, progs);
++         vk_free(&device->vk.alloc, (void *)entry->key);
++      }
++      _mesa_hash_table_destroy(device->prog_cache.load_ops, NULL);
++   }
++
++   if (device->prog_cache.eots) {
++      hash_table_foreach (device->prog_cache.eots, entry) {
++         struct pvr_eot_prog *prog = entry->data;
++
++         pvr_bo_suballoc_free(prog->usc_bo);
++         vk_free(&device->vk.alloc, prog);
++         vk_free(&device->vk.alloc, (void *)entry->key);
++      }
++      _mesa_hash_table_destroy(device->prog_cache.eots, NULL);
++   }
++
++   if (device->prog_cache.render_targets) {
++      hash_table_foreach (device->prog_cache.render_targets, entry) {
++         struct pvr_cached_render_targets *rts = entry->data;
++
++         pvr_render_targets_fini(rts->render_targets, rts->count);
++         vk_free(&device->vk.alloc, rts->render_targets);
++         vk_free(&device->vk.alloc, rts);
++         vk_free(&device->vk.alloc, (void *)entry->key);
++      }
++      _mesa_hash_table_destroy(device->prog_cache.render_targets, NULL);
++   }
++}
++
++const void *pvr_device_prog_cache_lookup(struct hash_table *table,
++                                         const void *key,
++                                         uint32_t key_size)
++{
++   const struct pvr_prog_cache_key k = { .size = key_size, .data = key };
++   struct hash_entry *entry;
++
++   if (!table)
++      return NULL;
++
++   entry = _mesa_hash_table_search(table, &k);
++
++   return entry ? entry->data : NULL;
++}
++
++bool pvr_device_prog_cache_insert(struct pvr_device *device,
++                                  struct hash_table **table,
++                                  const void *key,
++                                  uint32_t key_size,
++                                  const void *progs,
++                                  size_t progs_size)
++{
++   struct pvr_prog_cache_key *k;
++   void *data;
++
++   if (!*table) {
++      *table = _mesa_hash_table_create(NULL,
++                                       pvr_prog_cache_key_hash,
++                                       pvr_prog_cache_key_equal);
++      if (!*table)
++         return false;
++   }
++
++   if ((*table)->entries >= PVR_PROG_CACHE_MAX_ENTRIES)
++      return false;
++
++   k = vk_alloc(&device->vk.alloc,
++                sizeof(*k) + key_size,
++                8,
++                VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
++   data = vk_alloc(&device->vk.alloc,
++                   progs_size,
++                   8,
++                   VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
++   if (!k || !data) {
++      vk_free(&device->vk.alloc, k);
++      vk_free(&device->vk.alloc, data);
++      return false;
++   }
++
++   /* The key data is stored right after the key. */
++   k->size = key_size;
++   k->data = memcpy(k + 1, key, key_size);
++   memcpy(data, progs, progs_size);
++
++   if (!_mesa_hash_table_insert(*table, k, data)) {
++      vk_free(&device->vk.alloc, k);
++      vk_free(&device->vk.alloc, data);
++      return false;
++   }
++
++   return true;
++}
++
+ VkResult pvr_gpu_upload_usc(struct pvr_device *device,
+                             const void *code,
+                             size_t code_size,
+@@ -963,10 +1127,12 @@ void pvr_render_state_cleanup(struct pvr_device *device,
+    }
+ 
+    pvr_spm_scratch_buffer_release(device, rstate->scratch_buffer);
+-   pvr_render_targets_fini(rstate->render_targets,
+-                           rstate->render_targets_count);
++   if (!rstate->render_targets_cached) {
++      pvr_render_targets_fini(rstate->render_targets,
++                              rstate->render_targets_count);
++   }
+    pvr_bo_suballoc_free(rstate->ppp_state_bo);
+-   vk_free2(&device->vk.alloc, pAllocator, rstate->render_targets);
++   vk_free2(&device->vk.alloc, pAllocator, rstate->mem);
+ }
+ 
+ void pvr_GetBufferMemoryRequirements2(
+diff --git a/src/imagination/vulkan/pvr_device.h b/src/imagination/vulkan/pvr_device.h
+index 5b9e96d..34f2220 100644
+--- a/src/imagination/vulkan/pvr_device.h
++++ b/src/imagination/vulkan/pvr_device.h
+@@ -31,6 +31,8 @@
+ #include "pvr_pds.h"
+ #include "pvr_spm.h"
+ #include "pvr_usc.h"
++#include "hwdef/rogue_hw_defs.h"
++#include "pvr_limits.h"
+ #include "pvr_winsys.h"
+ 
+ typedef struct _pco_ctx pco_ctx;
+@@ -136,6 +138,19 @@ struct pvr_device {
+       uint32_t buffer_count;
+    } tile_buffer_state;
+ 
++   /* Programs the driver generates while recording command buffers, shared
++    * through the device by their inputs. With dynamic rendering they would
++    * otherwise be compiled and uploaded again for every render. The hash
++    * tables are created on first use.
++    */
++   struct {
++      simple_mtx_t mtx;
++      struct hash_table *load_ops;
++      struct hash_table *eots;
++      /* Render targets of dynamic renders, by size. */
++      struct hash_table *render_targets;
++   } prog_cache;
++
+    struct pvr_spm_scratch_buffer_store spm_scratch_buffer_store;
+ 
+    struct pvr_bo_store *bo_store;
+@@ -230,6 +245,60 @@ VkResult pvr_gpu_upload_usc(struct pvr_device *device,
+                             uint64_t code_alignment,
+                             struct pvr_suballoc_bo **const pvr_bo_out);
+ 
++/* Programs of a load op, see pvr_load_op. */
++struct pvr_load_op_progs {
++   struct pvr_suballoc_bo *usc_frag_prog_bo;
++   struct pvr_pds_upload pds_frag_prog;
++   struct pvr_pds_upload pds_tex_state_prog;
++   uint32_t temps_count;
++   uint32_t num_tile_buffers;
++   uint32_t const_shareds_count;
++   uint32_t shareds_count;
++};
++
++/* Render targets (RT datasets) shared by the dynamic renders of a size, like
++ * the renders of a framebuffer share them.
++ */
++struct pvr_cached_render_targets {
++   struct pvr_render_target *render_targets;
++   uint32_t count;
++};
++
++/* End of tile USC program. */
++struct pvr_eot_prog {
++   struct pvr_suballoc_bo *usc_bo;
++   uint32_t temps_count;
++};
++
++/* End of tile program cache keys. The kind separates the programs uploaded
++ * differently (per job, SPM).
++ */
++#define PVR_EOT_CACHE_KEY_MAX_DWORDS \
++   (4U + PVR_MAX_COLOR_ATTACHMENTS * (ROGUE_NUM_PBESTATE_STATE_WORDS + 2U))
++#define PVR_EOT_CACHE_KIND_JOB 0U
++#define PVR_EOT_CACHE_KIND_SPM 1U
++
++uint32_t pvr_eot_cache_key(const struct pvr_eot_props *props,
++                           uint32_t kind,
++                           uint32_t key[static PVR_EOT_CACHE_KEY_MAX_DWORDS]);
++
++void pvr_device_prog_cache_init(struct pvr_device *device);
++void pvr_device_prog_cache_finish(struct pvr_device *device);
++
++/* The lookup and the insertion must be done with prog_cache.mtx held. The
++ * cache owns the programs it was given, and frees them with the device.
++ * Insertion fails once the cache is full, the caller then keeps ownership.
++ */
++const void *pvr_device_prog_cache_lookup(struct hash_table *table,
++                                         const void *key,
++                                         uint32_t key_size);
++bool pvr_device_prog_cache_insert(struct pvr_device *device,
++                                  struct hash_table **table,
++                                  const void *key,
++                                  uint32_t key_size,
++                                  const void *progs,
++                                  size_t progs_size);
++
+ void pvr_rstate_entry_add(struct pvr_device *device,
+                           struct pvr_render_state *rstate);
+ 
+diff --git a/src/imagination/vulkan/pvr_framebuffer.h b/src/imagination/vulkan/pvr_framebuffer.h
+index 8f89cc1..8185458 100644
+--- a/src/imagination/vulkan/pvr_framebuffer.h
++++ b/src/imagination/vulkan/pvr_framebuffer.h
+@@ -48,6 +48,13 @@ struct pvr_render_state {
+ 
+    uint32_t render_targets_count;
+    struct pvr_render_target *render_targets;
++   /* The render targets belong to the device's cache. */
++   bool render_targets_cached;
++
++   /* Allocation holding the per render state (and the render targets when
++    * they aren't cached).
++    */
++   void *mem;
+ 
+    uint64_t scratch_buffer_size;
+    struct pvr_spm_scratch_buffer *scratch_buffer;
+@@ -75,7 +82,8 @@ VkResult PVR_PER_ARCH(render_state_setup)(
+    const VkAllocationCallbacks *pAllocator,
+    struct pvr_render_state *rstate,
+    uint32_t render_count,
+-   const struct pvr_renderpass_hwsetup_render *renders);
++   const struct pvr_renderpass_hwsetup_render *renders,
++   bool cache_render_targets);
+ 
+ #   define pvr_arch_render_state_setup PVR_PER_ARCH(render_state_setup)
+ 
+diff --git a/src/imagination/vulkan/pvr_mrt.h b/src/imagination/vulkan/pvr_mrt.h
+index 249a913..95db5ba 100644
+--- a/src/imagination/vulkan/pvr_mrt.h
++++ b/src/imagination/vulkan/pvr_mrt.h
+@@ -104,6 +104,9 @@ struct usc_mrt_setup {
+ struct pvr_load_op {
+    bool is_hw_object;
+ 
++   /* The programs belong to the device's program cache. */
++   bool progs_cached;
++
+    struct pvr_suballoc_bo *usc_frag_prog_bo;
+    uint32_t const_shareds_count;
+    uint32_t shareds_count;
+diff --git a/src/imagination/vulkan/pvr_spm.c b/src/imagination/vulkan/pvr_spm.c
+index 5e66a69..e57773b 100644
+--- a/src/imagination/vulkan/pvr_spm.c
++++ b/src/imagination/vulkan/pvr_spm.c
+@@ -214,7 +214,8 @@ void pvr_spm_finish_eot_state(struct pvr_device *device,
+                               struct pvr_spm_eot_state *spm_eot_state)
+ {
+    pvr_bo_suballoc_free(spm_eot_state->pixel_event_program_data_upload);
+-   pvr_bo_suballoc_free(spm_eot_state->usc_eot_program);
++   if (!spm_eot_state->usc_eot_program_cached)
++      pvr_bo_suballoc_free(spm_eot_state->usc_eot_program);
+ }
+ 
+ void pvr_spm_finish_bgobj_state(struct pvr_device *device,
+diff --git a/src/imagination/vulkan/pvr_spm.h b/src/imagination/vulkan/pvr_spm.h
+index d9fccdb..37fb1ae 100644
+--- a/src/imagination/vulkan/pvr_spm.h
++++ b/src/imagination/vulkan/pvr_spm.h
+@@ -65,6 +65,8 @@ struct pvr_spm_eot_state {
+                          [ROGUE_NUM_PBESTATE_REG_WORDS];
+ 
+    struct pvr_suballoc_bo *usc_eot_program;
++   /* usc_eot_program belongs to the device's program cache. */
++   bool usc_eot_program_cached;
+ 
+    /* TODO: Make this struct pvr_pds_upload? */
+    /* This is only the data section upload. The code was uploaded at device
+-- 
+2.56.0
+

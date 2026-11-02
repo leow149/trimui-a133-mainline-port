@@ -268,3 +268,16 @@ the screen it appeared top-right.)
 - VP9 (Hantro G2 @0x01c00000, SPI 90, "sunxi-google-vp9" stock): shares VE clock and reset with
   cedrus, which pulses the reset; IOMMU master unknown (stock node has none); 720p@30 4 Mbit/s max.
 - Manual: 4K@30 H.264/H.265 only with AFBC output + second scaler (not used by mainline cedrus).
+
+## 2026-11-02: Mesa patch 0005 -- render setup cached (CPU load of Zink/Wayland roughly /3)
+- perf (chroot: apk add perf; perf record -g -p PID): weston-simple-egl on Zink spent 54-72% in the
+  kernel + 30% in libvulkan_powervr: with dynamic rendering (Zink) every vkCmdBeginRendering
+  rebuilt the render state: load-op shaders (pvr_uscgen_loadop), SPM EOT shader, NEW RT datasets
+  + free lists (pvr_ioctl_create_free_list/hwrt_dataset per render), and every job compiled its
+  EOT shader (pvr_usc_eot) -- for all APIs. Upstream has a FIXME for exactly this.
+- 0005: device caches (prog_cache in pvr_device): load-op programs by clears/loads state + MRT
+  resources, EOT programs (job + SPM) by props, render targets by (w,h,layers). Bounded (256
+  programs / 32 sizes); full -> old per-render path. Measured (one core, 60 fps):
+  simple-egl 71->22%, cage compositing vkcube 42->14%, vkcube display 22->12%.
+  vktest/vkmulti correct, user: triangle + cube fine. Tool: board-port/cpuload.sh.
+- Upstream polish: split into 3 commits (program caches / shared render targets / SPM EOT).
