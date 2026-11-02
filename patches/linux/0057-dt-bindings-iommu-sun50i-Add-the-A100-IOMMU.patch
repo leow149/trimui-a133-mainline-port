@@ -1,0 +1,51 @@
+From 8d839a0d1dec7c17f40b561d1a595a9cc31fa611 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 09:12:24 +0100
+Subject: [PATCH 57/60] dt-bindings: iommu: sun50i: Add the A100 IOMMU
+
+The A100 has the same IOMMU as the H6 and H616 at the same address, with
+DE0 as master 0 and the video engine as master 2, but no reset line: its
+CCU register only has a bus clock gate.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../bindings/iommu/allwinner,sun50i-h6-iommu.yaml | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/iommu/allwinner,sun50i-h6-iommu.yaml b/Documentation/devicetree/bindings/iommu/allwinner,sun50i-h6-iommu.yaml
+index a8409db4a..f0ffc0315 100644
+--- a/Documentation/devicetree/bindings/iommu/allwinner,sun50i-h6-iommu.yaml
++++ b/Documentation/devicetree/bindings/iommu/allwinner,sun50i-h6-iommu.yaml
+@@ -18,6 +18,7 @@ properties:
+ 
+   compatible:
+     oneOf:
++      - const: allwinner,sun50i-a100-iommu
+       - const: allwinner,sun50i-h6-iommu
+       - const: allwinner,sun50i-h616-iommu
+       - items:
+@@ -42,7 +43,19 @@ required:
+   - reg
+   - interrupts
+   - clocks
+-  - resets
++
++allOf:
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: allwinner,sun50i-a100-iommu
++    then:
++      properties:
++        resets: false
++    else:
++      required:
++        - resets
+ 
+ additionalProperties: false
+ 
+-- 
+2.56.0
+

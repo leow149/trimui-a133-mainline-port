@@ -1,7 +1,7 @@
 From d664e537b6d7310d0c9ad97920350f5dc292c57a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:08 +0100
-Subject: [PATCH 32/56] phy: sun4i-usb: Allow any PHY to be the SIDDQ helper
+Subject: [PATCH 32/60] phy: sun4i-usb: Allow any PHY to be the SIDDQ helper
 
 H616 PHYs need PHY2's clock, reset and SIDDQ to work. The A100/A133 has the
 same arrangement with PHY1 (the vendor driver calls it the "common PHY"), so

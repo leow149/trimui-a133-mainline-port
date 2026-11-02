@@ -1,7 +1,7 @@
 From f144125e8ee28fa227cc2092e070c0b538d15ffb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:05:59 +0100
-Subject: [PATCH 51/56] arm64: dts: allwinner: trimui-smart-pro: Run the GPU at
+Subject: [PATCH 51/60] arm64: dts: allwinner: trimui-smart-pro: Run the GPU at
  696 MHz
 
 The stock firmware runs the GE8300 at 700 MHz with vdd-gpu-sys at 0.9 V;

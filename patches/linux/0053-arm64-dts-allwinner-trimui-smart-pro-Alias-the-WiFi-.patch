@@ -1,7 +1,7 @@
 From ef6b56bada095dd767bd7333a571a89b0857018b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:44:53 +0100
-Subject: [PATCH 53/56] arm64: dts: allwinner: trimui-smart-pro: Alias the WiFi
+Subject: [PATCH 53/60] arm64: dts: allwinner: trimui-smart-pro: Alias the WiFi
  as ethernet0
 
 So that the bootloader can give the XR829 a stable MAC address derived

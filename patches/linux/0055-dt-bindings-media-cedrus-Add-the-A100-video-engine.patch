@@ -1,7 +1,7 @@
 From 22364c6739c0f511f470679a47cdd217e9063783 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
-Subject: [PATCH 55/56] dt-bindings: media: cedrus: Add the A100 video engine
+Subject: [PATCH 55/60] dt-bindings: media: cedrus: Add the A100 video engine
 
 The A100 video engine works with the H6 programming model: H.264 and
 H.265 decode bit-exact compared to FFmpeg's software decoders.
