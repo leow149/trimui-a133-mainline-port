@@ -246,3 +246,25 @@ the screen it appeared top-right.)
   'gamepad' child under serial@5000c00.
 - Gotcha (again): pkill -f / pgrep -f patterns that occur in the ssh command line kill the ssh
   shell itself; use a bracket pattern like "cma[.]log" and skip $$.
+
+## 2026-11-02: OpenGL (ES) via Zink + Wayland session (landscape)
+- Zink (Alpine mesa 26.2.6) on our PowerVR Vulkan: OpenGL 3.2 core/compat, OpenGL ES 3.1.
+- kmscube on card1 falls back to llvmpipe: GBM on the display-only sun4i card -> kmsro, which
+  doesn't know powervr as render-only partner. Not pursued: a compositor is the real setup.
+- Our Mesa build had -Dplatforms= -> only VK_KHR_display; Zink's kopper then called a NULL
+  vkCreateWaylandSurfaceKHR (client segfault in kopper_CreateSurface). build_mesa.sh now builds
+  with -Dplatforms=wayland,x11 (sysroot + host wayland/xcb packages, build/.wsi marker); old .so
+  kept as gpu_video/mesa_build/libvulkan_powervr_mesa.so.nowsi. trimui-mesa-build image was
+  pruned on bodenserver (also debian:bookworm) -> builds reinstall tools.
+- cage (wlroots) with WLR_RENDER_DRM_DEVICE=renderD128, WLR_DRM_DEVICES=card1, Zink, seatd,
+  wlr-randr transform 90 -> board-port/wayland-session.sh. Needs /dev/shm (edge-chroot.sh mounts).
+  weston-simple-egl 59 fps; vkcube --wsi wayland smooth; user confirmed both, landscape correct.
+  es2gears_wayland crashes in its own libdecor code (demo bug, not GPU).
+- Open: vkcube --wsi wayland keeps spinning (R, high CPU) after the compositor exits -> check CPU
+  use during Wayland presentation (FIFO blocking?).
+- GPU idle: runtime PM already powers the GPU domain off (PPU state 2) after 50 ms idle; vdd-gpu-sys
+  is shared -> DVFS would only scale clock at fixed voltage; deferred (powervr has no devfreq, FW
+  needs clock-change notification).
+- VP9 (Hantro G2 @0x01c00000, SPI 90, "sunxi-google-vp9" stock): shares VE clock and reset with
+  cedrus, which pulses the reset; IOMMU master unknown (stock node has none); 720p@30 4 Mbit/s max.
+- Manual: 4K@30 H.264/H.265 only with AFBC output + second scaler (not used by mainline cedrus).

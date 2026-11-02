@@ -5,11 +5,13 @@
 # with LLVM; stage 2 cross-compiles the driver using them, without LLVM.
 set -eu
 cd /work
+# Skip the host packages when they are already there (persistent build container)
+command -v meson >/dev/null && command -v clang >/dev/null && command -v wayland-scanner >/dev/null ||
 apk add -q build-base clang lld llvm llvm-dev clang-dev libclc-dev spirv-llvm-translator-dev \
 	spirv-tools-dev glslang meson ninja py3-mako py3-yaml py3-packaging py3-ply \
 	flex bison pkgconf bash git python3 libdrm-dev zlib-dev zstd-dev expat-dev \
 	llvm-static clang-static zlib-static zstd-static libxml2-dev elfutils-dev \
-	linux-headers >/dev/null
+	linux-headers wayland-dev wayland-protocols >/dev/null
 if [ ! -f sysroot/.done ]; then
 	rm -rf sysroot; mkdir -p sysroot/etc/apk
 	cp /etc/apk/repositories sysroot/etc/apk/
@@ -17,6 +19,13 @@ if [ ! -f sysroot/.done ]; then
 		musl-dev gcc g++ libstdc++-dev libdrm-dev zlib-dev zstd-dev expat-dev \
 		elfutils-dev linux-headers >/dev/null
 	touch sysroot/.done
+fi
+# Window system libraries for the Vulkan WSI (Wayland, X11)
+if [ ! -f sysroot/.wsi ]; then
+	apk add -q --root sysroot --arch aarch64 --allow-untrusted --no-scripts \
+		wayland-dev wayland-protocols libxcb-dev libx11-dev libxshmfence-dev \
+		libxrandr-dev libxext-dev libxfixes-dev >/dev/null
+	touch sysroot/.wsi
 fi
 
 # Stage 1: native tools
@@ -56,13 +65,16 @@ cpu_family = 'aarch64'
 cpu = 'cortex-a53'
 endian = 'little'
 EOT
+# build/.wsi: configured with the window platforms (older build dirs were not)
+[ -f build/.wsi ] || rm -rf build
 if [ ! -f build/build.ninja ]; then
 	meson setup build mesa --cross-file cross.txt --buildtype=debugoptimized \
-		-Dvulkan-drivers=imagination -Dgallium-drivers= -Dplatforms= \
+		-Dvulkan-drivers=imagination -Dgallium-drivers= -Dplatforms=wayland,x11 \
 		-Dglx=disabled -Degl=disabled -Dgbm=disabled -Dllvm=disabled \
 		-Dopengl=false -Dgles1=disabled -Dgles2=disabled \
 		-Dvalgrind=disabled -Dlibunwind=disabled -Dzstd=enabled \
 		-Dmesa-clc=system -Dprecomp-compiler=system -Dbuild-tests=false
+	touch build/.wsi
 fi
 ninja -C build src/imagination/vulkan/libvulkan_powervr_mesa.so
 ls -la build/src/imagination/vulkan/libvulkan_powervr_mesa.so
