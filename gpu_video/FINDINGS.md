@@ -192,3 +192,10 @@ the screen it appeared top-right.)
   backups/uboot_sd/sd_sector16_1MiB_before_nsi_flash_20261102.bin. Verified: NSI table set by
   U-Boot with the boot script disabled (script + inittab line now removed); WiFi MAC
   <SID-derived, locally administered> from local-mac-address, stable across reboots. Default DTB has NO VE node yet.
+- 2026-11-02 morning: CEDRUS WORKS with the H616-style VE SRAM bit (SYS_CFG = 0x7ffffffe):
+  gpu_video/video/ve_test.sh: H.264 150/150 and H.265 150/150 frames bit-exact vs avdec; MPEG-2
+  > 69 dB PSNR, max diff 2 (IDCT rounding). 720p decode-only: H.264 231 fps HW vs 106 SW,
+  H.265 300 vs 79. Series 0054-0056 (sram binding incl. the missing a100-sram-c, cedrus binding,
+  a100 dtsi VE); bindings + DTB validated with dtschema (venv in scratchpad). VE DTB is now the
+  default. Not done: IOMMU (sun50i-iommu has no A100 support; buffers from 64 MB CMA), Hantro G2
+  (VP9) at 0x01c00000, encode.

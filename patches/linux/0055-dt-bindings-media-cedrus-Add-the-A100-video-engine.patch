@@ -1,0 +1,56 @@
+From 22364c6739c0f511f470679a47cdd217e9063783 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 07:46:46 +0100
+Subject: [PATCH 55/56] dt-bindings: media: cedrus: Add the A100 video engine
+
+The A100 video engine works with the H6 programming model: H.264 and
+H.265 decode bit-exact compared to FFmpeg's software decoders.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../allwinner,sun4i-a10-video-engine.yaml     | 28 +++++++++++--------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/media/allwinner,sun4i-a10-video-engine.yaml b/Documentation/devicetree/bindings/media/allwinner,sun4i-a10-video-engine.yaml
+index 01f2afa02..62ad2ff5a 100644
+--- a/Documentation/devicetree/bindings/media/allwinner,sun4i-a10-video-engine.yaml
++++ b/Documentation/devicetree/bindings/media/allwinner,sun4i-a10-video-engine.yaml
+@@ -12,18 +12,22 @@ maintainers:
+ 
+ properties:
+   compatible:
+-    enum:
+-      - allwinner,sun4i-a10-video-engine
+-      - allwinner,sun5i-a13-video-engine
+-      - allwinner,sun7i-a20-video-engine
+-      - allwinner,sun8i-a33-video-engine
+-      - allwinner,sun8i-h3-video-engine
+-      - allwinner,sun8i-v3s-video-engine
+-      - allwinner,sun8i-r40-video-engine
+-      - allwinner,sun20i-d1-video-engine
+-      - allwinner,sun50i-a64-video-engine
+-      - allwinner,sun50i-h5-video-engine
+-      - allwinner,sun50i-h6-video-engine
++    oneOf:
++      - enum:
++          - allwinner,sun4i-a10-video-engine
++          - allwinner,sun5i-a13-video-engine
++          - allwinner,sun7i-a20-video-engine
++          - allwinner,sun8i-a33-video-engine
++          - allwinner,sun8i-h3-video-engine
++          - allwinner,sun8i-v3s-video-engine
++          - allwinner,sun8i-r40-video-engine
++          - allwinner,sun20i-d1-video-engine
++          - allwinner,sun50i-a64-video-engine
++          - allwinner,sun50i-h5-video-engine
++          - allwinner,sun50i-h6-video-engine
++      - items:
++          - const: allwinner,sun50i-a100-video-engine
++          - const: allwinner,sun50i-h6-video-engine
+ 
+   reg:
+     maxItems: 1
+-- 
+2.56.0
+

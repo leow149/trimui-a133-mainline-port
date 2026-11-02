@@ -1,7 +1,7 @@
 From 2553d33327440bf5cf60ee2438e571b472748712 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:41:02 +0100
-Subject: [PATCH 52/53] media: cedrus: h264: Don't wait forever for the bits to
+Subject: [PATCH 52/56] media: cedrus: h264: Don't wait forever for the bits to
  be skipped
 
 When the VLD never becomes idle, as seen while bringing up the A133 VE,

@@ -1,7 +1,7 @@
 From 6d1ae6a014131865420c3c8bdb0181fc14444f27 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
-Subject: [PATCH 12/53] drm/panel: Add Orise OTM1289A / ER68576 MIPI DSI panel
+Subject: [PATCH 12/56] drm/panel: Add Orise OTM1289A / ER68576 MIPI DSI panel
  driver
 
 720x1280 video-mode DSI panel used in the TrimUI Smart Pro. Units ship with

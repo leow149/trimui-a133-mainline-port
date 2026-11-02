@@ -1,0 +1,37 @@
+From 647e2d8065c2f548d5ce43865b089738d2ebf414 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 07:46:45 +0100
+Subject: [PATCH 54/56] dt-bindings: sram: sunxi-sram: Add the A100 SRAM C and
+ VE SRAM
+
+The A100 maps its SRAM C between the CPU and the display engine like the
+A64, and its VE SRAM between the CPU and the video engine like the H616
+(SYS_CFG bit 0 cleared for the VE, as the vendor kernel does).
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../bindings/sram/allwinner,sun4i-a10-system-control.yaml     | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/sram/allwinner,sun4i-a10-system-control.yaml b/Documentation/devicetree/bindings/sram/allwinner,sun4i-a10-system-control.yaml
+index 6e6ab2168..9ac324445 100644
+--- a/Documentation/devicetree/bindings/sram/allwinner,sun4i-a10-system-control.yaml
++++ b/Documentation/devicetree/bindings/sram/allwinner,sun4i-a10-system-control.yaml
+@@ -105,9 +105,13 @@ patternProperties:
+                   - const: allwinner,sun4i-a10-sram-d
+               - items:
+                   - enum:
++                      - allwinner,sun50i-a100-sram-c
+                       - allwinner,sun50i-h6-sram-c
+                       - allwinner,sun50i-h616-sram-c
+                   - const: allwinner,sun50i-a64-sram-c
++              - items:
++                  - const: allwinner,sun50i-a100-ve-sram
++                  - const: allwinner,sun50i-h616-ve-sram
+ 
+ required:
+   - "#address-cells"
+-- 
+2.56.0
+

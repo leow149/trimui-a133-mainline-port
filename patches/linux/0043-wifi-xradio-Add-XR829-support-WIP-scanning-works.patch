@@ -1,7 +1,7 @@
 From 9acdfca7459db0129f9dfb799209efd8c7e31c6a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
-Subject: [PATCH 43/53] wifi: xradio: Add XR829 support (WIP: scanning works)
+Subject: [PATCH 43/56] wifi: xradio: Add XR829 support (WIP: scanning works)
 
 The XR829 (SDIO 0a9e:2282) runs a newer firmware ("HT40" API) that uses
 16-bit rate entries (modem type, bandwidth, flags, rate index) instead of

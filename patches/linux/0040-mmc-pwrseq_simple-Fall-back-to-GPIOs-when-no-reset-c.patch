@@ -1,7 +1,7 @@
 From e255dc7bcbccc95ec4b240ee5ff040c6fcd32438 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
-Subject: [PATCH 40/53] mmc: pwrseq_simple: Fall back to GPIOs when no reset
+Subject: [PATCH 40/56] mmc: pwrseq_simple: Fall back to GPIOs when no reset
  controller can be made
 
 With a single reset GPIO, pwrseq_simple asks the reset core for a reset
