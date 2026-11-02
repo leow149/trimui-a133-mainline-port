@@ -1,0 +1,427 @@
+From 5b60fb8c19a5819beb03766980fd513352b1e766 Mon Sep 17 00:00:00 2001
+From: sloppenberg <334347270+sloppenberg@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 05:52:37 -0500
+Subject: [PATCH] arm64: allwinner: trimui-smartpro: light the panel (ER68576,
+ DE SRAM, IRQs, clocks)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Gets a correct, stable, upright picture on a TrimUI Smart Pro on top of
+0001. Tested on hardware (see below).
+
+Panel: the stock U-Boot carries init tables for three controllers —
+OTM1289A, ER68576 and GC9702C — picks one by DCS ID reg 0x04, and boots
+the kernel with lcd=<name>; lcd_driver_name="otm1289a" in the vendor DT is
+only a default. Our unit's Knulli /proc/cmdline says lcd=er68576, and your
+write-up reports the same for yours. (Whether Smart Pros also ship with the
+other two controllers, we don't know.) Sending the OTM1289A table to an
+ER68576 leaves it awake but unconfigured. Add the ER68576 table — the stock
+U-Boot's er68576_init_table @ VA 0x4a09ca6c, 72-byte entries (cmd@0, len@4,
+data@8) — as compatible "trimui,er68576", and size the command buffer for
+its 38-byte gamma entry.
+
+DTS:
+- panel: trimui,er68576; reset on PD22 (BSP lcd_gpio_0), not PD0;
+  rotation = <270> (portrait panel mounted sideways, checked on glass).
+- DSI on GIC_SPI 68 (hwirq 100 = SPI 68; GIC_SPI takes the SPI number),
+  TCON-LCD0 on SPI 69; drop the D-PHY's interrupt (binding has none).
+- vcc-dsi-supply = bldo4 at 1.2V (DSI/D-PHY HS analog).
+- Clock the TCON like stock: pll-video0 102 MHz, tcon-lcd0 = pll-video0-4x
+  = 408 MHz, so the 69 MHz mode's dclk lands on 102 MHz (your own vendor
+  dump: pll_video0 102000000, tcon_lcd0 408000000). Unpinned, tcon-lcd0
+  falls to pll-periph0-2x/3 = 400 MHz -> 100 MHz dclk against a DSI PLL
+  sized for 69 MHz: per-line slip (sheared, crawling picture) and no TCON
+  vblank interrupts (flip_done timeouts).
+
+sun8i_mixer (A133 mixer-0): claim SRAM-C for the DE (sysctl 0x03000004
+bit 24) and enable the DE-local reset/bus/module gates at 0x06000000, as
+stock does before touching the mixer. Without the SRAM claim the DE page
+reads back as plain SRAM: every write "matches" on readback while nothing
+reaches the hardware. Quick and dirty — the proper form is a sunxi_sram
+claim + a de2-clk model (as in the A100 display series).
+
+Orientation: the panel reports DT rotation (get_orientation), and sun6i_dsi
+sets the connector orientation from the panel's DT node at bind time —
+the property must exist before drm_dev_register(), while sun6i_dsi only
+accepts the panel after registration.
+
+Tested: Linux at 26260251022f + 0001 + this, board-port defconfig plus the
+sun4i/sun6i/sun8i DRM, D-PHY and fbcon(+rotation) options, booted from
+mainline U-Boot on a TrimUI Smart Pro (ER68576): upright fbcon console on
+the panel, Tux, through to the (rootfs-less) mount panic.
+
+Signed-off-by: sloppenberg <334347270+sloppenberg@users.noreply.github.com>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 44 ++++++++--
+ .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 82 ++++++++++++++++++-
+ drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c        | 17 ++++
+ drivers/gpu/drm/sun4i/sun8i_mixer.c           | 55 +++++++++++++
+ 4 files changed, 188 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 91adc18ab..be04b791e 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -290,8 +290,13 @@ reg_bldo3: bldo3 {
+ 				regulator-always-on;
+ 			};
+ 			reg_bldo4: bldo4 {
+-				/* real: 1800mV at boot, onoff=1 */
++				/* vcc-dsi: the BSP boots it at 1.8V but the DSI/D-PHY
++				 * analog wants 1.2V — the rail that made the panel lock
++				 * HS on hardware. */
+ 				regulator-always-on;
++				regulator-min-microvolt = <1200000>;
++				regulator-max-microvolt = <1200000>;
++				regulator-name = "vcc-dsi";
+ 			};
+ 			reg_cldo1: cldo1 {
+ 				/* confirmed: LCD panel power0 (lcd_power0="cldo1"), real: 1800mV */
+@@ -463,9 +468,22 @@ tcon_lcd0: lcd-controller@6511000 {
+ 		 * exactly between the vendor DT and its own /proc/interrupts
+ 		 * with no offset, confirming the raw-cell-value convention.
+ 		 */
+-		interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
++		/* BSP disp triple {68,69,70}: DSI is 68 (proven: the VIDEO_VBLK
++		 * flag pends hwirq 100 = SPI 68), so TCON-LCD0 is 69. */
++		interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&ccu CLK_BUS_TCON_LCD>, <&ccu CLK_TCON_LCD>;
+ 		clock-names = "ahb", "tcon-ch0";
++		/*
++		 * Clock the TCON exactly like stock (live vendor dump:
++		 * pll_video0 102 MHz, tcon_lcd0 408 MHz): the 69 MHz mode's dclk
++		 * (69*6/4 = 103.5) then lands on 408/4 = 102 MHz. Left to itself
++		 * it picks pll-periph0-2x/3 = 400 MHz -> 100 MHz against a DSI PLL
++		 * sized for 69 MHz: per-line slip (sheared, crawling picture) and
++		 * no TCON vblank IRQ. IDs 8/10 = PLL_VIDEO0/_4X (driver-internal).
++		 */
++		assigned-clocks = <&ccu 8>, <&ccu CLK_TCON_LCD>;
++		assigned-clock-parents = <0>, <&ccu 10>;
++		assigned-clock-rates = <102000000>, <408000000>;
+ 		clock-output-names = "tcon-pixel-clock";
+ 		resets = <&ccu RST_BUS_TCON_LCD>;
+ 		reset-names = "lcd";
+@@ -522,7 +540,11 @@ tcon_lcd0_out_dsi0: endpoint@1 {
+ 	dsi0: dsi@6504000 {
+ 		compatible = "allwinner,sun50i-a100-mipi-dsi";
+ 		reg = <0x06504000 0x1000>;
+-		interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
++		/* SPI 68 (= hwirq 100; GIC_SPI takes the SPI number, not hwirq). */
++		interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
++		/* DSI/D-PHY HS analog 1.2V. Unclaimed, the late regulator cleanup
++		 * can drop it; at 1.8V/off the lanes never reach HS. */
++		vcc-dsi-supply = <&reg_bldo4>;
+ 		/*
+ 		 * REVERTED: tried sourcing "mod" from dpss_top0's gated DSI
+ 		 * output (matching the vendor's de_lcd.c, which gates
+@@ -582,9 +604,20 @@ panel@0 {
+ 			 * relationship (reg = virtual channel) is the only
+ 			 * link needed.
+ 			 */
+-			compatible = "orisetech,otm1289a";
++			/*
++			 * The stock U-Boot carries init tables for OTM1289A, ER68576
++			 * and GC9702C, picks one by DCS ID reg 0x04 and boots the
++			 * kernel with lcd=<name>; lcd_driver_name="otm1289a" in the
++			 * vendor DT is only a default. ER68576: what both units we
++			 * know of report (Knulli /proc/cmdline: lcd=er68576). Whether
++			 * Smart Pros also ship with the other two is unknown.
++			 */
++			compatible = "trimui,er68576";
+ 			reg = <0>;
+-			reset-gpios = <&pio 3 0 GPIO_ACTIVE_LOW>; /* TODO: unconfirmed pin, revisit on real hw */
++			/* PD22 = BSP lcd_gpio_0, verified on hardware. */
++			reset-gpios = <&pio 3 22 GPIO_ACTIVE_LOW>;
++			/* Portrait 720x1280 mounted sideways; verified on glass. */
++			rotation = <270>;
+ 			power-supply = <&reg_cldo1>;
+ 			backlight = <&backlight>;
+ 		};
+@@ -593,7 +626,6 @@ panel@0 {
+ 	dphy0: phy@6505000 {
+ 		compatible = "allwinner,sun50i-a100-mipi-dphy";
+ 		reg = <0x06505000 0x1000>;
+-		interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
+ 		clock-names = "bus", "mod";
+ 		resets = <&ccu RST_BUS_MIPI_DSI>;
+diff --git a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
+index 86d42bdab..1d73d5de3 100644
+--- a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
++++ b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
+@@ -36,22 +36,28 @@
+ #include <linux/delay.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/regulator/consumer.h>
+ 
+ #include <video/mipi_display.h>
+ 
+ #include <drm/drm_mipi_dsi.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_modes.h>
+ #include <drm/drm_panel.h>
+ 
+ #define OTM1289A_HDISPLAY	720
+ #define OTM1289A_VDISPLAY	1280
+ 
++struct otm1289a_desc;
++
+ struct otm1289a {
++	const struct otm1289a_desc *desc;
+ 	struct device *dev;
+ 	struct drm_panel panel;
+ 	struct gpio_desc *reset_gpio;
+ 	struct regulator *supply;
++	enum drm_panel_orientation orientation;
+ 	bool prepared;
+ };
+ 
+@@ -107,7 +113,7 @@ static const struct drm_display_mode otm1289a_mode = {
+ struct otm1289a_init_cmd {
+ 	u8 cmd;
+ 	u8 len;
+-	u8 data[16];
++	u8 data[40];	/* ER68576's longest entry (0xb9 gamma) is 38 bytes */
+ };
+ 
+ #define OTM1289A_CMD(_cmd, ...) \
+@@ -199,6 +205,58 @@ static const struct otm1289a_init_cmd otm1289a_init_sequence[] = {
+ 	OTM1289A_CMD(0xff, 0xff, 0xff, 0xff),
+ };
+ 
++/*
++ * ER68576 — the panel controller on both Smart Pro units we know of. The
++ * stock U-Boot carries otm1289a, er68576 and gc9702c init tables, picks one
++ * by DCS ID register 0x04, and boots the kernel with lcd=<name>; the vendor
++ * DT's lcd_driver_name="otm1289a" is only a default. This table is the stock
++ * U-Boot's er68576_init_table (VA 0x4a09ca6c; 72-byte entries, cmd@0, len@4,
++ * data@8), minus its trailing 0x11/0x29 + delays, which the shared send path
++ * below issues. Stock sends no COLMOD for this panel.
++ */
++static const struct otm1289a_init_cmd er68576_init_sequence[] = {
++	OTM1289A_CMD(0x36, 0x14),
++	OTM1289A_CMD(0xe0, 0xab, 0xba),
++	OTM1289A_CMD(0xe1, 0xba, 0xab),
++	OTM1289A_CMD(0xb1, 0x10, 0x01, 0x47, 0xff),
++	OTM1289A_CMD(0xb2, 0x09, 0x0e, 0x01, 0x50, 0x50, 0x14),
++	OTM1289A_CMD(0xb3, 0x56, 0xd2, 0x00),
++	OTM1289A_CMD(0xb4, 0x7a, 0x60, 0x04),
++	OTM1289A_CMD(0xb6, 0xbe, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00),
++	OTM1289A_CMD(0xb8, 0x05, 0x12, 0x29, 0x49, 0x48, 0x00, 0x00),
++	OTM1289A_CMD(0xb9, 0x7c, 0x6a, 0x5e, 0x52, 0x4f, 0x41, 0x45, 0x31, 0x4c, 0x4c, 0x4c, 0x67, 0x53, 0x58, 0x4d, 0x48, 0x35, 0x1d, 0x06, 0x7c, 0x6a, 0x5e, 0x52, 0x4f, 0x41, 0x45, 0x31, 0x4c, 0x4c, 0x4c, 0x67, 0x53, 0x58, 0x4d, 0x48, 0x35, 0x1d, 0x06),
++	OTM1289A_CMD(0xc0, 0x54, 0x32, 0x23, 0x45, 0x33, 0x33, 0x33, 0x33, 0x10, 0x04, 0x90, 0x04, 0x0f, 0x00, 0x00, 0xc0),
++	OTM1289A_CMD(0xc1, 0x32, 0x94, 0x02, 0x87, 0x10, 0x04, 0x90, 0x04, 0x54, 0x00),
++	OTM1289A_CMD(0xc2, 0x73, 0x09, 0x08, 0x89, 0x08, 0x11, 0x22, 0x33, 0x44, 0x82, 0x18, 0x00),
++	OTM1289A_CMD(0xc3, 0x8b, 0x49, 0x13, 0x11, 0x0f, 0x0d, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x05, 0x07, 0x02, 0x02),
++	OTM1289A_CMD(0xc4, 0x0a, 0x08, 0x12, 0x10, 0x0e, 0x0c, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x00, 0x02, 0x02, 0x02, 0x04, 0x06, 0x02, 0x02),
++	OTM1289A_CMD(0xc5, 0xe8, 0x85, 0x76),
++	OTM1289A_CMD(0xc6, 0x2a, 0x2a),
++	OTM1289A_CMD(0xc8, 0x21, 0x00, 0x32, 0x40, 0x44, 0x16),
++	OTM1289A_CMD(0xca, 0xcb, 0x43),
++	OTM1289A_CMD(0xcd, 0x0e, 0x32, 0x32, 0x20, 0x19, 0x6b, 0x06, 0xb3),
++	OTM1289A_CMD(0xd2, 0xe3, 0x2b, 0x38, 0x00),
++	OTM1289A_CMD(0xd4, 0x00, 0x01, 0x00, 0x0e, 0x04, 0x44, 0x08, 0x10, 0x10, 0x4f, 0x00),
++	OTM1289A_CMD(0xe6, 0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
++	OTM1289A_CMD(0xf0, 0x32, 0x05, 0x20, 0x00, 0xff),
++	OTM1289A_CMD(0xf3, 0x00),
++};
++
++struct otm1289a_desc {
++	const struct otm1289a_init_cmd *cmds;
++	unsigned int num_cmds;
++};
++
++static const struct otm1289a_desc otm1289a_desc = {
++	.cmds = otm1289a_init_sequence,
++	.num_cmds = ARRAY_SIZE(otm1289a_init_sequence),
++};
++
++static const struct otm1289a_desc er68576_desc = {
++	.cmds = er68576_init_sequence,
++	.num_cmds = ARRAY_SIZE(er68576_init_sequence),
++};
++
+ static inline struct otm1289a *panel_to_otm1289a(struct drm_panel *panel)
+ {
+ 	return container_of(panel, struct otm1289a, panel);
+@@ -210,8 +268,8 @@ static int otm1289a_init_sequence_send(struct otm1289a *ctx)
+ 	unsigned int i;
+ 	int ret;
+ 
+-	for (i = 0; i < ARRAY_SIZE(otm1289a_init_sequence); i++) {
+-		const struct otm1289a_init_cmd *c = &otm1289a_init_sequence[i];
++	for (i = 0; i < ctx->desc->num_cmds; i++) {
++		const struct otm1289a_init_cmd *c = &ctx->desc->cmds[i];
+ 
+ 		ret = mipi_dsi_dcs_write(dsi, c->cmd, c->data, c->len);
+ 		if (ret < 0)
+@@ -324,16 +382,25 @@ static int otm1289a_get_modes(struct drm_panel *panel,
+ 
+ 	connector->display_info.width_mm = mode->width_mm;
+ 	connector->display_info.height_mm = mode->height_mm;
++	/* No-op if the DSI host already set it at bind (it must, pre-register). */
++	drm_connector_set_panel_orientation(connector,
++					    panel_to_otm1289a(panel)->orientation);
+ 
+ 	return 1;
+ }
+ 
++static enum drm_panel_orientation otm1289a_get_orientation(struct drm_panel *panel)
++{
++	return panel_to_otm1289a(panel)->orientation;
++}
++
+ static const struct drm_panel_funcs otm1289a_drm_funcs = {
+ 	.disable   = otm1289a_disable,
+ 	.unprepare = otm1289a_unprepare,
+ 	.prepare   = otm1289a_prepare,
+ 	.enable    = otm1289a_enable,
+ 	.get_modes = otm1289a_get_modes,
++	.get_orientation = otm1289a_get_orientation,
+ };
+ 
+ static int otm1289a_probe(struct mipi_dsi_device *dsi)
+@@ -348,6 +415,12 @@ static int otm1289a_probe(struct mipi_dsi_device *dsi)
+ 	if (IS_ERR(ctx))
+ 		return PTR_ERR(ctx);
+ 
++	ctx->desc = of_device_get_match_data(dev);
++
++	ret = drm_of_get_panel_orientation(dev->of_node, &ctx->orientation);
++	if (ret)
++		return dev_err_probe(dev, ret, "invalid panel rotation\n");
++
+ 	ctx->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
+ 	if (IS_ERR(ctx->reset_gpio)) {
+ 		dev_err(dev, "cannot get reset-gpio\n");
+@@ -416,7 +489,8 @@ static void otm1289a_remove(struct mipi_dsi_device *dsi)
+ }
+ 
+ static const struct of_device_id orisetech_otm1289a_of_match[] = {
+-	{ .compatible = "orisetech,otm1289a" },
++	{ .compatible = "orisetech,otm1289a", .data = &otm1289a_desc },
++	{ .compatible = "trimui,er68576", .data = &er68576_desc },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, orisetech_otm1289a_of_match);
+diff --git a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
+index fae312e2e..4df050c1e 100644
+--- a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
++++ b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
+@@ -22,6 +22,7 @@
+ #include <drm/drm_atomic_helper.h>
+ #include <drm/drm_encoder.h>
+ #include <drm/drm_mipi_dsi.h>
++#include <drm/drm_of.h>
+ #include <drm/drm_panel.h>
+ #include <drm/drm_print.h>
+ #include <drm/drm_probe_helper.h>
+@@ -1270,6 +1271,22 @@ static int sun6i_dsi_bind(struct device *dev, struct device *master,
+ 
+ 	drm_connector_attach_encoder(&dsi->connector, &dsi->encoder);
+ 
++	/*
++	 * The panel-orientation property must exist before drm_dev_register(),
++	 * but sun6i_dsi_attach() only accepts the panel after registration, so
++	 * a panel setting it from get_modes() trips drm_mode_object WARNs. Take
++	 * the orientation straight from the panel's DT "rotation" here instead;
++	 * the panel's later call is then a no-op.
++	 */
++	{
++		struct device_node *np = of_get_child_by_name(dsi->dev->of_node, "panel");
++		enum drm_panel_orientation orientation;
++
++		if (np && !drm_of_get_panel_orientation(np, &orientation))
++			drm_connector_set_panel_orientation(&dsi->connector, orientation);
++		of_node_put(np);
++	}
++
+ 	dsi->drm = drm;
+ 
+ 	return 0;
+diff --git a/drivers/gpu/drm/sun4i/sun8i_mixer.c b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+index b3419f6d3..a7a8ef953 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_mixer.c
++++ b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+@@ -10,6 +10,7 @@
+ #include <linux/component.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/module.h>
++#include <linux/io.h>
+ #include <linux/of.h>
+ #include <linux/of_device.h>
+ #include <linux/of_graph.h>
+@@ -506,6 +507,54 @@ static void sun8i_mixer_init(struct sun8i_mixer *mixer)
+ 			   SUN8I_MIXER_BLEND_PIPE_CTL_EN_MSK, 0);
+ }
+ 
++/*
++ * A133 DE bring-up the CCU alone doesn't cover (stock does both before it
++ * touches the mixer; the TrimUI Brick port found the same):
++ *  1. SRAM-C ownership: system-control 0x03000004 bit 24 maps the DE's SRAM
++ *     to the CPU at reset. Until it's cleared, the whole DE page at
++ *     0x06000000 reads back as plain SRAM — every write "sticks" and reads
++ *     back, but nothing reaches the hardware and the mixer never streams.
++ *  2. The DE-local reset/bus/module gates at 0x06000000 (+8/+4/+0, bit 0 =
++ *     DE0), enabled in the stock order. CLK_BUS_DE/CLK_DE don't cover them.
++ * Quick and dirty for bring-up: a proper version would claim SRAM-C through
++ * the sunxi_sram API (a bus wrapper with allwinner,sram) and model the gates
++ * in a de2-clk driver, as the A100 display series does.
++ */
++static int sun8i_mixer_a133_de_init(struct device *dev)
++{
++	void __iomem *sram, *de;
++	int ret = 0;
++
++	if (!of_device_is_compatible(dev->of_node, "allwinner,sun50i-a133-de2-mixer-0"))
++		return 0;
++
++	sram = ioremap(0x03000004, 4);
++	de = ioremap(0x06000000, 16);
++	if (!sram || !de) {
++		ret = -ENOMEM;
++		goto out;
++	}
++
++	writel(readl(sram) & ~BIT(24), sram);
++	if (readl(sram) & BIT(24)) {
++		dev_err(dev, "DE SRAM claim did not stick\n");
++		ret = -EIO;
++		goto out;
++	}
++
++	writel(readl(de + 8) | BIT(0), de + 8);	/* reset */
++	writel(readl(de + 4) | BIT(0), de + 4);	/* bus gate */
++	writel(readl(de) | BIT(0), de);		/* module gate */
++	dev_info(dev, "A133 DE: SRAM claimed, DE0 gates %08x/%08x/%08x\n",
++		 readl(de), readl(de + 4), readl(de + 8));
++out:
++	if (de)
++		iounmap(de);
++	if (sram)
++		iounmap(sram);
++	return ret;
++}
++
+ static int sun8i_mixer_bind(struct device *dev, struct device *master,
+ 			      void *data)
+ {
+@@ -638,6 +687,12 @@ static int sun8i_mixer_bind(struct device *dev, struct device *master,
+ 
+ 	clk_prepare_enable(mixer->mod_clk);
+ 
++	ret = sun8i_mixer_a133_de_init(dev);
++	if (ret) {
++		clk_disable_unprepare(mixer->mod_clk);
++		goto err_disable_bus_clk;
++	}
++
+ 	list_add_tail(&mixer->engine.list, &drv->engine_list);
+ 
+ 	/* Reset registers and disable unused sub-engines */
+-- 
+2.54.0
+

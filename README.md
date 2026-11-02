@@ -73,7 +73,10 @@ This tracks upstream, so apply the patch on top of a clean checkout at the base 
 git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 cd linux && git checkout 26260251022fbc2f248a3d747a9b2b961b18d2d8
 git am /path/to/this/repo/patches/linux/0001-arm64-allwinner-add-trimui-smart-pro-a133-board-support.patch
-cp /path/to/this/repo/patches/linux/trimui-a133-smartpro_defconfig .config
+git am /path/to/this/repo/patches/linux/0002-arm64-allwinner-trimui-smartpro-light-the-panel.patch
+# The mainline config (patches/linux/trimui-a133-smartpro_defconfig is a vendor BSP
+# config — no MFD_AXP20X_I2C/I2C_MV64XXX, no sun4i DRM, no fbcon — on mainline).
+cp /path/to/this/repo/board-port/trimui-smartpro_kernel_defconfig .config
 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig Image sun50i-a133-trimui-smartpro.dtb
 
 # U-Boot — commit 6073c36b2c (2026-08-20, v2026.10-rc area)
