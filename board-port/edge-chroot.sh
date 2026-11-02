@@ -17,6 +17,9 @@ mkdir -p /tmp/edge
 mountpoint -q /tmp/edge || mount --bind $R /tmp/edge
 R=/tmp/edge
 cp /etc/resolv.conf $R/etc/
+# Wayland clients and compositors need POSIX shared memory.
+mkdir -p /dev/shm
+mountpoint -q /dev/shm || mount -t tmpfs -o mode=1777 tmpfs /dev/shm
 for d in proc sys dev dev/pts; do mountpoint -q $R/$d || mount --bind /$d $R/$d; done
 if [ ! -e $R/usr/bin/gst-launch-1.0 ]; then
 	chroot $R /sbin/apk add -q mesa-vulkan-imagination vulkan-tools vulkan-loader \
