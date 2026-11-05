@@ -24,8 +24,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ART="${ART:-$ROOT_DIR/build-artifacts}"
-BOARD="${BOARD:-$ROOT_DIR/board-port}"
-OUT="${OUT:-$ROOT_DIR/image}"
+BOARD="${BOARD:-$SCRIPT_DIR}"
+OUT="${OUT:-$ROOT_DIR/build-artifacts}"
 mkdir -p "$OUT"
 
 UBOOT="$ART/u-boot-sunxi-with-spl.bin"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install build-artifacts/Image (and optionally the DTB) on the TrimUI's SD boot
-# partition, no card swap. Uses the USB network (ssh trimui, see board-port/usb-net.sh)
+# partition, no card swap. Uses the USB network (ssh trimui, see rootfs/etc/usb-net.sh)
 # when the device answers there, else the UART console (needs a running mainline shell
 # and tools/uart_session.py holding the port).
 #
