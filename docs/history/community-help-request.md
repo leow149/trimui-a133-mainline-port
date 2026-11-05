@@ -1,5 +1,9 @@
 # Allwinner A133/A133P: DSI CPU-interface TRIGGER_START never self-clears — asking for a sanity check
 
+> **Historical, resolved.** This help request was written while the display was still black. The
+> causes were found later and are fixed in the patch series; see "History" in the main README.
+> The paths and patch names below refer to the repository as it was then.
+
 Full repo, including the actual driver patches:
 **https://github.com/leow149/trimui-a133-mainline-port**
 

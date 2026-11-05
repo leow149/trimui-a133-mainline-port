@@ -1,127 +1,208 @@
-# TrimUI Smart Pro — mainline Linux port
+# TrimUI Smart Pro: mainline Linux
 
-A from-scratch mainline Linux (and mainline U-Boot) bring-up for the **TrimUI Smart Pro**
-handheld (model TG5020, Allwinner **A133 Plus** SoC), entirely blob-free at the bootloader
-level. No vendor kernel, no vendor U-Boot, no Android — this boots pristine upstream Linux
-and U-Boot with a small, documented set of board-support patches.
+Mainline Linux, U-Boot and Trusted Firmware for the **TrimUI Smart Pro** handheld (TG5020,
+Allwinner **A133 Plus**). No vendor kernel or vendor boot loader: upstream code plus a series of
+board and SoC patches, kept small and in upstream style so it can be submitted.
+
+The device: 4x Cortex-A53 at up to 1.46 GHz, 1 GB RAM, a 720x1280 MIPI DSI panel mounted in
+landscape, PowerVR GE8300 GPU, Allwinner Cedar video engine, AXP717 PMIC, XR829 Wi-Fi/Bluetooth,
+two analog sticks, RGB LEDs, two USB-C ports.
 
 ## Status
 
-Work in progress, not yet submitted upstream in this form.
+Not submitted upstream yet.
 
-| Component | Status |
+| Area | Status |
 |---|---|
-| U-Boot (mainline, blob-free boot chain) | ✅ Working |
-| DRAM at real, correct timings | ✅ Working |
-| Display (MIPI DSI panel, OTM1289A / ER68576) + backlight | ✅ Working, rotated to landscape |
-| Buttons + analog sticks (two UART microcontrollers) | ✅ Working, one gamepad input device, sticks auto-centred |
-| Power key, volume keys | ✅ Working |
-| Battery level, charging (AXP717) | ✅ Working, stock charge current, battery thermistor on |
-| CPU frequency scaling 408-1464 MHz, thermal throttling | ✅ Working |
-| SD card, eMMC, UART console, reboot | ✅ Working |
-| RTC (external 32.768 kHz crystal) | ✅ Working, keeps time across reboots |
-| Audio: stereo speakers + headphone output | ✅ Working (playback), jack detection mutes the speakers |
-| Stick RGB LEDs + logo LED (23 on one chain) | ✅ Working, `/sys/class/leds/rgb:indicator-N` (0 logo, 1-11 left, 12-22 right) |
-| Slider switch | ✅ Working (input switch event, like stock) |
-| Suspend (s2idle; firmware has no PSCI system suspend), wake on power key | ✅ Working, display and gamepad resume |
-| USB-C (charging port) device mode | ✅ Working, with TX DMA: NCM 309 Mbit/s to the host, 154 Mbit/s from it (32 MiB md5-verified each way) |
-| Network + SSH over USB | ✅ At boot: NCM gadget 10.55.0.2, dropbear (key login); `ssh trimui`, `scp`, kernel installs in ~10 s |
-| USB-C second port (host) | ✅ Working (USB 2.0; hubs, storage, HID and USB Ethernet drivers built in) |
-| Wi-Fi/BT (XR829), GPU (PowerVR GE8300), video decoding | ❌ No mainline driver |
+| Boot | ✅ Mainline U-Boot + TF-A, blob-free boot chain, DRAM at the stock timings |
+| Display | ✅ MIPI DSI panel (ER68576, detected by its panel ID; other IDs get the OTM1289A init), backlight, console rotated to landscape |
+| GPU | ✅ PowerVR GE8300 at 696 MHz: Vulkan (Mesa, patched), OpenGL 3.2 / OpenGL ES 3.1 through Zink |
+| Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
+| Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
+| Wi-Fi | ✅ XR829, WPA2, 20 MHz: 29 Mbit/s receive, 12 Mbit/s send (iperf3); stable MAC address |
+| Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
+| Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
+| USB | ✅ Device mode with DMA (NCM network: 309 Mbit/s to the host, 154 Mbit/s from it), host mode on the second port |
+| Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
+| Not working yet | ❌ Bluetooth, VP9 decoding, video encoding, GPU frequency scaling |
 
-The long-standing black-screen bug is solved. It had four independent causes, all needed:
-SRAM C routed to the CPU (which shadows the whole display-engine register space), the
-DE2 clock block missing from the device tree, the TCON interrupt pointing at the DSI's
-line, and the panel reset on the wrong pin.
-[`COMMUNITY_HELP_REQUEST.md`](COMMUNITY_HELP_REQUEST.md) is kept as a record of the
-investigation; its open question is answered by the above.
+Suspend was last tested before the GPU and video engine were enabled.
 
-## Repo layout
+[`docs/gpu-video.md`](docs/gpu-video.md) describes the GPU and video bring-up in detail.
+
+## Repository layout
 
 ```
-patches/linux/     Kernel patch series against a named upstream commit, one change per
-                   patch (clk, drm/sun4i, panel, pwm, 8250_dw, gamepad, DT), + defconfig
-patches/u-boot/    Board DTS + defconfig for mainline U-Boot
-board-port/        Board bring-up scripts/configs used day-to-day (not raw patches)
-  audio-defaults.sh   sysinit script: quiet mixer levels at boot (the codec resets to full volume).
-                      Playback/mixer tools: aplay, amixer, speaker-test from Alpine's alsa-utils
-                      (only those three + libasound and /usr/share/alsa are needed).
-tools/             Small standalone tools written for this port
-  padview/            framebuffer gamepad viewer (buttons, sticks, last events)
-  devmem.c            minimal statically-linked /dev/mem peek/poke tool
-  i2creg.c            I2C register peek/poke (used on the AXP717 PMIC)
-  regsnap.c           nolibc AXP717 + pin-controller register dump, for stock-vs-mainline diffs
-  drmtest.c           raw-ioctl DRM legacy-modeset test tool (no libdrm dependency)
-  uart_session.py     holds the UART console open; commands go in through a FIFO
-  uart_push.py        md5-verified file transfer over the UART console
-  push_kernel.sh      installs a new kernel/DTB on the SD card over the UART, no card swap
-  uboot_test_boot.py  boots a kernel/DTB installed with push_kernel.sh --test once
-  reboot_loop.sh      reboot reliability test over the UART
-  test_gadget.sh      minimal USB serial gadget, to test device mode
-  backup_restore/     eMMC/RAM backup & restore scripts (no dumps, scripts only)
-vendor-notes/      Our own recorded register comparisons/notes (not vendor source/binaries)
+patches/
+  linux/         Kernel series (60 patches) and defconfig
+  u-boot/        Board support, DRAM arbiter priorities, Wi-Fi MAC alias (3 patches)
+  tf-a/          Watchdog fix for system reset (1 patch)
+  mesa/          PowerVR Vulkan driver fixes (5 patches) and build_mesa.sh
+rootfs/          Files installed on the device
+  etc/inittab           busybox init: mounts, watchdog, the scripts below, serial shell
+  etc/usb-net.sh        USB network gadget (10.55.0.2) and SSH server at boot
+  etc/audio-defaults.sh quiet mixer levels at boot
+  root/wifi-up.sh       connects Wi-Fi with /etc/wpa_supplicant/home.conf
+  root/edge-chroot.sh   Alpine edge chroot for the GPU/video userspace (Mesa, GStreamer)
+  root/wayland-session.sh  runs a program in a cage Wayland session, landscape
+  root/cpuload.sh       CPU load per process over an interval
+image/           SD card image: assemble_image.sh, update_sd_kernel.sh, extlinux.conf
+tools/           Development tools (see below), tools/gpu/ for GPU and display tests
+tests/video/     Decoder test: ve_test.sh compares hardware and software decoding
+docs/            gpu-video.md; history/ for older write-ups
+vendor-notes/    Register dumps and notes from the stock firmware, for comparison
 ```
-
-## What's *not* in this repo, and why
-
-This repo intentionally does **not** vendor the full Linux/U-Boot/ARM-Trusted-Firmware/
-BusyBox source trees, nor any binary pulled off the physical device (vendor kernel image,
-eMMC/RAM dumps, firmware blobs, the vendor's own decompiled kernel source, the Allwinner
-User Manual PDF). Reasons:
-
-- **Size** — those trees are hundreds of MB to GB+ of almost entirely unmodified upstream
-  code; a patch series is the normal, reviewable way to publish a board port.
-- **Copyright** — vendor kernel binaries, firmware blobs, and a full decompilation of
-  vendor's copyrighted kernel are not ours to redistribute. `vendor-notes/` includes only
-  our own written observations/register-value notes (facts we measured), never vendor
-  source or binaries.
-- **Privacy** — raw eMMC/RAM dumps of a specific physical unit can contain device-specific
-  identifiers; not included for the same reason the backup/restore *scripts* are provided
-  instead of the backups themselves.
-
-The decompiled vendor kernel cross-reference and full blind register dumps that informed
-several of these patches were obtained via ADB/UART access to stock firmware plus Ghidra --
-reproducible from your own unit, not included here for the reasons above.
 
 ## Building
 
-This tracks upstream, so apply the patch on top of a clean checkout at the base commit:
+The patches apply with `git am` to the commits below; the result is the tree that was tested.
+Cross compiler: `aarch64-linux-gnu-`.
+
+### Linux
 
 ```sh
-# Linux — based on v7.2 area, commit 2626025102 (2026-08-21)
 git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-cd linux && git checkout 26260251022fbc2f248a3d747a9b2b961b18d2d8
-git am /path/to/this/repo/patches/linux/*.patch
-cp /path/to/this/repo/patches/linux/trimui-a133-smartpro_defconfig arch/arm64/configs/trimui_defconfig
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- trimui_defconfig
-make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image allwinner/sun50i-a133-trimui-smartpro.dtb
-
-# U-Boot — commit 6073c36b2c (2026-08-20, v2026.10-rc area)
-git clone https://source.denx.de/u-boot/u-boot.git
-cd u-boot && git checkout 6073c36b2c8d39afe3ecc789b281667a3ddebc70
-git am /path/to/this/repo/patches/u-boot/0001-sunxi-add-trimui-smart-pro-a133-board-support.patch
-make trimui-smartpro_defconfig
-make CROSS_COMPILE=aarch64-linux-gnu-
+cd linux
+git checkout 26260251022fbc2f248a3d747a9b2b961b18d2d8
+git am /path/to/repo/patches/linux/*.patch
+cp /path/to/repo/patches/linux/trimui-a133-smartpro_defconfig arch/arm64/configs/
 ```
 
-ARM Trusted Firmware and BusyBox are used untouched (mainline ATF at commit `6a164dd`,
-BusyBox at commit `371fe9f` for the minimal test rootfs) — no patches needed there.
+The config builds the GPU and Wi-Fi firmware into the kernel, from `firmware/` in the kernel tree:
 
-Then `board-port/assemble_image.sh` builds a flashable SD image (boot chain + FAT32 boot
-partition + your rootfs of choice), and `board-port/update_sd_kernel.sh` swaps just the
-kernel/DTB on an already-flashed card for fast iteration. See the script headers for exact
-usage and the real, hard-won partition-layout/boot-chain notes (this board's BROM only
-boots from a specific eGON offset, and boots SD over eMMC when both are present).
+- `firmware/powervr/rogue_22.102.54.38_v1.fw` from Imagination's
+  [linux-firmware fork](https://gitlab.freedesktop.org/imagination/linux-firmware/-/tree/powervr),
+  branch `powervr`.
+- `firmware/xr829/boot_xr829.bin`, `fw_xr829.bin` and `sdd_xr829.bin` from `/lib/firmware` of
+  the stock firmware. They aren't redistributable, so take them from your own device.
+
+```sh
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- trimui-a133-smartpro_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- Image allwinner/sun50i-a133-trimui-smartpro.dtb
+```
+
+The GE8300 isn't on the `powervr` driver's list of supported cores yet: boot with
+`powervr.exp_hw_support=1` (`image/extlinux.conf` does).
+
+### Trusted Firmware and U-Boot
+
+```sh
+git clone https://github.com/ARM-software/arm-trusted-firmware.git
+cd arm-trusted-firmware
+git checkout 6a164dd
+git am /path/to/repo/patches/tf-a/*.patch
+make CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_a133 bl31
+
+git clone https://source.denx.de/u-boot/u-boot.git
+cd u-boot
+git checkout 6073c36b2c8d39afe3ecc789b281667a3ddebc70
+git am /path/to/repo/patches/u-boot/*.patch
+make trimui-smartpro_defconfig
+make CROSS_COMPILE=aarch64-linux-gnu- \
+     BL31=/path/to/arm-trusted-firmware/build/sun50i_a133/release/bl31.bin
+```
+
+The result is `u-boot-sunxi-with-spl.bin`.
+
+### Mesa (Vulkan driver)
+
+The PowerVR driver is cross-built for Alpine Linux (musl) in an `alpine:edge` container:
+
+```sh
+mkdir mesa-build && cd mesa-build
+git clone https://gitlab.freedesktop.org/mesa/mesa.git
+git -C mesa checkout 01bab9302a6bf0a082c7ba8c49d74427cf10b0cf
+git -C mesa am /path/to/repo/patches/mesa/*.patch
+cp /path/to/repo/patches/mesa/build_mesa.sh .
+docker run --rm -v "$PWD":/work -w /work alpine:edge sh build_mesa.sh
+```
+
+The driver ends up in `build/src/imagination/vulkan/libvulkan_powervr_mesa.so`. It replaces the
+one of Alpine's `mesa-vulkan-imagination` package in the chroot on the device (see Userspace).
+
+## Installing
+
+`image/assemble_image.sh` builds an SD card image from the U-Boot binary, kernel, device tree and
+a root file system: U-Boot at 128 KiB, a 64 MiB FAT32 boot partition with `Image`, the DTB and
+`extlinux/extlinux.conf`, then the root partition. The card used during development has U-Boot
+at 8 KiB instead; the boot ROM boots from both. With an SD card in the slot, the device boots
+from it rather than from the eMMC.
+
+To update an existing card, `image/update_sd_kernel.sh` replaces kernel and DTB on its boot
+partition in a card reader, and `tools/push_kernel.sh` installs them on the running device over
+USB.
+
+## Userspace
+
+The root file system is a minimal Alpine Linux 3.22 with busybox init, plus the files in
+`rootfs/`. The USB-C charging port comes up as a USB network adapter at boot: the device is
+`10.55.0.2`, reachable over SSH (dropbear, key login).
+
+The GPU and video userspace (current Mesa, GStreamer) runs in an Alpine edge chroot that
+`rootfs/root/edge-chroot.sh` creates on an ext4 partition labelled `TRIMUIDATA` on the SD card
+and mounts at `/tmp/edge`. Examples:
+
+```sh
+# Vulkan, straight to the display
+chroot /tmp/edge env PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1 vkcube --wsi display
+
+# OpenGL ES through Zink, in a Wayland session in landscape
+/root/wayland-session.sh weston-simple-egl -f
+
+# Hardware video decoding, played on the display
+chroot /tmp/edge gst-launch-1.0 filesrc location=video.mp4 ! qtdemux ! h264parse \
+    ! v4l2slh264dec ! queue ! kmssink driver-name=sun4i-drm plane-id=35 can-scale=true \
+      plane-properties="s,zpos=(int)3"
+```
+
+Mesa refuses the GE8300 without `PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1`, as it isn't a
+conformant Vulkan implementation yet.
+
+## Tools
+
+| Tool | Purpose |
+|---|---|
+| `tools/push_kernel.sh` | Installs kernel/DTB on the device's SD card over the USB network (UART as fallback) |
+| `tools/uboot_test_boot.py` | Boots a test kernel/DTB once from U-Boot over the UART; the next reboot uses the default again |
+| `tools/uart_session.py`, `uart_push.py` | Holds the UART console open behind a FIFO; md5-verified transfers over it |
+| `tools/reboot_loop.sh` | Reboot reliability test |
+| `tools/padview/` | Framebuffer gamepad viewer |
+| `tools/rainbow.sh` | Colour cycle on the stick and logo LEDs |
+| `tools/devmem.c`, `i2creg.c`, `regsnap.c` | Register access: MMIO, I2C (the PMIC), PMIC and pin controller snapshots |
+| `tools/drmtest.c` | DRM modeset test without libdrm |
+| `tools/ncm_gadget.sh`, `test_gadget.sh` | USB gadget setups for device-mode tests |
+| `tools/backup_restore/` | Backup of the stock system's eMMC and RAM, eMMC restore (scripts only) |
+| `tools/gpu/` | GPU and display tests, see [`docs/gpu-video.md`](docs/gpu-video.md) |
+
+## What's not in this repo
+
+No source trees, and nothing copyrighted by the vendor: no firmware blobs, kernel images, eMMC or
+RAM dumps, or decompiled vendor code, and not the Allwinner manual. The source trees are almost
+entirely unmodified upstream code, for which a patch series is the reviewable form. The vendor's
+files aren't ours to redistribute, and dumps of a physical unit contain device-specific data.
+`vendor-notes/` has only our own measurements. The vendor files can be pulled from your own
+device: `tools/backup_restore/` for the eMMC, the stock firmware for the firmware files.
+
+## History
+
+The display stayed black for a long time. It had several independent causes, all of which had to
+be fixed: SRAM C mapped to the CPU (which hides the whole display engine register space), the
+display engine clocks missing from the device tree, the TCON interrupt pointing at the DSI's,
+the panel reset on the wrong pin and, finally, the wrong panel controller: this unit's panel is an
+ER68576, not the OTM1289A named in the vendor device tree.
+[`docs/history/community-help-request.md`](docs/history/community-help-request.md) is the
+write-up from that time.
 
 ## License
 
-The patches in `patches/` are GPL-2.0(-or-later), matching the Linux kernel and U-Boot they
-modify. See [`LICENSE`](LICENSE). Our own original tools/scripts/docs in this repo are also
-GPL-2.0-or-later unless noted otherwise.
+The patches are under the license of the project they modify: GPL-2.0 for Linux and U-Boot,
+BSD-3-Clause for TF-A, MIT for Mesa. Everything else in this repo is GPL-2.0-or-later
+([`LICENSE`](LICENSE)) unless noted otherwise.
 
-## Credit
+## Credits
 
-Built on mainline's existing `sun4i`/`sun6i` DRM driver family (originally written by
-Maxime Ripard and the linux-sunxi community) and the existing `phy-sun6i-mipi-dphy`
-D-PHY driver — this project extends and board-adapts that existing work, it doesn't start
-display support from zero.
+This builds on the work of the linux-sunxi community, in particular the `sun4i` DRM driver
+family, the `sunxi-ng` clock drivers and Cedrus, on Imagination's open-source `powervr` kernel
+driver and Mesa PowerVR driver, on fifteenhex's [xradio](https://github.com/fifteenhex/xradio) driver for the XR819 (imported in
+`0042` and extended for the XR829), and on Paul Kocialkowski's U-Boot series for the A133 NSI arbiter,
+which `patches/u-boot/0002` ports.
