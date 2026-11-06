@@ -1,0 +1,114 @@
+From 6286915c3e67c305b619e4dca9df0f1ae257358a Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Fri, 6 Nov 2026 00:33:50 +0100
+Subject: [PATCH] media: add A133 VP9 decoder (Hantro G2), share the VE reset
+ with cedrus
+
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi         | 10 ++++++++++
+ .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts |  4 ++++
+ drivers/media/platform/verisilicon/hantro.h            |  1 +
+ drivers/media/platform/verisilicon/hantro_drv.c        |  5 ++++-
+ drivers/media/platform/verisilicon/sunxi_vpu_hw.c      |  1 +
+ drivers/staging/media/sunxi/cedrus/cedrus_hw.c         |  4 ++--
+ 6 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 4e343d699..aa00bc3af 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -203,6 +203,16 @@ video-codec@1c0e000 {
+ 			iommus = <&iommu 2>;
+ 		};
+ 
++		vp9: video-codec-g2@1c00000 {
++			compatible = "allwinner,sun50i-h6-vpu-g2";
++			reg = <0x01c00000 0x1000>;
++			interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_VE>, <&ccu CLK_VE>;
++			clock-names = "bus", "mod";
++			resets = <&ccu RST_BUS_VE>;
++			status = "disabled";
++		};
++
+ 		gic: interrupt-controller@3021000 {
+ 			compatible = "arm,gic-400";
+ 			reg = <0x03021000 0x1000>, <0x03022000 0x2000>,
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 47ef62729..303d9bcbe 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -376,6 +376,10 @@ &gpu {
+ 	status = "okay";
+ };
+ 
++&vp9 {
++	status = "okay";
++};
++
+ &mmc0 {
+ 	bus-width = <4>;
+ 	vmmc-supply = <&reg_cldo3>;
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index 0353de154..de79419b9 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -102,6 +102,7 @@ struct hantro_variant {
+ 	unsigned int double_buffer : 1;
+ 	unsigned int legacy_regs : 1;
+ 	unsigned int late_postproc : 1;
++	unsigned int shared_reset : 1;
+ 	const struct of_device_id *shared_devices;
+ };
+ 
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index ad71c0402..b59561a36 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -1134,7 +1134,10 @@ static int hantro_probe(struct platform_device *pdev)
+ 			return PTR_ERR(vpu->clocks[0].clk);
+ 	}
+ 
+-	vpu->resets = devm_reset_control_array_get_optional_exclusive(&pdev->dev);
++	if (vpu->variant->shared_reset)
++		vpu->resets = devm_reset_control_array_get_shared(&pdev->dev);
++	else
++		vpu->resets = devm_reset_control_array_get_optional_exclusive(&pdev->dev);
+ 	if (IS_ERR(vpu->resets))
+ 		return PTR_ERR(vpu->resets);
+ 
+diff --git a/drivers/media/platform/verisilicon/sunxi_vpu_hw.c b/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
+index 02ce8b064..125f6920e 100644
+--- a/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
+@@ -126,4 +126,5 @@ const struct hantro_variant sunxi_vpu_variant = {
+ 	.double_buffer = 1,
+ 	.legacy_regs = 1,
+ 	.late_postproc = 1,
++	.shared_reset = 1,
+ };
+diff --git a/drivers/staging/media/sunxi/cedrus/cedrus_hw.c b/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
+index 444fb5387..a199ef914 100644
+--- a/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
++++ b/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
+@@ -203,7 +203,7 @@ int cedrus_hw_resume(struct device *device)
+ 	struct cedrus_dev *dev = dev_get_drvdata(device);
+ 	int ret;
+ 
+-	ret = reset_control_reset(dev->rstc);
++	ret = reset_control_deassert(dev->rstc);
+ 	if (ret) {
+ 		dev_err(dev->dev, "Failed to apply reset\n");
+ 
+@@ -304,7 +304,7 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
+ 		goto err_sram;
+ 	}
+ 
+-	dev->rstc = devm_reset_control_get(dev->dev, NULL);
++	dev->rstc = devm_reset_control_get_shared(dev->dev, NULL);
+ 	if (IS_ERR(dev->rstc)) {
+ 		dev_err(dev->dev, "Failed to get reset control\n");
+ 
+-- 
+2.56.0
+
