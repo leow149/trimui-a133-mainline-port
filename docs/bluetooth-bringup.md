@@ -1,6 +1,32 @@
-# Bluetooth (XR829) bring-up — assessment
+# Bluetooth (XR829) bring-up — status
 
-Status: investigated 2026-11-06, not implemented. This is roadmap item **1.1**.
+Status: **kernel + userspace implemented 2026-11-06; firmware download (BROM sync) not yet working.**
+This is roadmap item **1.1**.
+
+## What's done
+
+- **Kernel** (patch `0062`): UART1 (PG6-9) enabled, `rfkill-gpio` for BT_RST_N (PL2),
+  `btlpm` node for BT_WAKE/BT_HOSTWAKE (PL4/PL3), and the `xradio_btlpm` sleep/wake driver
+  (provides `/proc/bluetooth/sleep/{lpm,btwake}`). `CONFIG_BT=y`, `BT_HCIUART=y`,
+  `BT_HCIUART_H4=y`, `RFKILL_GPIO=y`, `XR_BT_LPM=y`. Verified on hardware: `/dev/ttyS1` up,
+  rfkill + btlpm proc entries present, PL2/PL4 driven correctly.
+- **Userspace**: bluez 5.54 (xradio branch) built in the edge chroot; `hciattach` + `hciconfig`
+  with the `xr829` protocol. The firmware download is done in userspace (a "BROM" command
+  protocol over UART1: 0x55 sync → SETUART → 1KB SEQWR chunks → SETPC jump → HCI reset/bdaddr).
+
+## Open issue: the BROM sync never gets "OK"
+
+`hciattach /dev/ttyS1 xr829` runs, power-cycles the BT via rfkill, asserts bt_wake, then sends
+0x55 and reads `00 00` instead of `OK`, forever (even after the 500 ms power-cycle workaround).
+
+Ruled out so far: UART1 pins (PG6=TX/PG7=RX/PG8=RTS/PG9=CTS, matches stock), BT power (bldo1
+3.3 V on), reset polarity (GPIO_ACTIVE_HIGH: blocked→PL2 LOW, unblocked→PL2 HIGH, matching the
+vendor `sunxi_bt_set_block`), bt_wake asserted (PL4 HIGH), 32k clock (same `CLK_OSC32K_FANOUT`
+as WiFi, enabled by pwrseq), UART clock (24 MHz bus clock, identical to the working uart0/3/4).
+
+Still to investigate: a scope/logic analyzer on the UART1 TX/RX lines (is the SoC actually
+transmitting 0x55, and is the BT echoing anything), and whether the XR829 BT core needs a
+power-on sequence the rfkill-gpio isn't reproducing.
 
 ## Wiring (fully known from stock)
 

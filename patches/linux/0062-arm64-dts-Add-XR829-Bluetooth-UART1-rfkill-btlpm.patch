@@ -1,0 +1,272 @@
+From dbb9606db6a45ea998eb1a6f8a5ab145098032fe Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Fri, 6 Nov 2026 08:41:15 +0100
+Subject: [PATCH] arm64: dts: sun50i-a100 + trimui-smart-pro: XR829 Bluetooth
+
+Enable UART1 (PG6-9) for the XR829 Bluetooth HCI, add a rfkill-gpio
+for BT_RST_N (PL2) and a btlpm node for BT_WAKE/BT_HOSTWAKE (PL4/PL3),
+and add the xradio_btlpm sleep/wake driver (the /proc/bluetooth/sleep/*
+entries that hciattach's xr829 protocol uses). Firmware download is done
+in userspace by hciattach; this is the kernel side only.
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi |   6 +
+ .../allwinner/sun50i-a133-trimui-smartpro.dts |  27 +++
+ drivers/bluetooth/Kconfig                     |  11 ++
+ drivers/bluetooth/Makefile                    |   2 +
+ drivers/bluetooth/xradio_btlpm.c              | 154 ++++++++++++++++++
+ 5 files changed, 200 insertions(+)
+ create mode 100644 drivers/bluetooth/xradio_btlpm.c
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index aa00bc3af..fcfedb846 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -324,6 +324,12 @@ uart4_pd_pins: uart4-pd-pins {
+ 				pins = "PD18", "PD19";
+ 				function = "uart4";
+ 			};
++
++			/omit-if-no-ref/
++			uart1_pg_pins: uart1-pg-pins {
++				pins = "PG6", "PG7", "PG8", "PG9";
++				function = "uart1";
++			};
+ 		};
+ 
+ 		iommu: iommu@30f0000 {
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 303d9bcbe..d6306cde9 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -555,6 +555,33 @@ &uart0 {
+ 	status = "okay";
+ };
+ 
++/* XR829 Bluetooth (HCI over UART1). Firmware is downloaded by userspace
++ * (hciattach with the xr829 protocol); the kernel side is the UART plus the
++ * power/reset (rfkill-gpio) and wake/sleep GPIOs (sunxi-btlpm). */
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart1_pg_pins>;
++	status = "okay";
++};
++
++/* XR829 Bluetooth power/reset (BT_RST_N = PL2, active low) and sleep/wake
++ * GPIOs (BT_WAKE = PL4, BT_HOSTWAKE = PL3). */
++&{/} {
++	bt_rfkill: rfkill-bt {
++		compatible = "rfkill-gpio";
++		label = "rfkill-xr829-bt";
++		radio-type = "bluetooth";
++		shutdown-gpios = <&r_pio 0 2 GPIO_ACTIVE_HIGH>;
++	};
++
++	btlpm: btlpm {
++		compatible = "allwinner,sunxi-btlpm";
++		uart_index = <1>;
++		bt-wake-gpios = <&r_pio 0 4 GPIO_ACTIVE_HIGH>;
++		bt-hostwake-gpios = <&r_pio 0 3 GPIO_ACTIVE_HIGH>;
++	};
++};
++
+ /* Buttons and sticks: one microcontroller per side, each on its own UART. */
+ &uart3 {
+ 	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+diff --git a/drivers/bluetooth/Kconfig b/drivers/bluetooth/Kconfig
+index 4e8c24d75..87f9722c4 100644
+--- a/drivers/bluetooth/Kconfig
++++ b/drivers/bluetooth/Kconfig
+@@ -347,6 +347,17 @@ config BT_HCIVHCI
+ 	  Say Y here to compile support for virtual HCI devices into the
+ 	  kernel or say M to compile it as module (hci_vhci).
+ 
++config XR_BT_LPM
++	tristate "Xradio Bluetooth sleep/wake driver support"
++	help
++	  Sleep/wake (LPM) support for Xradio XR819/XR829 Bluetooth chips.
++	  It controls the BT_WAKE / BT_HOSTWAKE GPIOs and provides the
++	  /proc/bluetooth/sleep/* entries that hciattach's xr829 protocol
++	  uses to keep the controller awake during firmware download.
++
++	  Say Y here to compile support into the kernel, or M to build it as
++	  a module (xradio_btlpm).
++
+ config BT_MRVL
+ 	tristate "Marvell Bluetooth driver support"
+ 	help
+diff --git a/drivers/bluetooth/Makefile b/drivers/bluetooth/Makefile
+index e6b1c1180..9d16f92e4 100644
+--- a/drivers/bluetooth/Makefile
++++ b/drivers/bluetooth/Makefile
+@@ -36,6 +36,8 @@ obj-$(CONFIG_BT_HCIRSI)		+= btrsi.o
+ btmrvl-y			:= btmrvl_main.o
+ btmrvl-$(CONFIG_DEBUG_FS)	+= btmrvl_debugfs.o
+ 
++obj-$(CONFIG_XR_BT_LPM)		+= xradio_btlpm.o
++
+ hci_uart-y				:= hci_ldisc.o
+ hci_uart-$(CONFIG_BT_HCIUART_SERDEV)	+= hci_serdev.o
+ hci_uart-$(CONFIG_BT_HCIUART_H4)	+= hci_h4.o
+diff --git a/drivers/bluetooth/xradio_btlpm.c b/drivers/bluetooth/xradio_btlpm.c
+new file mode 100644
+index 000000000..3022778b9
+--- /dev/null
++++ b/drivers/bluetooth/xradio_btlpm.c
+@@ -0,0 +1,154 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * XR829 Bluetooth sleep/wake (LPM) driver
++ *
++ * Controls the BT_WAKE / BT_HOSTWAKE GPIOs and exposes the /proc/bluetooth/
++ * sleep/* entries that hciattach's "xr829" protocol uses to keep the BT
++ * controller awake while downloading its firmware over UART1.
++ *
++ * Minimal, mainline-style port of XRadio's bluesleep driver for this board.
++ */
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/gpio/consumer.h>
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++#include <linux/uaccess.h>
++
++struct xr_btlpm {
++	struct gpio_desc *bt_wake;
++	struct gpio_desc *bt_hostwake;
++	bool lpm_enabled;
++};
++
++static struct xr_btlpm *lpm;
++
++static int lpm_proc_show(struct seq_file *m, void *v)
++{
++	seq_printf(m, "lpm enable: %d\n", lpm ? lpm->lpm_enabled : 0);
++	return 0;
++}
++
++static int lpm_proc_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, lpm_proc_show, NULL);
++}
++
++static ssize_t lpm_proc_write(struct file *file, const char __user *buf,
++			      size_t count, loff_t *pos)
++{
++	char b;
++
++	if (count < 1 || !lpm)
++		return -EINVAL;
++	if (copy_from_user(&b, buf, 1))
++		return -EFAULT;
++	lpm->lpm_enabled = (b != '0');
++	return count;
++}
++
++static const struct proc_ops lpm_proc_ops = {
++	.proc_open	= lpm_proc_open,
++	.proc_read	= seq_read,
++	.proc_lseek	= seq_lseek,
++	.proc_release	= single_release,
++	.proc_write	= lpm_proc_write,
++};
++
++static int btwake_proc_show(struct seq_file *m, void *v)
++{
++	seq_printf(m, "bt wake state: %d\n",
++		   lpm ? gpiod_get_value(lpm->bt_wake) : 0);
++	return 0;
++}
++
++static int btwake_proc_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, btwake_proc_show, NULL);
++}
++
++static ssize_t btwake_proc_write(struct file *file, const char __user *buf,
++				 size_t count, loff_t *pos)
++{
++	char b;
++
++	if (count < 1 || !lpm)
++		return -EINVAL;
++	if (copy_from_user(&b, buf, 1))
++		return -EFAULT;
++
++	switch (b) {
++	case '0':	/* sleep */
++		gpiod_set_value(lpm->bt_wake, 0);
++		break;
++	case '1':	/* wake up */
++		gpiod_set_value(lpm->bt_wake, 1);
++		break;
++	case '2':	/* lock (keep awake) */
++	case '3':	/* unlock */
++	default:
++		break;
++	}
++	return count;
++}
++
++static const struct proc_ops btwake_proc_ops = {
++	.proc_open	= btwake_proc_open,
++	.proc_read	= seq_read,
++	.proc_lseek	= seq_lseek,
++	.proc_release	= single_release,
++	.proc_write	= btwake_proc_write,
++};
++
++static int xr_btlpm_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct proc_dir_entry *bt_dir, *sleep_dir;
++
++	lpm = devm_kzalloc(dev, sizeof(*lpm), GFP_KERNEL);
++	if (!lpm)
++		return -ENOMEM;
++
++	lpm->bt_wake = devm_gpiod_get(dev, "bt-wake", GPIOD_OUT_LOW);
++	if (IS_ERR(lpm->bt_wake))
++		return dev_err_probe(dev, PTR_ERR(lpm->bt_wake),
++				     "can't get bt-wake gpio\n");
++
++	lpm->bt_hostwake = devm_gpiod_get(dev, "bt-hostwake", GPIOD_IN);
++	if (IS_ERR(lpm->bt_hostwake))
++		return dev_err_probe(dev, PTR_ERR(lpm->bt_hostwake),
++				     "can't get bt-hostwake gpio\n");
++
++	bt_dir = proc_mkdir("bluetooth", NULL);
++	if (!bt_dir)
++		return -ENOMEM;
++
++	sleep_dir = proc_mkdir("sleep", bt_dir);
++	if (!sleep_dir)
++		return -ENOMEM;
++
++	proc_create("lpm", 0220, sleep_dir, &lpm_proc_ops);
++	proc_create("btwake", 0220, sleep_dir, &btwake_proc_ops);
++
++	platform_set_drvdata(pdev, lpm);
++	return 0;
++}
++
++static const struct of_device_id xr_btlpm_of_match[] = {
++	{ .compatible = "allwinner,sunxi-btlpm" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, xr_btlpm_of_match);
++
++static struct platform_driver xr_btlpm_driver = {
++	.probe	= xr_btlpm_probe,
++	.driver	= {
++		.name		= "xradio-btlpm",
++		.of_match_table	= xr_btlpm_of_match,
++	},
++};
++module_platform_driver(xr_btlpm_driver);
++
++MODULE_AUTHOR("XRadioTech");
++MODULE_DESCRIPTION("XR829 Bluetooth sleep/wake driver");
++MODULE_LICENSE("GPL");
+-- 
+2.56.0
+
