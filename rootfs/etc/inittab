@@ -13,6 +13,7 @@
 ::sysinit:/etc/audio-defaults.sh
 ::sysinit:/etc/usb-net.sh
 ::sysinit:/etc/bt-up.sh
+::sysinit:/etc/wake-sources.sh
 ::sysinit:/bin/echo "=== Alpine minimal boot test — TrimUI Smart Pro mainline port ==="
 ttyS0::respawn:/bin/ash
 ::ctrlaltdel:/sbin/reboot
