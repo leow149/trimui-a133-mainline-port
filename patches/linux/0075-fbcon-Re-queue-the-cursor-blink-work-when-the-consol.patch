@@ -1,0 +1,54 @@
+From 11c482a86e79cbaf5d7cef6dfb11dfe883332c39 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 00:54:41 +0100
+Subject: [PATCH] fbcon: Re-queue the cursor blink work when the console lock
+ is busy
+
+fb_flashcursor() bails out without re-queuing itself when console_trylock()
+fails. With a busy serial console (115200 baud, loglevel 7) that happens
+often enough during boot that the cursor stops blinking until the next
+console write.
+
+Re-queue the work for the next blink interval instead of dropping it. This
+does not block, which is what the trylock is there to avoid, and
+cancel_delayed_work_sync() in fbcon_del_cursor_work() handles the
+self-re-queue on teardown.
+
+Tested on the TrimUI Smart Pro (A133): /sys/class/graphics/fbcon/cursor_blink
+(delayed_work_pending of the blink work) stays 1 in 10/10 samples over 20 s
+after each of two boots. Before, the blink stopped intermittently at boot.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/video/fbdev/core/fbcon.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/video/fbdev/core/fbcon.c b/drivers/video/fbdev/core/fbcon.c
+index 23b3c536d..b97273289 100644
+--- a/drivers/video/fbdev/core/fbcon.c
++++ b/drivers/video/fbdev/core/fbcon.c
+@@ -402,8 +402,18 @@ static void fb_flashcursor(struct work_struct *work)
+ 	/* instead we just fail to flash the cursor if we can't get
+ 	 * the lock instead of blocking fbcon deinit */
+ 	ret = console_trylock();
+-	if (ret == 0)
++	if (ret == 0) {
++		/*
++		 * Try again at the next blink instead of dropping the work for
++		 * good: with a busy serial console the lock is often held, and
++		 * the cursor would stop blinking until the next console write.
++		 * cancel_delayed_work_sync() in fbcon_del_cursor_work() copes
++		 * with the re-queue.
++		 */
++		queue_delayed_work(system_power_efficient_wq, &par->cursor_work,
++				   par->cur_blink_jiffies);
+ 		return;
++	}
+ 
+ 	/* protected by console_lock */
+ 	info = par->info;
+-- 
+2.56.0
+

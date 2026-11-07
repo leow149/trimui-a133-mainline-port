@@ -155,4 +155,4 @@ The register dumps behind these comparisons are in `vendor-notes/gpu_regdump/`.
   - The thermal case for it was checked with a 5 min soak (4 busy CPU cores + vkmark headless). With the thermal trips from patch 0067, the die levels at CPU 83-85 C / GPU 83 C through CPU throttling alone. Before 0067 it was 88/86 C and rising.
   - Caveat: these soaks ran with the back cover off and the stock SoC cooling removed (UART development setup). With a temporary heatsink, the same load reaches CPU 83 C / GPU 80 C at 5 min, still slowly rising. Re-measure with the stock cooling and back cover in place.
   - So a GPU cooling device is not needed for now. Revisit if a GPU-only load (CPU idle) heats past the 88 C GPU trip.
-- `vkcube --wsi wayland` keeps running after the compositor exits.
+- `vkcube --wsi wayland` kept running after `kill cage`: on SIGTERM cage waits for its app without stopping it. Not a driver issue. Fixed in our launcher: `wayland-session.sh stop` ends the app, and cage then exits (2026-11-08).

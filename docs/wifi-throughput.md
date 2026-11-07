@@ -85,3 +85,6 @@ Recommendation until then: use WPA2 (the home-ssid mixed-mode SSID) on this devi
 - xradio only accepts its two registered MACs (wlan0's and wlan0's + 1), so ap0 uses MAC + 1, and the BT address moved to MAC + 2.
 - The AP comes up at 20 MHz even with `ht_capab=[HT40+]` (the hostapd HT40 setup reports "Could not configure driver mode").
 - **Open:** station + AP at the same time. The driver advertises 1 managed + 1 AP on one channel, but with ap0 up the wlan0 station stops passing traffic (still associated), until ap0 is removed and the station fully reassociates. Hence AP-only.
+
+## SDIO "data error, sending stop command" (2026-11-08)
+About 4 per 120 s of iperf load at 50 MHz SDIO; they are retried transparently (no driver error, no throughput collapse). A 40 MHz cap (max-frequency on &mmc1) gave 1 per 120 s but cost ~10 % throughput, so it was reverted. Left as is.

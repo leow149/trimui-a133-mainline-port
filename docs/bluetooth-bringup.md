@@ -99,3 +99,6 @@ Bluetooth should follow once the serdev/UART plumbing and firmware-download appr
 
   After a scan, Wi-Fi stays broken: wlan0 loops through auth/assoc retries until BT is switched off (rfkill block). Then a Wi-Fi reconnect works. Once, the xradio driver hung after the rfkill block (`iw` stuck in the kernel) and needed a reboot.
   Needs the vendor coexistence setup: Wi-Fi firmware coex parameters (SDD/wsm) or the BT vendor commands for PTA. Until then, don't use BT while relying on Wi-Fi.
+- First-run quirk, status 2026-11-08: left as a documented workaround (throw-away probe in bt-up.sh), which is reliable.
+  Ruled out: chip state (9 power cycles inside the failing run), start time, BT_WAKE pre-set, stty priming.
+  The cause is host-side UART/tty state left by the first process; not worth more reboot experiments for now.
