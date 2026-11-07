@@ -12,6 +12,7 @@
 ::sysinit:/sbin/watchdog -T 16 -t 5 /dev/watchdog
 ::sysinit:/etc/audio-defaults.sh
 ::sysinit:/etc/usb-net.sh
+::sysinit:/etc/bt-up.sh
 ::sysinit:/bin/echo "=== Alpine minimal boot test — TrimUI Smart Pro mainline port ==="
 ttyS0::respawn:/bin/ash
 ::ctrlaltdel:/sbin/reboot

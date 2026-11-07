@@ -24,7 +24,7 @@ Not submitted upstream yet.
 | Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
 | USB | ✅ Device mode with DMA (NCM network: 309 Mbit/s to the host, 154 Mbit/s from it), host mode on the second port |
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
-| Not working yet | ❌ Bluetooth, video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
+| Not working yet | ❌ Wi-Fi/Bluetooth coexistence (Bluetooth works on its own, see docs/bluetooth-bringup.md), video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
 
 Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm is tested; wake by the power and volume keys is not.
 

@@ -77,3 +77,25 @@ Because this needs a from-scratch firmware loader with a vendor protocol, it is 
 VP9** (which rides on the existing `hantro` G2 driver). VP9 (1.2) is the better first Phase 1 target;
 Bluetooth should follow once the serdev/UART plumbing and firmware-download approach are nailed down
 (possibly borrowing from the `btqca`/`btmtk` serdev drivers).
+
+## Boot integration and status (2026-11-07)
+
+- `/etc/bt-up.sh` (rootfs/etc, started from inittab) loads the firmware at boot, in the background, once wlan0 exists.
+  - The BD address is the Wi-Fi MAC with the last byte + 1, for example 02:00:34:9a:30:3b. That's stable, because U-Boot derives the Wi-Fi MAC from the SoC ID.
+  - hci0 is left DOWN. There is no bluetoothd yet; bring it up with `hciconfig hci0 up` (bluez is in the edge chroot).
+  - The verbose log of the last attempt is in /tmp/bt-up.log.
+- **First-run quirk:** the first `xr829_bt_up` run after boot never gets the BROM sync, even across 9 chip power cycles. These did not help:
+  - a later start (15 s uptime),
+  - raising BT_WAKE before the first reset,
+  - priming ttyS1 with stty.
+  The next run syncs on the first 0x55. The script therefore does a throw-away 5 s probe (`-p`) first. Cause still unknown; probably UART/tty state the first process leaves behind.
+- **Wi-Fi/BT coexistence is broken (open):**
+
+  | BT state | Wi-Fi to the gateway |
+  |---|---|
+  | hci0 down | 6/6 pings |
+  | hci0 up, idle | 6/6 pings |
+  | LE scan running | 5/6, or 0/10 with `--duplicates` |
+
+  After a scan, Wi-Fi stays broken: wlan0 loops through auth/assoc retries until BT is switched off (rfkill block). Then a Wi-Fi reconnect works. Once, the xradio driver hung after the rfkill block (`iw` stuck in the kernel) and needed a reboot.
+  Needs the vendor coexistence setup: Wi-Fi firmware coex parameters (SDD/wsm) or the BT vendor commands for PTA. Until then, don't use BT while relying on Wi-Fi.
