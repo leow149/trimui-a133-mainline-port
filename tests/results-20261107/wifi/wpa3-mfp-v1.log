@@ -1,0 +1,32 @@
+iperf 
+iperf -R
+iperf 
+iperf -R
+--- 192.168.1.1 ping statistics ---
+20 packets transmitted, 0 packets received, 100% packet loss
+	tx bitrate:	150.0 MBit/s MCS 7 40MHz short GI
+	rx bitrate:	1.0 MBit/s
+	MFP:		yes
+tx_ampdus 0
+tx_mpdus_in_ampdus 0
+tx_octets_l32 0
+tx_octets_h32 0
+rx_ampdus 1342
+rx_mpdus_in_ampdus 1407
+rx_octets_l32 173070
+rx_octets_h32 0
+rx_delim_crc_err 0
+implicit_bar_fail 0
+explicit_bar_fail 0
+[   17.366826] wlan0: authenticate with xx:xx:xx:xx:xx:01 (local address=02:00:34:9a:30:3a)
+[   17.375002] wlan0: send auth to xx:xx:xx:xx:xx:01 (try 1/3)
+[   17.384454] wlan0: authenticated
+[   17.392489] wlan0: associate with xx:xx:xx:xx:xx:01 (try 1/3)
+[   17.406601] wlan0: RX AssocResp from xx:xx:xx:xx:xx:01 (capab=0x1031 status=0 aid=13)
+[   17.414919] ieee80211 phy0: vif 0, configuring tx
+[   17.415582] ieee80211 phy0: vif 0, configuring tx
+[   17.416079] ieee80211 phy0: vif 0, configuring tx
+[   17.416731] ieee80211 phy0: vif 0, configuring tx
+[   17.420972] wlan0: associated
+[   17.424161] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[   17.464528] ieee80211 phy0: CCMP_PAIRWISE keylen=16!

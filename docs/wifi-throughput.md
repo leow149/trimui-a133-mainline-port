@@ -53,3 +53,27 @@ The router's 2.4 GHz radio went to 40 MHz (home-ssid and home-ssid-mlo on ch 1, 
 - `ba_tid_mask` 0xB1 ("HW limitation") unchanged; 0x3F untested.
 
 Logs: tests/results-20261107/wifi/.
+
+## WPA3 (SAE + MFP) performance: open (2026-11-07)
+
+Measured on home-ssid, 40 MHz + SGI, same AP (UniFi U7 Pro XG):
+
+| | WPA2-PSK | WPA3-SAE (MFP required) |
+|---|---|---|
+| TX / RX (iperf3) | ~31 / ~40 Mbit/s | ~14 / ~14 Mbit/s |
+| Ping to the gateway | 11-17 ms | 70-150 ms, spikes to 460 ms, loss |
+
+home-ssid-mlo (WPA3-only, MLO) behaves the same, so MLO is not the cause.
+
+Attempted port of the vendor PMF support (linux branch `wip-xr829-pmf`, not merged):
+- IGTK in firmware (key type 8) and the PROTECTED_MGMT_POLICY MIB.
+- MMIE / multicast robust-mgmt TX.
+- Ignoring unprotected deauths.
+
+Results:
+- **policy off, IGTK uploaded:** connects, no improvement.
+- **protectedMgmtEnable=1:** connects, TX works, but AP-to-STA unicast data stops reaching the host after DHCP. This is the same with every policy-bit combination and with mac80211 ADDBA handling left on. The AP's protected ADDBA requests do decrypt; the AP then sends a BAR about every second.
+
+Next lead: AP-initiated BA session / PN state in the firmware with PMF on. That needs an over-the-air capture (frame headers and BA/BAR timing are visible even when encrypted). Logs: tests/results-20261107/wifi/pmf-*.log.
+
+Recommendation until then: use WPA2 (the home-ssid mixed-mode SSID) on this device.

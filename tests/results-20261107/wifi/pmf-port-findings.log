@@ -1,0 +1,7 @@
+PMF/IGTK port experiment 2026-11-07 (branch wip-xr829-pmf, linux repo)
+- keys.c AES_CMAC -> WSM_KEY_TYPE_IGTK_GROUP(8) + MIB 0x1020 policy, MMIE template in tx_h_crypt, deauth filter: builds, IGTK add ret=0.
+- policy enable=0 + IGTK uploaded: WPA3 works, ping avg ~150 ms (no improvement).
+- policy enable=1 (any combination of bits 0..2, written at IGTK time or at join): connect OK, TX unicast works (UDP reached host),
+  but ALL AP->STA unicast data stops after DHCP (ping 100% loss). AP sends ADDBA req (tid 0,5,6, protected, fw decrypts them)
+  then BAR every 1s that fw passes to host. Disabling fw BA policy (debugfs block_ack "0 0"), not dropping mac80211 ADDBA resp: no change.
+- fw: XR_C09.08.52.73_DBG_02.122
