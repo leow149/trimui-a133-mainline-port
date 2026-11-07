@@ -82,7 +82,7 @@ Bluetooth should follow once the serdev/UART plumbing and firmware-download appr
 
 - `/etc/bt-up.sh` (rootfs/etc, started from inittab) loads the firmware at boot, in the background, once wlan0 exists.
   - The BD address is the Wi-Fi MAC with the last byte + 1, for example 02:00:34:9a:30:3b. That's stable, because U-Boot derives the Wi-Fi MAC from the SoC ID.
-  - hci0 is left DOWN. There is no bluetoothd yet; bring it up with `hciconfig hci0 up` (bluez is in the edge chroot).
+  - Since 2026-11-07 the script also starts the system D-Bus and bluetoothd (`apk add dbus bluez`, see rootfs/apk-packages.txt). bluetoothd powers hci0 itself, and `bluetoothctl` works for scanning and pairing.
   - The verbose log of the last attempt is in /tmp/bt-up.log.
 - **First-run quirk:** the first `xr829_bt_up` run after boot never gets the BROM sync, even across 9 chip power cycles. These did not help:
   - a later start (15 s uptime),

@@ -27,8 +27,17 @@ pidof xr829_bt_up >/dev/null && exit 0
 	timeout 5 $T -p >/dev/null 2>&1
 	for try in 1 2 3; do
 		timeout 25 $T -F 0 -a "$ADDR" 2>/tmp/bt-up.log
-		[ -e /sys/class/bluetooth/hci0 ] && { logger -t bt-up "hci0 up ($ADDR, try $try)"; exit 0; }
+		if [ -e /sys/class/bluetooth/hci0 ]; then
+			# System D-Bus + bluetoothd (apk: dbus bluez). bluetoothd powers hci0
+			# itself (AutoEnable), then bluetoothctl works for scanning/pairing.
+			if [ -x /usr/lib/bluetooth/bluetoothd ]; then
+				mkdir -p /run/dbus
+				dbus-uuidgen --ensure
+				pidof dbus-daemon >/dev/null || dbus-daemon --system
+				pidof bluetoothd >/dev/null || /usr/lib/bluetooth/bluetoothd
+			fi
+			exit 0
+		fi
 		sleep 2
 	done
-	logger -t bt-up "XR829 BT bring-up failed"
 ) >/dev/null 2>&1 </dev/null &

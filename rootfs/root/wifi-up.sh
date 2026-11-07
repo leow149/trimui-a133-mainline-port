@@ -15,3 +15,6 @@ for i in $(seq 1 20); do
 	sleep 1
 done
 udhcpc -i wlan0 -n -q -t 5
+# Sync the clock once per connect and keep the RTC (which persists while the battery is
+# connected) in step. On this LAN any NTP server works: the router redirects NTP to the Pi.
+timeout 15 ntpd -n -q -p 192.168.1.1 >/dev/null 2>&1 && hwclock -w -u

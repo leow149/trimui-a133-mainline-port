@@ -1,0 +1,5 @@
+# Alpine (v3.22) packages added to the device rootfs with `apk add` on top of the base
+# alpine-minirootfs. Reinstall with: apk add $(grep -v '^#' rootfs/apk-packages.txt)
+# (wpa_supplicant, iw, iperf3, dropbear etc. were added earlier outside apk.)
+dbus
+bluez
