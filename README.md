@@ -20,6 +20,7 @@ Not submitted upstream yet.
 | Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
 | Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
 | Wi-Fi | ✅ XR829, WPA2, 20 MHz: 29 Mbit/s receive, 12 Mbit/s send (iperf3); stable MAC address |
+| Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Not yet usable together with Wi-Fi (see below) |
 | Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
 | Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
 | USB | ✅ Device mode with DMA (NCM network: 309 Mbit/s to the host, 154 Mbit/s from it), host mode on the second port |
