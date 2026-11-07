@@ -1,4 +1,4 @@
-From 7dc7116329eb94f329812f8040b5da1a53f64139 Mon Sep 17 00:00:00 2001
+From 18646e28eee2b25544d7aec74d39285d734e1496 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 21:32:09 +0100
 Subject: [PATCH] arm64: dts: allwinner: trimui-smart-pro: Add thermal trips
@@ -18,6 +18,12 @@ that force states 3-4 and 5-6. Give the GPU zone an 88 C passive trip
 
 Same 5-minute load after this change: CPU levels at 83-85 C at 1080 MHz,
 GPU at 83 C. vkmark frame rates are unchanged.
+
+All measurements were taken with the back cover off and the stock SoC
+cooling removed (development setup with UART access). With a temporary
+heatsink on the SoC, the same load reaches CPU 83 C / GPU 80 C at 5 minutes,
+still slowly rising at 1.2-1.32 GHz. Stock-condition behaviour is
+not measured yet.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
