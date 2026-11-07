@@ -1,0 +1,11 @@
+== 
+[  5]   0.00-10.00  sec  2.62 MBytes  2.20 Mbits/sec   39            sender
+[  5]   0.00-10.01  sec  1.88 MBytes  1.57 Mbits/sec                  receiver
+== -R
+[  5]   0.00-10.07  sec  36.0 MBytes  30.0 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  32.4 MBytes  27.2 Mbits/sec                  receiver
+== 
+iperf3: error - unable to connect to server - server may have stopped running or use a different port, firewall issue, etc.: Connection refused
+== -R
+[  5]   0.00-10.13  sec  35.4 MBytes  29.3 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  32.8 MBytes  27.5 Mbits/sec                  receiver

@@ -1,0 +1,12 @@
+== TX 1
+[  5]   0.00-10.00  sec  4.75 MBytes  3.98 Mbits/sec   25            sender
+[  5]   0.00-10.08  sec  4.00 MBytes  3.33 Mbits/sec                  receiver
+== TX 2
+[  5]   0.00-10.00  sec  31.0 MBytes  26.0 Mbits/sec    8            sender
+[  5]   0.00-10.01  sec  30.4 MBytes  25.4 Mbits/sec                  receiver
+== TX 3
+[  5]   0.00-10.00  sec  34.5 MBytes  28.9 Mbits/sec    4            sender
+[  5]   0.00-10.01  sec  33.5 MBytes  28.1 Mbits/sec                  receiver
+== TX 4
+[  5]   0.00-10.00  sec  33.6 MBytes  28.2 Mbits/sec    1            sender
+[  5]   0.00-10.02  sec  32.4 MBytes  27.1 Mbits/sec                  receiver

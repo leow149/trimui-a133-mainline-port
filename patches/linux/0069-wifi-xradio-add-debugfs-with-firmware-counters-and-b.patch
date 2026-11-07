@@ -1,0 +1,254 @@
+From 445326bd78bc15acd0391fb4101b23098f11e91f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 22:19:46 +0100
+Subject: [PATCH 69/69] wifi: xradio: add debugfs with firmware counters and
+ block-ack policy
+
+Add /sys/kernel/debug/xradio/ with:
+  ampdu_counters  firmware TX/RX A-MPDU statistics (clear on read)
+  counters        firmware MAC counters (retries, ACK failures, FCS)
+  block_ack       read back / write the firmware BA TID policy ("tx rx" hex)
+  txstate         hw_bufs_used and per-AC host queue occupancy
+  ampdu_len       write the firmware A-MPDU length limit (MIB 0x000a)
+
+This is what exposed the zero TX block-ack mask and the lack of TX
+aggregation.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/Makefile  |   3 +-
+ drivers/net/wireless/xradio/debugfs.c | 149 ++++++++++++++++++++++++++
+ drivers/net/wireless/xradio/debugfs.h |   7 ++
+ drivers/net/wireless/xradio/main.c    |   3 +
+ drivers/net/wireless/xradio/xradio.h  |   1 +
+ 5 files changed, 162 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/net/wireless/xradio/debugfs.c
+ create mode 100644 drivers/net/wireless/xradio/debugfs.h
+
+diff --git a/drivers/net/wireless/xradio/Makefile b/drivers/net/wireless/xradio/Makefile
+index d2d9f68d1..a5c1edbe7 100644
+--- a/drivers/net/wireless/xradio/Makefile
++++ b/drivers/net/wireless/xradio/Makefile
+@@ -16,7 +16,8 @@ xradio_wlan-y := \
+ 	sdio.o \
+ 	pm.o \
+ 	ht.o \
+-	p2p.o
++	p2p.o \
++	debugfs.o
+ 
+ ccflags-y += -DCONFIG_XRADIO_USE_EXTENSIONS
+ 
+diff --git a/drivers/net/wireless/xradio/debugfs.c b/drivers/net/wireless/xradio/debugfs.c
+new file mode 100644
+index 000000000..3eb74a0a4
+--- /dev/null
++++ b/drivers/net/wireless/xradio/debugfs.c
+@@ -0,0 +1,149 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Minimal debugfs for the XR829 firmware counters (TX/RX A-MPDU statistics,
++ * MAC counters) and the firmware A-MPDU length knob.
++ */
++#include <linux/debugfs.h>
++#include <linux/seq_file.h>
++
++#include "xradio.h"
++#include "wsm.h"
++#include "debugfs.h"
++
++static int xradio_dbg_ampdu_show(struct seq_file *seq, void *v)
++{
++	struct xradio_common *hw_priv = seq->private;
++	struct wsm_ampducounters_table c;
++	int ret = wsm_get_ampducounters_table(hw_priv, &c);
++
++	if (ret)
++		return ret;
++	seq_printf(seq, "tx_ampdus %u\ntx_mpdus_in_ampdus %u\ntx_octets_l32 %u\ntx_octets_h32 %u\n"
++		   "rx_ampdus %u\nrx_mpdus_in_ampdus %u\nrx_octets_l32 %u\nrx_octets_h32 %u\n"
++		   "rx_delim_crc_err %u\nimplicit_bar_fail %u\nexplicit_bar_fail %u\n",
++		   c.countTxAMPDUs, c.countTxMPDUsInAMPDUs, c.countTxOctetsInAMPDUs_l32,
++		   c.countTxOctetsInAMPDUs_h32, c.countRxAMPDUs, c.countRxMPDUsInAMPDUs,
++		   c.countRxOctetsInAMPDUs_l32, c.countRxOctetsInAMPDUs_h32,
++		   c.countRxDelimeterCRCErrorCount, c.countImplictBARFailures,
++		   c.countExplictBARFailures);
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(xradio_dbg_ampdu);
++
++static int xradio_dbg_counters_show(struct seq_file *seq, void *v)
++{
++	struct xradio_common *hw_priv = seq->private;
++	struct wsm_counters_table c;
++	int ret = wsm_get_counters_table(hw_priv, &c);
++
++	if (ret)
++		return ret;
++#define P(n) seq_printf(seq, #n " %u\n", le32_to_cpu(c.count##n))
++	P(PlcpErrors); P(FcsErrors); P(TxPackets); P(RxPackets); P(RxPacketErrors);
++	P(RtsSuccess); P(RtsFailures); P(RxFramesSuccess); P(TxFramesSuccess);
++	P(TxFrameFailures); P(TxFramesRetried); P(TxFramesMultiRetried);
++	P(RxFrameDuplicates); P(AckFailures);
++#undef P
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(xradio_dbg_counters);
++
++static int xradio_dbg_txstate_show(struct seq_file *seq, void *v)
++{
++	struct xradio_common *hw_priv = seq->private;
++	int i;
++
++	seq_printf(seq, "hw_bufs_used %d tx_lock %d wsm_cmd %d", hw_priv->hw_bufs_used,
++		   atomic_read(&hw_priv->tx_lock), !!hw_priv->wsm_cmd.ptr);
++	for (i = 0; i < 4; i++) {
++		struct xradio_queue *q = &hw_priv->tx_queue[i];
++
++		seq_printf(seq, " q%d[queued %zu pending %zu lock %d over %d]", i, q->num_queued,
++			   q->num_pending, q->tx_locked_cnt, q->overfull);
++	}
++	seq_putc(seq, '\n');
++	return 0;
++}
++DEFINE_SHOW_ATTRIBUTE(xradio_dbg_txstate);
++
++static int xradio_dbg_ba_show(struct seq_file *seq, void *v)
++{
++	struct xradio_common *hw_priv = seq->private;
++	u8 val[4] = { };
++	int ret = wsm_read_mib(hw_priv, WSM_MIB_ID_BLOCK_ACK_POLICY, val, 4, 0);
++
++	if (ret)
++		return ret;
++	seq_printf(seq, "tx_tid_mask 0x%02x rx_tid_mask 0x%02x (driver ba_tid_mask 0x%02x)\n",
++		   val[0], val[2], hw_priv->ba_tid_mask);
++	return 0;
++}
++
++static int xradio_dbg_ba_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, xradio_dbg_ba_show, inode->i_private);
++}
++
++/* write "<tx mask> <rx mask>" to set the firmware block ack policy */
++static ssize_t xradio_dbg_ba_write(struct file *file, const char __user *ubuf,
++				   size_t count, loff_t *ppos)
++{
++	struct xradio_common *hw_priv = ((struct seq_file *)file->private_data)->private;
++	char buf[32] = { };
++	unsigned int tx, rx;
++	int ret;
++
++	if (copy_from_user(buf, ubuf, min(count, sizeof(buf) - 1)))
++		return -EFAULT;
++	if (sscanf(buf, "%x %x", &tx, &rx) != 2)
++		return -EINVAL;
++	wsm_lock_tx(hw_priv);
++	ret = wsm_set_block_ack_policy(hw_priv, tx, rx, 0);
++	wsm_unlock_tx(hw_priv);
++	return ret ? ret : count;
++}
++
++static const struct file_operations xradio_dbg_ba_fops = {
++	.open = xradio_dbg_ba_open,
++	.read = seq_read,
++	.write = xradio_dbg_ba_write,
++	.llseek = seq_lseek,
++	.release = single_release,
++};
++
++static ssize_t xradio_dbg_ampdu_len_write(struct file *file, const char __user *ubuf,
++					  size_t count, loff_t *ppos)
++{
++	struct xradio_common *hw_priv = file->private_data;
++	u16 len;
++	int ret = kstrtou16_from_user(ubuf, count, 0, &len);
++
++	if (ret)
++		return ret;
++	ret = wsm_write_mib(hw_priv, WSM_MIB_ID_SET_AMPDU_NUM, &len, sizeof(len), 0);
++	return ret ? ret : count;
++}
++
++static const struct file_operations xradio_dbg_ampdu_len_fops = {
++	.open = simple_open,
++	.write = xradio_dbg_ampdu_len_write,
++	.llseek = default_llseek,
++};
++
++void xradio_debugfs_init(struct xradio_common *hw_priv)
++{
++	struct dentry *d = debugfs_create_dir("xradio", NULL);
++
++	hw_priv->debugfs_dir = d;
++	debugfs_create_file("ampdu_counters", 0444, d, hw_priv, &xradio_dbg_ampdu_fops);
++	debugfs_create_file("counters", 0444, d, hw_priv, &xradio_dbg_counters_fops);
++	debugfs_create_file("block_ack", 0644, d, hw_priv, &xradio_dbg_ba_fops);
++	debugfs_create_file("txstate", 0444, d, hw_priv, &xradio_dbg_txstate_fops);
++	debugfs_create_file("ampdu_len", 0200, d, hw_priv, &xradio_dbg_ampdu_len_fops);
++}
++
++void xradio_debugfs_exit(struct xradio_common *hw_priv)
++{
++	debugfs_remove_recursive(hw_priv->debugfs_dir);
++	hw_priv->debugfs_dir = NULL;
++}
+diff --git a/drivers/net/wireless/xradio/debugfs.h b/drivers/net/wireless/xradio/debugfs.h
+new file mode 100644
+index 000000000..a7aadfef2
+--- /dev/null
++++ b/drivers/net/wireless/xradio/debugfs.h
+@@ -0,0 +1,7 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef XRADIO_DEBUGFS_H
++#define XRADIO_DEBUGFS_H
++struct xradio_common;
++void xradio_debugfs_init(struct xradio_common *hw_priv);
++void xradio_debugfs_exit(struct xradio_common *hw_priv);
++#endif
+diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
+index dd64ec13c..d30e92ff1 100644
+--- a/drivers/net/wireless/xradio/main.c
++++ b/drivers/net/wireless/xradio/main.c
+@@ -19,6 +19,7 @@
+ #include "fwio.h"
+ #include "hwio.h"
+ #include "bh.h"
++#include "debugfs.h"
+ #include "sta.h"
+ #include "ap.h"
+ #include "keys.h"
+@@ -613,6 +614,7 @@ int xradio_core_init(struct sdio_func* func)
+ 		goto err4;
+ 	}
+ 
++	xradio_debugfs_init(hw_priv);
+ 	return err;
+ 
+ err4:
+@@ -631,6 +633,7 @@ void xradio_core_deinit(struct sdio_func* func)
+ {
+ 	struct xradio_common* hw_priv = sdio_get_drvdata(func);
+ 	if (hw_priv) {
++		xradio_debugfs_exit(hw_priv);
+ 		xradio_unregister_common(hw_priv->hw);
+ 		xradio_dev_deinit(hw_priv);
+ 		xradio_unregister_bh(hw_priv);
+diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
+index fa67a6279..3fe7d7b5f 100644
+--- a/drivers/net/wireless/xradio/xradio.h
++++ b/drivers/net/wireless/xradio/xradio.h
+@@ -221,6 +221,7 @@ struct xradio_common {
+ 	atomic_t			bh_term;
+ 	atomic_t			bh_suspend;
+ 	struct task_struct		*bh_thread;
++	struct dentry			*debugfs_dir;
+ 	int				bh_error;
+ 	wait_queue_head_t		bh_wq;
+ 	wait_queue_head_t		bh_evt_wq;
+-- 
+2.56.0
+

@@ -1,0 +1,2475 @@
+# tracer: function_graph
+#
+#     TIME        CPU  DURATION                  FUNCTION CALLS
+#      |          |     |   |                     |   |   |   |
+ 1174.845797 |   1) + 95.667 us   |  xradio_data_write();
+ 1174.845919 |   1) + 26.708 us   |  xradio_data_read();
+ 1174.846030 |   1) + 90.250 us   |  xradio_data_write();
+ 1174.846150 |   1) + 89.291 us   |  xradio_data_write();
+ 1174.846268 |   1) + 94.833 us   |  xradio_data_write();
+ 1174.846391 |   1) ! 100.666 us  |  xradio_data_write();
+ 1174.846486 |   0)   5.708 us    |  xradio_irq_handler();
+ 1174.846539 |   1) + 20.791 us   |  xradio_data_read();
+ 1174.846600 |   1) + 85.125 us   |  xradio_data_write();
+ 1174.846709 |   1) + 84.417 us   |  xradio_data_write();
+ 1174.846815 |   1)               |  xradio_data_write() {
+ 1174.846910 |   3) + 92.709 us   |  } /* xradio_data_write */
+ 1174.846964 |   3)               |  xradio_bh_exchange() {
+ 1174.846990 |   3) + 24.875 us   |    xradio_data_read();
+ 1174.847078 |   3) + 95.541 us   |    xradio_data_write();
+ 1174.847155 |   0)   3.334 us    |  xradio_irq_handler();
+ 1174.847201 |   3) + 29.042 us   |    xradio_data_read();
+ 1174.847351 |   3) ! 386.875 us  |  }
+ 1174.847353 |   3) + 27.042 us   |  xradio_bh_exchange();
+ 1174.847488 |   0)   4.666 us    |  xradio_irq_handler();
+ 1174.847500 |   3)               |  xradio_bh_exchange() {
+ 1174.847531 |   3) + 23.958 us   |    xradio_data_read();
+ 1174.847588 |   3) + 89.167 us   |    xradio_data_write();
+ 1174.847729 |   3) ! 227.959 us  |  }
+ 1174.848039 |   0)   4.542 us    |  xradio_irq_handler();
+ 1174.848057 |   3)               |  xradio_bh_exchange() {
+ 1174.848084 |   3) + 22.542 us   |    xradio_data_read();
+ 1174.848141 |   3) + 88.875 us   |    xradio_data_write();
+ 1174.848233 |   3) + 27.459 us   |    xradio_data_read();
+ 1174.848365 |   3) ! 307.833 us  |  }
+ ------------------------------------------
+ 0)   sleep-613    =>    <idle>-0   
+ ------------------------------------------
+
+ 1174.848710 |   0)   4.541 us    |  xradio_irq_handler();
+ 1174.848723 |   3)               |  xradio_bh_exchange() {
+ 1174.848753 |   3) + 23.041 us   |    xradio_data_read();
+ 1174.848801 |   3) + 87.417 us   |    xradio_data_write();
+ 1174.848935 |   3) ! 212.083 us  |  }
+ 1174.849225 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.849238 |   3)               |  xradio_bh_exchange() {
+ 1174.849264 |   3) + 22.500 us   |    xradio_data_read();
+ 1174.849315 |   3) + 87.792 us   |    xradio_data_write();
+ 1174.849378 |   0)   1.708 us    |  xradio_irq_handler();
+ 1174.849428 |   3) + 26.083 us   |    xradio_data_read();
+ 1174.849520 |   3) ! 280.917 us  |  }
+ 1174.849522 |   3) + 23.959 us   |  xradio_bh_exchange();
+ 1174.849927 |   0)   2.750 us    |  xradio_irq_handler();
+ 1174.849938 |   3)               |  xradio_bh_exchange() {
+ 1174.849964 |   3) + 22.333 us   |    xradio_data_read();
+ 1174.850007 |   3) + 87.458 us   |    xradio_data_write();
+ 1174.850140 |   3) ! 202.625 us  |  }
+ 1174.851301 |   0)   3.666 us    |  xradio_irq_handler();
+ 1174.851315 |   3)               |  xradio_bh_exchange() {
+ 1174.851341 |   3) + 25.875 us   |    xradio_data_read();
+ 1174.851426 |   3) ! 111.250 us  |  }
+ 1174.851850 |   0)   2.875 us    |  xradio_irq_handler();
+ 1174.851861 |   3)               |  xradio_bh_exchange() {
+ 1174.851887 |   3) + 22.875 us   |    xradio_data_read();
+ 1174.851960 |   3) + 87.708 us   |    xradio_data_write();
+ 1174.852095 |   3) ! 233.833 us  |  }
+ 1174.852460 |   0)   2.667 us    |  xradio_irq_handler();
+ 1174.852472 |   3)               |  xradio_bh_exchange() {
+ 1174.852498 |   3) + 22.541 us   |    xradio_data_read();
+ 1174.852550 |   3) + 87.500 us   |    xradio_data_write();
+ 1174.852684 |   3) ! 211.833 us  |  }
+ 1174.853009 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.853020 |   3)               |  xradio_bh_exchange() {
+ 1174.853046 |   3) + 22.375 us   |    xradio_data_read();
+ 1174.853089 |   3) + 87.208 us   |    xradio_data_write();
+ 1174.853179 |   3) + 25.584 us   |    xradio_data_read();
+ 1174.853270 |   3) ! 249.208 us  |  }
+ 1174.853986 |   0)   2.833 us    |  xradio_irq_handler();
+ 1174.853999 |   3)               |  xradio_bh_exchange() {
+ 1174.854025 |   3) + 22.209 us   |    xradio_data_read();
+ 1174.854069 |   3) + 87.417 us   |    xradio_data_write();
+ 1174.854203 |   3) ! 204.375 us  |  }
+ 1174.854444 |   0)   2.750 us    |  xradio_irq_handler();
+ 1174.854454 |   3)               |  xradio_bh_exchange() {
+ 1174.854480 |   3) + 24.208 us   |    xradio_data_read();
+ 1174.854533 |   3) + 87.500 us   |    xradio_data_write();
+ 1174.854623 |   3) + 25.583 us   |    xradio_data_read();
+ 1174.854692 |   3) ! 237.500 us  |  }
+ 1174.855146 |   0)   3.458 us    |  xradio_irq_handler();
+ 1174.855159 |   3)               |  xradio_bh_exchange() {
+ 1174.855186 |   3) + 22.834 us   |    xradio_data_read();
+ 1174.855231 |   3) + 87.375 us   |    xradio_data_write();
+ 1174.855366 |   3) ! 206.792 us  |  }
+ 1174.855542 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.855553 |   3)               |  xradio_bh_exchange() {
+ 1174.855579 |   3) + 22.500 us   |    xradio_data_read();
+ 1174.855632 |   3) + 87.875 us   |    xradio_data_write();
+ 1174.855745 |   3) + 25.750 us   |    xradio_data_read();
+ 1174.855823 |   3) ! 269.542 us  |  }
+ 1174.856122 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.856134 |   3)               |  xradio_bh_exchange() {
+ 1174.856162 |   3) + 22.458 us   |    xradio_data_read();
+ 1174.856205 |   3) + 87.250 us   |    xradio_data_write();
+ 1174.856340 |   3) ! 205.417 us  |  }
+ 1174.856732 |   0)   2.792 us    |  xradio_irq_handler();
+ 1174.856745 |   3)               |  xradio_bh_exchange() {
+ 1174.856771 |   3) + 22.250 us   |    xradio_data_read();
+ 1174.856822 |   3) + 87.792 us   |    xradio_data_write();
+ 1174.856913 |   3) + 25.708 us   |    xradio_data_read();
+ 1174.856982 |   3) ! 236.917 us  |  }
+ 1174.857313 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.857328 |   3)               |  xradio_bh_exchange() {
+ 1174.857356 |   3) + 22.500 us   |    xradio_data_read();
+ 1174.857400 |   3) + 87.750 us   |    xradio_data_write();
+ 1174.857536 |   3) ! 210.916 us  |  }
+ 1174.857861 |   0)   2.791 us    |  xradio_irq_handler();
+ 1174.857874 |   3)               |  xradio_bh_exchange() {
+ 1174.857900 |   3) + 22.333 us   |    xradio_data_read();
+ 1174.857951 |   3) + 87.666 us   |    xradio_data_write();
+ 1174.858045 |   0)   1.584 us    |  xradio_irq_handler();
+ 1174.858065 |   3) + 26.292 us   |    xradio_data_read();
+ 1174.858137 |   3) ! 262.708 us  |  }
+ 1174.858139 |   3) + 25.833 us   |  xradio_bh_exchange();
+ 1174.858625 |   0)   2.917 us    |  xradio_irq_handler();
+ 1174.858636 |   3)               |  xradio_bh_exchange() {
+ 1174.858664 |   3) + 22.875 us   |    xradio_data_read();
+ 1174.858707 |   3) + 87.208 us   |    xradio_data_write();
+ 1174.858878 |   3) ! 242.417 us  |  }
+ ------------------------------------------
+ 0)    <idle>-0    =>   sugov:0-80  
+ ------------------------------------------
+
+ 1174.858963 |   0)   6.000 us    |  xradio_irq_handler();
+ 1174.858981 |   3)               |  xradio_bh_exchange() {
+ 1174.859016 |   3) + 43.375 us   |    xradio_data_read();
+ 1174.859142 |   3) ! 160.459 us  |  }
+ ------------------------------------------
+ 0)   sugov:0-80   =>    <idle>-0   
+ ------------------------------------------
+
+ 1174.859481 |   0)   4.792 us    |  xradio_irq_handler();
+ 1174.859496 |   3)               |  xradio_bh_exchange() {
+ 1174.859538 |   3) + 29.375 us   |    xradio_data_read();
+ 1174.859596 |   3) + 93.208 us   |    xradio_data_write();
+ 1174.859750 |   3) ! 253.125 us  |  }
+ 1174.860091 |   0)   4.209 us    |  xradio_irq_handler();
+ 1174.860108 |   3)               |  xradio_bh_exchange() {
+ 1174.860141 |   3) + 27.500 us   |    xradio_data_read();
+ 1174.860206 |   3) + 92.875 us   |    xradio_data_write();
+ 1174.860361 |   3) ! 252.416 us  |  }
+ 1174.860548 |   0)   3.750 us    |  xradio_irq_handler();
+ 1174.860562 |   3)               |  xradio_bh_exchange() {
+ 1174.860595 |   3) + 31.292 us   |    xradio_data_read();
+ ------------------------------------------
+ 3)   xradio_-93   =>   ksoftir-32  
+ ------------------------------------------
+
+ 1174.860912 |   3) + 15.333 us   |  xradio_tx();
+ 1174.860942 |   3)   5.208 us    |  xradio_tx();
+ 1174.860959 |   3)   4.792 us    |  xradio_tx();
+ 1174.860974 |   3)   4.792 us    |  xradio_tx();
+ 1174.860990 |   3)   4.875 us    |  xradio_tx();
+ 1174.861005 |   3)   4.709 us    |  xradio_tx();
+ 1174.861021 |   3)   4.666 us    |  xradio_tx();
+ 1174.861036 |   3)   4.709 us    |  xradio_tx();
+ 1174.861051 |   3)   4.666 us    |  xradio_tx();
+ 1174.861067 |   3)   4.584 us    |  xradio_tx();
+ 1174.861082 |   3)   4.583 us    |  xradio_tx();
+ 1174.861097 |   3)   4.584 us    |  xradio_tx();
+ 1174.861112 |   3)   4.667 us    |  xradio_tx();
+ 1174.861128 |   3)   4.666 us    |  xradio_tx();
+ 1174.861143 |   3)   4.542 us    |  xradio_tx();
+ 1174.861158 |   3)   4.584 us    |  xradio_tx();
+ 1174.861173 |   3)   4.500 us    |  xradio_tx();
+ 1174.861188 |   3)   4.583 us    |  xradio_tx();
+ 1174.861203 |   3)   4.584 us    |  xradio_tx();
+ 1174.861219 |   3)   4.666 us    |  xradio_tx();
+ 1174.861234 |   3)   4.667 us    |  xradio_tx();
+ 1174.861250 |   3)   4.750 us    |  xradio_tx();
+ 1174.861265 |   3)   4.625 us    |  xradio_tx();
+ 1174.861280 |   3)   4.666 us    |  xradio_tx();
+ 1174.861281 |   0)   2.125 us    |  xradio_irq_handler();
+ 1174.861296 |   3)   4.583 us    |  xradio_tx();
+ 1174.861311 |   3)   4.667 us    |  xradio_tx();
+ 1174.861326 |   3)   4.667 us    |  xradio_tx();
+ 1174.861341 |   3)   4.459 us    |  xradio_tx();
+ 1174.861356 |   3)   4.833 us    |  xradio_tx();
+ 1174.861372 |   3)   4.750 us    |  xradio_tx();
+ 1174.861387 |   3)   4.542 us    |  xradio_tx();
+ 1174.861402 |   3)   7.250 us    |  xradio_tx();
+ ------------------------------------------
+ 3)   ksoftir-32   =>   xradio_-93  
+ ------------------------------------------
+
+ 1174.861457 |   3) ! 894.916 us  |  } /* xradio_bh_exchange */
+ 1174.861460 |   3)               |  xradio_bh_exchange() {
+ 1174.861507 |   3) + 29.125 us   |    xradio_data_read();
+ 1174.861572 |   3) + 93.625 us   |    xradio_data_write();
+ 1174.861677 |   0)   2.000 us    |  xradio_irq_handler();
+ 1174.861701 |   3) + 27.667 us   |    xradio_data_read();
+ 1174.861775 |   3) + 97.791 us   |    xradio_data_write();
+ 1174.861931 |   3) ! 470.041 us  |  }
+ 1174.861934 |   3) + 31.000 us   |  xradio_bh_exchange();
+ 1174.862165 |   0)   3.708 us    |  xradio_irq_handler();
+ 1174.862180 |   3)               |  xradio_bh_exchange() {
+ 1174.862216 |   3) + 30.208 us   |    xradio_data_read();
+ 1174.862275 |   3) + 93.000 us   |    xradio_data_write();
+ 1174.862372 |   3) + 31.416 us   |    xradio_data_read();
+ 1174.862491 |   3) ! 310.708 us  |  }
+ 1174.862654 |   0)   3.708 us    |  xradio_irq_handler();
+ 1174.862668 |   3)               |  xradio_bh_exchange() {
+ 1174.862703 |   3) + 27.583 us   |    xradio_data_read();
+ 1174.862758 |   3) ! 130.084 us  |    xradio_data_write();
+ 1174.862954 |   3) ! 285.292 us  |  }
+ 1174.863234 |   0)   4.834 us    |  xradio_irq_handler();
+ 1174.863249 |   3)               |  xradio_bh_exchange() {
+ 1174.863283 |   3) + 27.625 us   |    xradio_data_read();
+ 1174.863354 |   3) + 95.000 us   |    xradio_data_write();
+ 1174.863482 |   3) + 31.375 us   |    xradio_data_read();
+ 1174.863579 |   3) ! 328.792 us  |  }
+ 1174.863875 |   0)   4.000 us    |  xradio_irq_handler();
+ 1174.863890 |   3)               |  xradio_bh_exchange() {
+ 1174.863927 |   3) + 31.250 us   |    xradio_data_read();
+ 1174.863986 |   3) + 93.667 us   |    xradio_data_write();
+ 1174.864142 |   3) ! 251.458 us  |  }
+ 1174.864424 |   0)   4.292 us    |  xradio_irq_handler();
+ 1174.864438 |   3)               |  xradio_bh_exchange() {
+ 1174.864472 |   3) + 30.208 us   |    xradio_data_read();
+ 1174.864539 |   3) + 93.125 us   |    xradio_data_write();
+ 1174.864636 |   3) + 31.375 us   |    xradio_data_read();
+ 1174.864727 |   3) ! 288.041 us  |  }
+ 1174.865187 |   0)   4.000 us    |  xradio_irq_handler();
+ 1174.865202 |   3)               |  xradio_bh_exchange() {
+ 1174.865239 |   3) + 28.042 us   |    xradio_data_read();
+ 1174.865293 |   3) + 93.500 us   |    xradio_data_write();
+ 1174.865449 |   3) ! 246.083 us  |  }
+ 1174.865705 |   0)   3.792 us    |  xradio_irq_handler();
+ 1174.865722 |   3)               |  xradio_bh_exchange() {
+ 1174.865756 |   3) + 27.667 us   |    xradio_data_read();
+ 1174.865820 |   3) + 93.167 us   |    xradio_data_write();
+ 1174.865916 |   3) + 31.083 us   |    xradio_data_read();
+ 1174.866006 |   3) ! 283.541 us  |  }
+ 1174.866224 |   0)   3.959 us    |  xradio_irq_handler();
+ 1174.866240 |   3)               |  xradio_bh_exchange() {
+ 1174.866276 |   3) + 27.791 us   |    xradio_data_read();
+ 1174.866329 |   3) + 92.875 us   |    xradio_data_write();
+ 1174.866486 |   3) ! 246.167 us  |  }
+ 1174.866621 |   0)   3.750 us    |  xradio_irq_handler();
+ 1174.866635 |   3)               |  xradio_bh_exchange() {
+ 1174.866669 |   3) + 27.250 us   |    xradio_data_read();
+ 1174.866736 |   3) + 93.791 us   |    xradio_data_write();
+ 1174.866773 |   0)   1.917 us    |  xradio_irq_handler();
+ 1174.866881 |   3) + 32.708 us   |    xradio_data_read();
+ 1174.866973 |   3) ! 337.875 us  |  }
+ 1174.866976 |   3) + 36.542 us   |  xradio_bh_exchange();
+ 1174.867201 |   0)   4.708 us    |  xradio_irq_handler();
+ 1174.867216 |   3)               |  xradio_bh_exchange() {
+ 1174.867252 |   3) + 27.792 us   |    xradio_data_read();
+ 1174.867306 |   3) + 93.167 us   |    xradio_data_write();
+ 1174.867462 |   3) ! 245.042 us  |  }
+ 1174.877792 |   0)   4.625 us    |  xradio_irq_handler();
+ 1174.877816 |   3)               |  xradio_bh_exchange() {
+ 1174.877855 |   3) + 32.750 us   |    xradio_data_read();
+ 1174.877978 |   3) ! 162.084 us  |  }
+ 1174.878493 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.878510 |   3)               |  xradio_bh_exchange() {
+ 1174.878546 |   3) + 28.208 us   |    xradio_data_read();
+ 1174.878605 |   3) + 93.625 us   |    xradio_data_write();
+ 1174.878764 |   3) ! 253.291 us  |  }
+ 1174.879255 |   0)   3.875 us    |  xradio_irq_handler();
+ 1174.879274 |   3)               |  xradio_bh_exchange() {
+ 1174.879311 |   3) + 28.250 us   |    xradio_data_read();
+ 1174.879377 |   3) + 93.958 us   |    xradio_data_write();
+ 1174.879537 |   3) ! 262.667 us  |  }
+ 1174.880476 |   0)   3.750 us    |  xradio_irq_handler();
+ 1174.880490 |   3)               |  xradio_bh_exchange() {
+ 1174.880525 |   3) + 31.625 us   |    xradio_data_read();
+ 1174.880620 |   3) ! 129.916 us  |  }
+ 1174.880934 |   0)   3.959 us    |  xradio_irq_handler();
+ 1174.880950 |   3)               |  xradio_bh_exchange() {
+ 1174.880984 |   3) + 28.750 us   |    xradio_data_read();
+ 1174.881041 |   3) + 93.500 us   |    xradio_data_write();
+ 1174.881191 |   3) ! 240.166 us  |  }
+ 1174.881330 |   0)   3.750 us    |  xradio_irq_handler();
+ 1174.881345 |   3)               |  xradio_bh_exchange() {
+ 1174.881376 |   3) + 28.167 us   |    xradio_data_read();
+ 1174.881442 |   3) + 93.500 us   |    xradio_data_write();
+ 1174.881594 |   3) ! 248.709 us  |  }
+ 1174.881910 |   0)   3.750 us    |  xradio_irq_handler();
+ 1174.881927 |   3)               |  xradio_bh_exchange() {
+ 1174.881958 |   3) + 27.958 us   |    xradio_data_read();
+ 1174.882012 |   3) + 93.375 us   |    xradio_data_write();
+ 1174.882111 |   3) + 31.917 us   |    xradio_data_read();
+ 1174.882218 |   3) ! 290.833 us  |  }
+ 1174.882429 |   0)   4.000 us    |  xradio_irq_handler();
+ 1174.882444 |   3)               |  xradio_bh_exchange() {
+ 1174.882476 |   3) + 28.584 us   |    xradio_data_read();
+ 1174.882531 |   3) + 93.250 us   |    xradio_data_write();
+ 1174.882682 |   3) ! 237.875 us  |  }
+ 1174.882918 |   0)   3.833 us    |  xradio_irq_handler();
+ 1174.882939 |   3)               |  xradio_bh_exchange() {
+ 1174.882971 |   3) + 28.125 us   |    xradio_data_read();
+ 1174.883038 |   3) + 93.584 us   |    xradio_data_write();
+ 1174.883135 |   3) + 31.625 us   |    xradio_data_read();
+ 1174.883249 |   3) ! 310.125 us  |  }
+ 1174.883530 |   0)   7.334 us    |  xradio_irq_handler();
+ 1174.883552 |   3)               |  xradio_bh_exchange() {
+ 1174.883596 |   3) + 36.209 us   |    xradio_data_read();
+ 1174.883668 |   3) ! 101.083 us  |    xradio_data_write();
+ 1174.883844 |   3) ! 291.583 us  |  }
+ 1174.884049 |   0)   6.833 us    |  xradio_irq_handler();
+ 1174.884071 |   3)               |  xradio_bh_exchange() {
+ 1174.884112 |   3) + 35.584 us   |    xradio_data_read();
+ 1174.884198 |   3) ! 103.125 us  |    xradio_data_write();
+ 1174.884306 |   3) + 38.834 us   |    xradio_data_read();
+ 1174.884432 |   3) ! 360.750 us  |  }
+ 1174.884689 |   0)   6.125 us    |  xradio_irq_handler();
+ 1174.884711 |   3)               |  xradio_bh_exchange() {
+ 1174.884757 |   3) + 35.416 us   |    xradio_data_read();
+ 1174.884828 |   3) ! 100.500 us  |    xradio_data_write();
+ 1174.885002 |   3) ! 290.916 us  |  }
+ 1174.885146 |   0)   5.208 us    |  xradio_irq_handler();
+ 1174.885169 |   3)               |  xradio_bh_exchange() {
+ 1174.885210 |   3) + 35.583 us   |    xradio_data_read();
+ 1174.885296 |   3) ! 101.125 us  |    xradio_data_write();
+ 1174.885469 |   3) ! 300.375 us  |  }
+ 1174.885604 |   0)   4.958 us    |  xradio_irq_handler();
+ 1174.885623 |   3)               |  xradio_bh_exchange() {
+ 1174.885663 |   3) + 35.625 us   |    xradio_data_read();
+ 1174.885733 |   3) ! 100.667 us  |    xradio_data_write();
+ 1174.885838 |   3) + 38.459 us   |    xradio_data_read();
+ 1174.885977 |   3) ! 353.375 us  |  }
+ 1174.886153 |   0)   4.959 us    |  xradio_irq_handler();
+ 1174.886172 |   3)               |  xradio_bh_exchange() {
+ 1174.886218 |   3) + 38.375 us   |    xradio_data_read();
+ 1174.886292 |   3) ! 100.500 us  |    xradio_data_write();
+ 1174.886469 |   3) ! 296.292 us  |  }
+ 1174.886763 |   0)   5.084 us    |  xradio_irq_handler();
+ 1174.886783 |   3)               |  xradio_bh_exchange() {
+ 1174.886824 |   3) + 61.916 us   |    xradio_data_read();
+ 1174.886937 |   3) ! 104.542 us  |    xradio_data_write();
+ 1174.887046 |   3) + 40.250 us   |    xradio_data_read();
+ 1174.887167 |   3) ! 383.917 us  |  }
+ 1174.887284 |   0)   6.250 us    |  xradio_irq_handler();
+ 1174.887305 |   3)               |  xradio_bh_exchange() {
+ 1174.887350 |   3) + 39.750 us   |    xradio_data_read();
+ 1174.887427 |   3) ! 101.958 us  |    xradio_data_write();
+ 1174.887605 |   3) ! 298.792 us  |  }
+ 1174.887924 |   0)   5.167 us    |  xradio_irq_handler();
+ 1174.887943 |   3)               |  xradio_bh_exchange() {
+ 1174.887985 |   3) + 36.542 us   |    xradio_data_read();
+ 1174.888071 |   3) ! 101.541 us  |    xradio_data_write();
+ 1174.888177 |   3) + 39.208 us   |    xradio_data_read();
+ 1174.888298 |   3) ! 354.209 us  |  }
+ 1174.888473 |   0)   5.750 us    |  xradio_irq_handler();
+ 1174.888498 |   3)               |  xradio_bh_exchange() {
+ 1174.888545 |   3) + 35.834 us   |    xradio_data_read();
+ 1174.888622 |   3) ! 101.459 us  |    xradio_data_write();
+ 1174.888800 |   3) ! 301.541 us  |  }
+ 1174.889022 |   0)   5.125 us    |  xradio_irq_handler();
+ 1174.889041 |   3)               |  xradio_bh_exchange() {
+ 1174.889083 |   3) + 36.041 us   |    xradio_data_read();
+ 1174.889168 |   3) ! 101.833 us  |    xradio_data_write();
+ 1174.889275 |   3) + 39.958 us   |    xradio_data_read();
+ 1174.889416 |   3) ! 374.250 us  |  }
+ 1174.889541 |   0)   5.125 us    |  xradio_irq_handler();
+ 1174.889561 |   3)               |  xradio_bh_exchange() {
+ 1174.889605 |   3) + 39.542 us   |    xradio_data_read();
+ 1174.889682 |   3) + 13.041 us   |    xradio_tx();
+ 1174.889705 |   3)   6.125 us    |    xradio_tx();
+ 1174.889720 |   3)   5.833 us    |    xradio_tx();
+ 1174.889766 |   3) ! 102.208 us  |    xradio_data_write();
+ 1174.889946 |   3) ! 384.917 us  |  }
+ 1174.889950 |   3) + 38.917 us   |  xradio_bh_exchange();
+ 1174.890121 |   0)   5.167 us    |  xradio_irq_handler();
+ 1174.890139 |   3)               |  xradio_bh_exchange() {
+ 1174.890185 |   3) + 39.750 us   |    xradio_data_read();
+ 1174.890324 |   3) ! 183.584 us  |  }
+ 1174.890853 |   0)   5.292 us    |  xradio_irq_handler();
+ 1174.890896 |   3)               |  xradio_bh_exchange() {
+ 1174.890944 |   3) + 38.500 us   |    xradio_data_read();
+ 1174.891018 |   3) ! 101.417 us  |    xradio_data_write();
+ 1174.891123 |   3) + 39.166 us   |    xradio_data_read();
+ 1174.891267 |   3) ! 371.125 us  |  }
+ 1174.891402 |   0)   5.000 us    |  xradio_irq_handler();
+ 1174.891422 |   3)               |  xradio_bh_exchange() {
+ 1174.891466 |   3) + 36.541 us   |    xradio_data_read();
+ 1174.891538 |   3) ! 101.583 us  |    xradio_data_write();
+ 1174.891717 |   3) ! 295.167 us  |  }
+ 1174.892013 |   0)   5.083 us    |  xradio_irq_handler();
+ 1174.892035 |   3)               |  xradio_bh_exchange() {
+ 1174.892077 |   3) + 36.250 us   |    xradio_data_read();
+ 1174.892163 |   3) ! 101.917 us  |    xradio_data_write();
+ 1174.892343 |   3) ! 307.375 us  |  }
+ 1174.892623 |   0)   5.083 us    |  xradio_irq_handler();
+ 1174.892642 |   3)               |  xradio_bh_exchange() {
+ 1174.892685 |   3) + 36.167 us   |    xradio_data_read();
+ 1174.892756 |   3) ! 101.834 us  |    xradio_data_write();
+ 1174.892863 |   3) + 39.750 us   |    xradio_data_read();
+ 1174.893009 |   3) ! 366.333 us  |  }
+ 1174.893111 |   0)   5.208 us    |  xradio_irq_handler();
+ 1174.893135 |   3)               |  xradio_bh_exchange() {
+ 1174.893180 |   3) + 39.292 us   |    xradio_data_read();
+ 1174.893256 |   3) ! 101.291 us  |    xradio_data_write();
+ 1174.893435 |   3) ! 300.250 us  |  }
+ 1174.893783 |   0)   5.125 us    |  xradio_irq_handler();
+ 1174.893802 |   3)               |  xradio_bh_exchange() {
+ 1174.893845 |   3) + 36.333 us   |    xradio_data_read();
+ 1174.893930 |   3) ! 101.583 us  |    xradio_data_write();
+ 1174.894113 |   3) ! 310.542 us  |  }
+ 1174.894332 |   0)   5.000 us    |  xradio_irq_handler();
+ 1174.894354 |   3)               |  xradio_bh_exchange() {
+ 1174.894397 |   3) + 35.417 us   |    xradio_data_read();
+ 1174.894467 |   3) ! 102.042 us  |    xradio_data_write();
+ 1174.894648 |   3) ! 293.916 us  |  }
+ 1174.895705 |   0)   5.042 us    |  xradio_irq_handler();
+ 1174.895734 |   3)               |  xradio_bh_exchange() {
+ 1174.895779 |   3) + 36.125 us   |    xradio_data_read();
+ 1174.895866 |   3) ! 101.959 us  |    xradio_data_write();
+ 1174.896047 |   3) ! 312.916 us  |  }
+ 1174.896255 |   0)   5.083 us    |  xradio_irq_handler();
+ 1174.896274 |   3)               |  xradio_bh_exchange() {
+ 1174.896316 |   3) + 35.917 us   |    xradio_data_read();
+ 1174.896439 |   1) ! 164.416 us  |  } /* xradio_bh_exchange */
+ 1174.896682 |   0)   5.208 us    |  xradio_irq_handler();
+ 1174.896703 |   1)               |  xradio_bh_exchange() {
+ 1174.896751 |   1) + 40.250 us   |    xradio_data_read();
+ 1174.897048 |   1) + 13.417 us   |    xradio_tx();
+ 1174.897080 |   1)   6.959 us    |    xradio_tx();
+ 1174.897102 |   1)   6.625 us    |    xradio_tx();
+ 1174.897124 |   1)   6.250 us    |    xradio_tx();
+ 1174.897144 |   1)   6.125 us    |    xradio_tx();
+ 1174.897165 |   1)   6.292 us    |    xradio_tx();
+ 1174.897186 |   1)   6.125 us    |    xradio_tx();
+ 1174.897201 |   0)   2.750 us    |  xradio_irq_handler();
+ 1174.897207 |   1)   5.958 us    |    xradio_tx();
+ 1174.897227 |   1)   6.333 us    |    xradio_tx();
+ 1174.897248 |   1)   6.333 us    |    xradio_tx();
+ 1174.897269 |   1)   6.291 us    |    xradio_tx();
+ 1174.897290 |   1)   6.083 us    |    xradio_tx();
+ 1174.897310 |   1)   6.125 us    |    xradio_tx();
+ 1174.897330 |   1)   6.167 us    |    xradio_tx();
+ 1174.897351 |   1)   6.375 us    |    xradio_tx();
+ 1174.897371 |   1)   6.167 us    |    xradio_tx();
+ 1174.897392 |   1)   6.166 us    |    xradio_tx();
+ 1174.897412 |   1)   6.333 us    |    xradio_tx();
+ 1174.897433 |   1)   6.166 us    |    xradio_tx();
+ 1174.897453 |   1)   6.208 us    |    xradio_tx();
+ 1174.897474 |   1)   6.209 us    |    xradio_tx();
+ 1174.897495 |   1)   6.167 us    |    xradio_tx();
+ 1174.897515 |   1)   6.250 us    |    xradio_tx();
+ 1174.897535 |   1)   6.208 us    |    xradio_tx();
+ 1174.897619 |   1) + 41.542 us   |    xradio_data_read();
+ 1174.897724 |   1) ! 102.875 us  |    xradio_data_write();
+ 1174.897831 |   1) + 43.917 us   |    xradio_data_read();
+ 1174.897974 |   1) ! 108.417 us  |    xradio_data_write();
+ 1174.897994 |   0)   2.916 us    |  xradio_irq_handler();
+ 1174.898127 |   1) + 36.791 us   |    xradio_data_read();
+ 1174.898220 |   1) ! 102.167 us  |    xradio_data_write();
+ 1174.898361 |   0)   2.958 us    |  xradio_irq_handler();
+ 1174.898365 |   1) + 36.666 us   |    xradio_data_read();
+ 1174.898440 |   1) ! 101.167 us  |    xradio_data_write();
+ 1174.898575 |   0)   2.792 us    |  xradio_irq_handler();
+ 1174.898583 |   1) + 40.375 us   |    xradio_data_read();
+ 1174.898729 |   1) # 2026.458 us |  }
+ 1174.898733 |   1) + 40.833 us   |  xradio_bh_exchange();
+ 1174.899093 |   0)   5.458 us    |  xradio_irq_handler();
+ 1174.899113 |   1)               |  xradio_bh_exchange() {
+ 1174.899158 |   1) + 35.917 us   |    xradio_data_read();
+ 1174.899231 |   1) ! 105.375 us  |    xradio_data_write();
+ 1174.899416 |   1) ! 302.625 us  |  }
+ 1174.899520 |   0)   5.125 us    |  xradio_irq_handler();
+ 1174.899539 |   1)               |  xradio_bh_exchange() {
+ 1174.899582 |   1) + 36.375 us   |    xradio_data_read();
+ 1174.899668 |   1) ! 102.167 us  |    xradio_data_write();
+ 1174.899775 |   1) + 39.083 us   |    xradio_data_read();
+ 1174.899892 |   1) ! 352.167 us  |  }
+ 1174.900131 |   0)   5.334 us    |  xradio_irq_handler();
+ 1174.900152 |   1)               |  xradio_bh_exchange() {
+ 1174.900198 |   1) + 36.542 us   |    xradio_data_read();
+ 1174.900269 |   1) ! 101.250 us  |    xradio_data_write();
+ 1174.900452 |   1) ! 299.959 us  |  }
+ 1174.901046 |   0)   5.166 us    |  xradio_irq_handler();
+ 1174.901065 |   1)               |  xradio_bh_exchange() {
+ 1174.901116 |   1) + 42.542 us   |    xradio_data_read();
+ 1174.901255 |   1) ! 189.500 us  |  }
+ 1174.906513 |   0) + 10.625 us   |  xradio_irq_handler();
+ 1174.906558 |   1)               |  xradio_bh_exchange() {
+ 1174.906625 |   1) + 50.083 us   |    xradio_data_read();
+ 1174.906779 |   1) ! 137.125 us  |    xradio_data_write();
+ 1174.907033 |   1) ! 473.750 us  |  }
+ 1174.907184 |   0)   9.042 us    |  xradio_irq_handler();
+ 1174.907212 |   1)               |  xradio_bh_exchange() {
+ 1174.907273 |   1) + 50.042 us   |    xradio_data_read();
+ 1174.907398 |   1) ! 117.375 us  |    xradio_data_write();
+ 1174.907576 |   1) + 48.875 us   |    xradio_data_read();
+ 1174.907676 |   1) ! 115.291 us  |    xradio_data_write();
+ 1174.907902 |   1) ! 689.292 us  |  }
+ 1174.908190 |   0)   7.708 us    |  xradio_irq_handler();
+ 1174.908223 |   1)               |  xradio_bh_exchange() {
+ 1174.908286 |   1) + 54.833 us   |    xradio_data_read();
+ 1174.908531 |   1) ! 307.458 us  |  }
+ 1174.908647 |   0)   7.750 us    |  xradio_irq_handler();
+ 1174.908676 |   1)               |  xradio_bh_exchange() {
+ 1174.908740 |   1) + 48.916 us   |    xradio_data_read();
+ 1174.908840 |   1) ! 115.875 us  |    xradio_data_write();
+ 1174.909067 |   1) ! 390.584 us  |  }
+ 1174.909288 |   0)   7.750 us    |  xradio_irq_handler();
+ 1174.909321 |   1)               |  xradio_bh_exchange() {
+ 1174.909382 |   1) + 51.916 us   |    xradio_data_read();
+ 1174.909506 |   1) ! 116.375 us  |    xradio_data_write();
+ 1174.909629 |   1) + 53.125 us   |    xradio_data_read();
+ 1174.909811 |   1) ! 489.667 us  |  }
+ 1174.909991 |   0)   8.125 us    |  xradio_irq_handler();
+ 1174.910022 |   1)               |  xradio_bh_exchange() {
+ 1174.910088 |   1) + 49.750 us   |    xradio_data_read();
+ 1174.910188 |   1) ! 120.459 us  |    xradio_data_write();
+ 1174.910423 |   1) ! 400.250 us  |  }
+ 1174.910631 |   0)   7.792 us    |  xradio_irq_handler();
+ 1174.910660 |   1)               |  xradio_bh_exchange() {
+ 1174.910722 |   1) + 49.958 us   |    xradio_data_read();
+ 1174.910888 |   1) ! 118.292 us  |    xradio_data_write();
+ 1174.911013 |   1) + 53.125 us   |    xradio_data_read();
+ 1174.911155 |   1) + 51.500 us   |    xradio_data_read();
+ 1174.911356 |   1) ! 695.583 us  |  }
+ 1174.911608 |   0)   8.875 us    |  xradio_irq_handler();
+ 1174.911643 |   1)               |  xradio_bh_exchange() {
+ 1174.911709 |   1) + 50.209 us   |    xradio_data_read();
+ 1174.911814 |   1) ! 115.958 us  |    xradio_data_write();
+ 1174.912044 |   1) ! 400.292 us  |  }
+ 1174.912188 |   0)   7.500 us    |  xradio_irq_handler();
+ 1174.912215 |   1)               |  xradio_bh_exchange() {
+ 1174.912278 |   1) + 49.208 us   |    xradio_data_read();
+ 1174.912401 |   1) ! 115.708 us  |    xradio_data_write();
+ 1174.912630 |   1) ! 413.583 us  |  }
+ 1174.912797 |   0)   7.541 us    |  xradio_irq_handler();
+ 1174.912830 |   1)               |  xradio_bh_exchange() {
+ 1174.912893 |   1) + 52.708 us   |    xradio_data_read();
+ 1174.912998 |   1) ! 115.500 us  |    xradio_data_write();
+ 1174.913235 |   1) ! 403.917 us  |  }
+ 1174.913286 |   0)   7.500 us    |  xradio_irq_handler();
+ 1174.913314 |   1)               |  xradio_bh_exchange() {
+ 1174.913376 |   1) + 49.584 us   |    xradio_data_read();
+ 1174.913507 |   1) ! 116.875 us  |    xradio_data_write();
+ 1174.913739 |   1) ! 424.500 us  |  }
+ 1174.913896 |   0)   7.459 us    |  xradio_irq_handler();
+ 1174.913928 |   1)               |  xradio_bh_exchange() {
+ 1174.913991 |   1) + 49.750 us   |    xradio_data_read();
+ 1174.914091 |   1) ! 116.125 us  |    xradio_data_write();
+ 1174.914323 |   1) ! 394.583 us  |  }
+ 1174.914507 |   0)   7.583 us    |  xradio_irq_handler();
+ 1174.914535 |   1)               |  xradio_bh_exchange() {
+ 1174.914598 |   1) + 48.542 us   |    xradio_data_read();
+ 1174.914718 |   1) ! 115.500 us  |    xradio_data_write();
+ 1174.914872 |   0)   4.166 us    |  xradio_irq_handler();
+ 1174.914947 |   1) + 50.167 us   |    xradio_data_read();
+ 1174.915048 |   1) ! 120.209 us  |    xradio_data_write();
+ 1174.915286 |   1) ! 750.958 us  |  }
+ 1174.915292 |   1) + 59.000 us   |  xradio_bh_exchange();
+ 1174.915514 |   0)   7.625 us    |  xradio_irq_handler();
+ 1174.915542 |   1)               |  xradio_bh_exchange() {
+ 1174.915604 |   1) + 49.958 us   |    xradio_data_read();
+ 1174.915729 |   1) ! 116.291 us  |    xradio_data_write();
+ 1174.915849 |   0)   4.167 us    |  xradio_irq_handler();
+ 1174.915909 |   1) + 48.959 us   |    xradio_data_read();
+ 1174.916009 |   1) ! 114.875 us  |    xradio_data_write();
+ 1174.916239 |   1) ! 697.167 us  |  }
+ 1174.916245 |   1) + 63.375 us   |  xradio_bh_exchange();
+ 1174.916460 |   0)   7.666 us    |  xradio_irq_handler();
+ 1174.916488 |   1)               |  xradio_bh_exchange() {
+ 1174.916551 |   1) + 48.958 us   |    xradio_data_read();
+ 1174.916673 |   1) ! 115.750 us  |    xradio_data_write();
+ 1174.916905 |   1) ! 416.458 us  |  }
+ 1174.917100 |   0)   7.458 us    |  xradio_irq_handler();
+ 1174.917132 |   1)               |  xradio_bh_exchange() {
+ 1174.917195 |   1) + 49.125 us   |    xradio_data_read();
+ 1174.917382 |   3) ! 252.791 us  |  }
+ 1174.917467 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.917496 |   3)               |  xradio_bh_exchange() {
+ 1174.917570 |   3) + 50.500 us   |    xradio_data_read();
+ 1174.917753 |   3) ! 256.583 us  |  }
+ 1174.918169 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.918197 |   3)               |  xradio_bh_exchange() {
+ 1174.918264 |   3) + 50.125 us   |    xradio_data_read();
+ 1174.918411 |   3) ! 213.292 us  |  }
+ 1174.918871 |   0)   8.334 us    |  xradio_irq_handler();
+ 1174.918911 |   3)               |  xradio_bh_exchange() {
+ 1174.918978 |   3) + 50.208 us   |    xradio_data_read();
+ 1174.919159 |   3) ! 246.875 us  |  }
+ 1174.919481 |   0)   7.833 us    |  xradio_irq_handler();
+ 1174.919510 |   3)               |  xradio_bh_exchange() {
+ 1174.919576 |   3) + 49.208 us   |    xradio_data_read();
+ 1174.919723 |   3) ! 212.000 us  |  }
+ 1174.919847 |   0)   7.959 us    |  xradio_irq_handler();
+ 1174.919882 |   3)               |  xradio_bh_exchange() {
+ 1174.919949 |   3) + 50.084 us   |    xradio_data_read();
+ 1174.920126 |   3) ! 243.458 us  |  }
+ 1174.920457 |   0)   7.584 us    |  xradio_irq_handler();
+ 1174.920486 |   3)               |  xradio_bh_exchange() {
+ 1174.920552 |   3) + 49.667 us   |    xradio_data_read();
+ 1174.920699 |   3) ! 211.500 us  |  }
+ 1174.920915 |   0)   8.041 us    |  xradio_irq_handler();
+ 1174.920950 |   3)               |  xradio_bh_exchange() {
+ 1174.921017 |   3) + 50.000 us   |    xradio_data_read();
+ 1174.921202 |   3) ! 251.208 us  |  }
+ 1174.921403 |   0)   7.584 us    |  xradio_irq_handler();
+ 1174.921431 |   3)               |  xradio_bh_exchange() {
+ 1174.921497 |   3) + 49.083 us   |    xradio_data_read();
+ 1174.921643 |   3) ! 210.459 us  |  }
+ 1174.921831 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.921861 |   3)               |  xradio_bh_exchange() {
+ 1174.921927 |   3) + 57.792 us   |    xradio_data_read();
+ 1174.922121 |   3) ! 258.583 us  |  }
+ 1174.922380 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.922409 |   3)               |  xradio_bh_exchange() {
+ 1174.922475 |   3) + 49.083 us   |    xradio_data_read();
+ 1174.922621 |   3) ! 211.667 us  |  }
+ 1174.922961 |   0)   7.875 us    |  xradio_irq_handler();
+ 1174.922998 |   3)               |  xradio_bh_exchange() {
+ 1174.923066 |   3) + 49.542 us   |    xradio_data_read();
+ 1174.923254 |   3) ! 254.625 us  |  }
+ 1174.923570 |   0)   7.667 us    |  xradio_irq_handler();
+ 1174.923599 |   3)               |  xradio_bh_exchange() {
+ 1174.923666 |   3) + 49.292 us   |    xradio_data_read();
+ 1174.923812 |   3) ! 212.375 us  |  }
+ 1174.924029 |   0)   9.959 us    |  xradio_irq_handler();
+ 1174.924061 |   3)               |  xradio_bh_exchange() {
+ 1174.924128 |   3) + 49.500 us   |    xradio_data_read();
+ 1174.924303 |   3) ! 241.584 us  |  }
+ 1174.924424 |   0)   7.875 us    |  xradio_irq_handler();
+ 1174.924457 |   3)               |  xradio_bh_exchange() {
+ 1174.924525 |   3) + 49.375 us   |    xradio_data_read();
+ 1174.924671 |   3) ! 213.750 us  |  }
+ 1174.924853 |   0)   9.334 us    |  xradio_irq_handler();
+ 1174.924884 |   3)               |  xradio_bh_exchange() {
+ 1174.924950 |   3) + 49.041 us   |    xradio_data_read();
+ 1174.925138 |   3) ! 252.875 us  |  }
+ 1174.925492 |   0)   7.625 us    |  xradio_irq_handler();
+ 1174.925526 |   3)               |  xradio_bh_exchange() {
+ 1174.925594 |   3) + 49.375 us   |    xradio_data_read();
+ 1174.925741 |   3) ! 214.834 us  |  }
+ 1174.926105 |   0) + 11.083 us   |  xradio_irq_handler();
+ 1174.926136 |   3)               |  xradio_bh_exchange() {
+ 1174.926203 |   3) + 48.917 us   |    xradio_data_read();
+ 1174.926377 |   3) ! 240.625 us  |  }
+ 1174.926529 |   0)   7.583 us    |  xradio_irq_handler();
+ 1174.926557 |   3)               |  xradio_bh_exchange() {
+ 1174.926623 |   3) + 58.417 us   |    xradio_data_read();
+ 1174.926779 |   3) ! 220.416 us  |  }
+ 1174.926835 |   0)   7.833 us    |  xradio_irq_handler();
+ 1174.926896 |   3)               |  xradio_bh_exchange() {
+ 1174.926969 |   3) + 93.583 us   |    xradio_data_read();
+ 1174.927348 |   3) + 75.708 us   |    xradio_data_read();
+ 1174.927477 |   0)   5.334 us    |  xradio_irq_handler();
+ 1174.927673 |   3) + 54.583 us   |    xradio_data_read();
+ 1174.927805 |   3) + 58.167 us   |    xradio_data_read();
+ 1174.928100 |   3) + 19.625 us   |    xradio_tx();
+ 1174.928145 |   3) + 10.291 us   |    xradio_tx();
+ 1174.928148 |   0)   4.542 us    |  xradio_irq_handler();
+ 1174.928178 |   3)   9.209 us    |    xradio_tx();
+ 1174.928209 |   3)   9.208 us    |    xradio_tx();
+ 1174.928240 |   3)   9.291 us    |    xradio_tx();
+ 1174.928270 |   3)   9.125 us    |    xradio_tx();
+ 1174.928301 |   3)   8.792 us    |    xradio_tx();
+ 1174.928332 |   3)   9.000 us    |    xradio_tx();
+ 1174.928362 |   3)   8.666 us    |    xradio_tx();
+ 1174.928393 |   3)   9.041 us    |    xradio_tx();
+ 1174.928423 |   3)   9.084 us    |    xradio_tx();
+ 1174.928453 |   3)   9.000 us    |    xradio_tx();
+ 1174.928483 |   3)   8.959 us    |    xradio_tx();
+ 1174.928513 |   3)   8.958 us    |    xradio_tx();
+ 1174.928543 |   3)   9.125 us    |    xradio_tx();
+ 1174.928641 |   3) + 60.500 us   |    xradio_data_read();
+ 1174.928784 |   3) ! 119.500 us  |    xradio_data_write();
+ 1174.928910 |   3) + 59.417 us   |    xradio_data_read();
+ 1174.929061 |   3) ! 118.791 us  |    xradio_data_write();
+ 1174.929159 |   0)   4.375 us    |  xradio_irq_handler();
+ 1174.929248 |   3) + 50.458 us   |    xradio_data_read();
+ 1174.929373 |   3) ! 118.167 us  |    xradio_data_write();
+ 1174.929561 |   3) ! 122.667 us  |    xradio_data_write();
+ 1174.929643 |   0)   4.625 us    |  xradio_irq_handler();
+ 1174.929747 |   3) + 50.500 us   |    xradio_data_read();
+ 1174.929849 |   3) ! 121.834 us  |    xradio_data_write();
+ 1174.929887 |   0)   4.000 us    |  xradio_irq_handler();
+ 1174.930037 |   3) + 53.833 us   |    xradio_data_read();
+ 1174.930195 |   3) ! 118.250 us  |    xradio_data_write();
+ 1174.930356 |   0)   3.958 us    |  xradio_irq_handler();
+ 1174.930379 |   3) + 49.208 us   |    xradio_data_read();
+ 1174.930480 |   3) ! 116.416 us  |    xradio_data_write();
+ 1174.930667 |   3) ! 114.750 us  |    xradio_data_write();
+ 1174.930896 |   3) ! 117.417 us  |    xradio_data_write();
+ 1174.930955 |   0)   3.958 us    |  xradio_irq_handler();
+ 1174.931081 |   3) + 49.916 us   |    xradio_data_read();
+ 1174.931206 |   3) ! 117.833 us  |    xradio_data_write();
+ 1174.931230 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.931393 |   3) + 54.291 us   |    xradio_data_read();
+ 1174.931528 |   3) ! 117.916 us  |    xradio_data_write();
+ 1174.931689 |   0)   4.084 us    |  xradio_irq_handler();
+ 1174.931713 |   3) + 49.875 us   |    xradio_data_read();
+ 1174.931838 |   3) ! 117.959 us  |    xradio_data_write();
+ 1174.932024 |   3) ! 114.792 us  |    xradio_data_write();
+ 1174.932145 |   0)   3.958 us    |  xradio_irq_handler();
+ 1174.932203 |   3) + 48.667 us   |    xradio_data_read();
+ 1174.932309 |   3) ! 120.625 us  |    xradio_data_write();
+ 1174.932502 |   3) ! 115.709 us  |    xradio_data_write();
+ 1174.932573 |   0)   4.208 us    |  xradio_irq_handler();
+ 1174.932681 |   3) + 48.958 us   |    xradio_data_read();
+ 1174.932802 |   3) + 63.875 us   |    xradio_data_read();
+ 1174.932997 |   3) # 6100.375 us |  }
+ 1174.933003 |   3) + 67.083 us   |  xradio_bh_exchange();
+ 1174.933306 |   0)   8.334 us    |  xradio_irq_handler();
+ 1174.933335 |   3)               |  xradio_bh_exchange() {
+ 1174.933407 |   3) + 49.666 us   |    xradio_data_read();
+ 1174.933594 |   3) ! 254.833 us  |  }
+ 1174.934801 |   0)   7.625 us    |  xradio_irq_handler();
+ 1174.934833 |   3)               |  xradio_bh_exchange() {
+ 1174.934935 |   3) + 54.708 us   |    xradio_data_read();
+ 1174.935115 |   3) ! 280.625 us  |  }
+ 1174.935320 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.935350 |   3)               |  xradio_bh_exchange() {
+ 1174.935418 |   3) + 50.250 us   |    xradio_data_read();
+ 1174.935595 |   3) ! 244.000 us  |  }
+ 1174.935777 |   0)   7.459 us    |  xradio_irq_handler();
+ 1174.935811 |   3)               |  xradio_bh_exchange() {
+ 1174.935876 |   3) + 49.500 us   |    xradio_data_read();
+ 1174.935974 |   3) + 49.209 us   |    xradio_data_read();
+ 1174.936173 |   3) ! 362.167 us  |  }
+ 1174.936388 |   0)   7.792 us    |  xradio_irq_handler();
+ 1174.936416 |   3)               |  xradio_bh_exchange() {
+ 1174.936483 |   3) + 50.125 us   |    xradio_data_read();
+ 1174.936773 |   3) + 16.208 us   |    xradio_tx();
+ 1174.936814 |   3) + 10.166 us   |    xradio_tx();
+ 1174.936847 |   3)   9.417 us    |    xradio_tx();
+ 1174.936877 |   3)   9.292 us    |    xradio_tx();
+ 1174.936908 |   3)   9.459 us    |    xradio_tx();
+ 1174.936939 |   3)   9.291 us    |    xradio_tx();
+ 1174.936970 |   3)   8.959 us    |    xradio_tx();
+ 1174.937000 |   3)   9.291 us    |    xradio_tx();
+ 1174.937030 |   3)   9.125 us    |    xradio_tx();
+ 1174.937060 |   3)   9.042 us    |    xradio_tx();
+ 1174.937089 |   0)   4.000 us    |  xradio_irq_handler();
+ 1174.937091 |   3)   9.375 us    |    xradio_tx();
+ 1174.937121 |   3)   9.125 us    |    xradio_tx();
+ 1174.937151 |   3)   8.959 us    |    xradio_tx();
+ 1174.937181 |   3)   9.167 us    |    xradio_tx();
+ 1174.937211 |   3)   8.667 us    |    xradio_tx();
+ 1174.937241 |   3)   9.083 us    |    xradio_tx();
+ 1174.937271 |   3)   8.833 us    |    xradio_tx();
+ 1174.937301 |   3)   9.417 us    |    xradio_tx();
+ 1174.937332 |   3)   9.209 us    |    xradio_tx();
+ 1174.937426 |   3) + 55.333 us   |    xradio_data_read();
+ 1174.937567 |   3) ! 118.583 us  |    xradio_data_write();
+ 1174.937692 |   3) + 59.083 us   |    xradio_data_read();
+ 1174.937853 |   3) ! 118.958 us  |    xradio_data_write();
+ 1174.937913 |   0)   4.333 us    |  xradio_irq_handler();
+ 1174.938033 |   3) + 50.209 us   |    xradio_data_read();
+ 1174.938166 |   3) ! 117.041 us  |    xradio_data_write();
+ 1174.938346 |   3) ! 114.959 us  |    xradio_data_write();
+ 1174.938526 |   3) ! 115.458 us  |    xradio_data_write();
+ 1174.938702 |   3) ! 114.625 us  |    xradio_data_write();
+ 1174.938917 |   3) + 55.500 us   |    xradio_data_read();
+ 1174.939064 |   3) ! 118.084 us  |    xradio_data_write();
+ 1174.939245 |   3) ! 114.375 us  |    xradio_data_write();
+ 1174.939420 |   3) ! 113.875 us  |    xradio_data_write();
+ 1174.939594 |   3) ! 114.125 us  |    xradio_data_write();
+ 1174.939769 |   3) ! 114.083 us  |    xradio_data_write();
+ 1174.939928 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.939940 |   3) + 54.125 us   |    xradio_data_read();
+ 1174.940105 |   3) ! 121.792 us  |    xradio_data_write();
+ 1174.940294 |   3) ! 114.250 us  |    xradio_data_write();
+ 1174.940470 |   3) ! 115.042 us  |    xradio_data_write();
+ 1174.940645 |   3) ! 115.125 us  |    xradio_data_write();
+ 1174.940690 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.940818 |   3) + 48.750 us   |    xradio_data_read();
+ 1174.940927 |   3) ! 116.625 us  |    xradio_data_write();
+ 1174.941088 |   0)   4.042 us    |  xradio_irq_handler();
+ 1174.941102 |   3) + 58.583 us   |    xradio_data_read();
+ 1174.941242 |   3) ! 117.625 us  |    xradio_data_write();
+ 1174.941428 |   3) ! 114.333 us  |    xradio_data_write();
+ 1174.941603 |   3) ! 114.167 us  |    xradio_data_write();
+ 1174.941699 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.941774 |   3) + 49.542 us   |    xradio_data_read();
+ 1174.941882 |   3) + 48.958 us   |    xradio_data_read();
+ 1174.942096 |   3) # 5679.000 us |  }
+ 1174.942105 |   3) + 62.459 us   |  xradio_bh_exchange();
+ 1174.942339 |   0)   7.959 us    |  xradio_irq_handler();
+ 1174.942367 |   3)               |  xradio_bh_exchange() {
+ 1174.942431 |   3) + 49.709 us   |    xradio_data_read();
+ 1174.942582 |   3) ! 213.667 us  |  }
+ 1174.942888 |   0)   7.958 us    |  xradio_irq_handler();
+ 1174.942949 |   3)               |  xradio_bh_exchange() {
+ 1174.943014 |   3) + 50.417 us   |    xradio_data_read();
+ 1174.943145 |   3) + 57.833 us   |    xradio_data_read();
+ 1174.943337 |   3) ! 387.583 us  |  }
+ 1174.943651 |   0)   7.750 us    |  xradio_irq_handler();
+ 1174.943682 |   3)               |  xradio_bh_exchange() {
+ 1174.943749 |   3) + 54.375 us   |    xradio_data_read();
+ 1174.943943 |   3) ! 260.833 us  |  }
+ 1174.944139 |   0)   7.584 us    |  xradio_irq_handler();
+ 1174.944168 |   3)               |  xradio_bh_exchange() {
+ 1174.944228 |   3) + 80.666 us   |    xradio_data_read();
+ 1174.944415 |   0)   5.458 us    |  xradio_irq_handler();
+ 1174.944415 |   3) + 57.000 us   |    xradio_data_read();
+ 1174.944636 |   3) ! 467.917 us  |  }
+ 1174.944642 |   3) + 58.042 us   |  xradio_bh_exchange();
+ 1174.944901 |   0)   7.875 us    |  xradio_irq_handler();
+ 1174.944935 |   3)               |  xradio_bh_exchange() {
+ 1174.945002 |   3) + 50.667 us   |    xradio_data_read();
+ 1174.945155 |   3) ! 219.750 us  |  }
+ 1174.945238 |   0)   9.333 us    |  xradio_irq_handler();
+ 1174.945270 |   3)               |  xradio_bh_exchange() {
+ 1174.945331 |   3) + 49.500 us   |    xradio_data_read();
+ 1174.945513 |   3) ! 242.792 us  |  }
+ 1174.945908 |   0)   7.791 us    |  xradio_irq_handler();
+ 1174.945937 |   3)               |  xradio_bh_exchange() {
+ 1174.946002 |   3) + 53.667 us   |    xradio_data_read();
+ 1174.946189 |   3) ! 251.917 us  |  }
+ 1174.946274 |   0)   7.917 us    |  xradio_irq_handler();
+ 1174.946309 |   3)               |  xradio_bh_exchange() {
+ 1174.946378 |   3) + 50.209 us   |    xradio_data_read();
+ 1174.946562 |   3) ! 252.417 us  |  }
+ 1174.946762 |   0)   7.541 us    |  xradio_irq_handler();
+ 1174.946791 |   3)               |  xradio_bh_exchange() {
+ 1174.946890 |   3) + 64.250 us   |    xradio_data_read();
+ 1174.947066 |   3) + 14.791 us   |    xradio_tx();
+ 1174.947114 |   3) + 52.458 us   |    xradio_data_read();
+ 1174.947278 |   3) ! 120.333 us  |    xradio_data_write();
+ 1174.947344 |   0)   5.292 us    |  xradio_irq_handler();
+ 1174.947468 |   3) + 54.333 us   |    xradio_data_read();
+ 1174.947626 |   3) ! 835.000 us  |  }
+ 1174.947632 |   3)               |  xradio_bh_exchange() {
+ 1174.947695 |   3) + 49.625 us   |    xradio_data_read();
+ 1174.947878 |   3) ! 244.917 us  |  }
+ 1174.949235 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.949270 |   3)               |  xradio_bh_exchange() {
+ 1174.949335 |   3) + 49.542 us   |    xradio_data_read();
+ 1174.949487 |   3) ! 215.833 us  |  }
+ 1174.949602 |   0)   7.917 us    |  xradio_irq_handler();
+ 1174.949633 |   3)               |  xradio_bh_exchange() {
+ 1174.949701 |   3) + 53.875 us   |    xradio_data_read();
+ 1174.949833 |   3) + 58.000 us   |    xradio_data_read();
+ 1174.950030 |   3) ! 396.750 us  |  }
+ 1174.950334 |   0)   8.250 us    |  xradio_irq_handler();
+ 1174.950365 |   3)               |  xradio_bh_exchange() {
+ 1174.950435 |   3) + 49.917 us   |    xradio_data_read();
+ 1174.950619 |   3) ! 252.708 us  |  }
+ 1174.950857 |   0)   8.125 us    |  xradio_irq_handler();
+ 1174.950913 |   3)               |  xradio_bh_exchange() {
+ 1174.950980 |   3) + 51.042 us   |    xradio_data_read();
+ 1174.951086 |   3) + 49.334 us   |    xradio_data_read();
+ 1174.951306 |   3) ! 392.833 us  |  }
+ 1174.951891 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.951920 |   3)               |  xradio_bh_exchange() {
+ 1174.951986 |   3) + 55.209 us   |    xradio_data_read();
+ 1174.952073 |   0)   4.291 us    |  xradio_irq_handler();
+ 1174.952146 |   3) + 56.000 us   |    xradio_data_read();
+ 1174.952313 |   3) + 57.833 us   |    xradio_data_read();
+ 1174.952440 |   0)   4.209 us    |  xradio_irq_handler();
+ 1174.952507 |   3) + 56.375 us   |    xradio_data_read();
+ ------------------------------------------
+ 3)   xradio_-93   =>   ksoftir-32  
+ ------------------------------------------
+
+ 1174.952721 |   3) + 13.791 us   |  xradio_tx();
+ 1174.952760 |   3) + 10.042 us   |  xradio_tx();
+ 1174.952793 |   3)   9.083 us    |  xradio_tx();
+ 1174.952824 |   3)   9.167 us    |  xradio_tx();
+ 1174.952855 |   3)   9.291 us    |  xradio_tx();
+ 1174.952886 |   3)   9.334 us    |  xradio_tx();
+ 1174.952917 |   3)   9.750 us    |  xradio_tx();
+ 1174.952959 |   0)   4.500 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 3)   ksoftir-32   =>   xradio_-93  
+ ------------------------------------------
+
+ 1174.952974 |   3) ! 121.416 us  |    xradio_data_write();
+ 1174.953156 |   3) + 55.417 us   |    xradio_data_read();
+ 1174.953237 |   3) ! 115.708 us  |    xradio_data_write();
+ 1174.953426 |   3) ! 122.750 us  |    xradio_data_write();
+ 1174.953508 |   0)   4.291 us    |  xradio_irq_handler();
+ 1174.953609 |   3) + 49.625 us   |    xradio_data_read();
+ 1174.953684 |   3) ! 114.792 us  |    xradio_data_write();
+ 1174.953843 |   0)   4.084 us    |  xradio_irq_handler();
+ 1174.953859 |   3) + 54.125 us   |    xradio_data_read();
+ 1174.953999 |   3) ! 121.375 us  |    xradio_data_write();
+ 1174.954184 |   3) ! 113.625 us  |    xradio_data_write();
+ 1174.954279 |   0)   4.250 us    |  xradio_irq_handler();
+ 1174.954360 |   3) + 49.625 us   |    xradio_data_read();
+ 1174.954435 |   3) + 92.917 us   |    xradio_data_write();
+ 1174.954642 |   3) # 2721.416 us |  } /* xradio_bh_exchange */
+ 1174.954647 |   3) + 58.958 us   |  xradio_bh_exchange();
+ 1174.954759 |   0)   7.709 us    |  xradio_irq_handler();
+ 1174.954786 |   3)               |  xradio_bh_exchange() {
+ 1174.954875 |   3) + 52.000 us   |    xradio_data_read();
+ 1174.955000 |   3) + 57.334 us   |    xradio_data_read();
+ 1174.955222 |   3) ! 435.250 us  |  }
+ 1174.955584 |   0)   9.042 us    |  xradio_irq_handler();
+ 1174.955618 |   3)               |  xradio_bh_exchange() {
+ 1174.955689 |   3) + 49.875 us   |    xradio_data_read();
+ 1174.955815 |   3) ! 196.542 us  |  }
+ 1174.956529 |   0)   7.791 us    |  xradio_irq_handler();
+ 1174.956558 |   3)               |  xradio_bh_exchange() {
+ 1174.956623 |   3) + 53.250 us   |    xradio_data_read();
+ 1174.956810 |   3) ! 251.417 us  |  }
+ 1174.957414 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.957445 |   3)               |  xradio_bh_exchange() {
+ 1174.957516 |   3) + 50.167 us   |    xradio_data_read();
+ 1174.957590 |   3) + 54.875 us   |    xradio_data_read();
+ 1174.957808 |   3) ! 361.875 us  |  }
+ 1174.958024 |   0)   7.625 us    |  xradio_irq_handler();
+ 1174.958058 |   3)               |  xradio_bh_exchange() {
+ 1174.958129 |   3) + 50.875 us   |    xradio_data_read();
+ 1174.958256 |   3) ! 197.500 us  |  }
+ 1174.958451 |   0)   7.750 us    |  xradio_irq_handler();
+ 1174.958480 |   3)               |  xradio_bh_exchange() {
+ 1174.958545 |   3) + 49.584 us   |    xradio_data_read();
+ 1174.958672 |   3) ! 191.084 us  |  }
+ 1174.958817 |   0)   7.417 us    |  xradio_irq_handler();
+ 1174.958881 |   3)               |  xradio_bh_exchange() {
+ 1174.958948 |   3) + 49.959 us   |    xradio_data_read();
+ 1174.959079 |   3) ! 197.916 us  |  }
+ 1174.959306 |   0)   7.667 us    |  xradio_irq_handler();
+ 1174.959333 |   3)               |  xradio_bh_exchange() {
+ 1174.959397 |   3) + 49.916 us   |    xradio_data_read();
+ 1174.959523 |   3) ! 189.417 us  |  }
+ 1174.959672 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.959700 |   3)               |  xradio_bh_exchange() {
+ 1174.959764 |   3) + 49.625 us   |    xradio_data_read();
+ 1174.959896 |   3) ! 195.500 us  |  }
+ 1174.960069 |   0)   7.458 us    |  xradio_irq_handler();
+ 1174.960096 |   3)               |  xradio_bh_exchange() {
+ 1174.960161 |   3) + 58.250 us   |    xradio_data_read();
+ 1174.960350 |   3) ! 252.916 us  |  }
+ 1174.960435 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.960467 |   3)               |  xradio_bh_exchange() {
+ 1174.960536 |   3) + 49.833 us   |    xradio_data_read();
+ 1174.960661 |   3) ! 193.750 us  |  }
+ 1174.961076 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.961104 |   3)               |  xradio_bh_exchange() {
+ 1174.961170 |   3) + 49.000 us   |    xradio_data_read();
+ 1174.961295 |   3) ! 190.500 us  |  }
+ 1174.961686 |   0)   7.667 us    |  xradio_irq_handler();
+ 1174.961720 |   3)               |  xradio_bh_exchange() {
+ 1174.961787 |   3) + 58.375 us   |    xradio_data_read();
+ 1174.962083 |   0)   4.250 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 3)   xradio_-93   =>   ksoftir-32  
+ ------------------------------------------
+
+ 1174.962261 |   3) + 18.667 us   |  xradio_tx();
+ 1174.962305 |   3) + 10.208 us   |  xradio_tx();
+ 1174.962338 |   3)   9.292 us    |  xradio_tx();
+ 1174.962369 |   3)   9.375 us    |  xradio_tx();
+ 1174.962400 |   3)   9.125 us    |  xradio_tx();
+ 1174.962430 |   3)   9.500 us    |  xradio_tx();
+ 1174.962461 |   3)   9.125 us    |  xradio_tx();
+ 1174.962492 |   3)   8.959 us    |  xradio_tx();
+ 1174.962522 |   3)   9.250 us    |  xradio_tx();
+ 1174.962553 |   3)   9.292 us    |  xradio_tx();
+ 1174.962583 |   3)   9.292 us    |  xradio_tx();
+ 1174.962614 |   3)   9.292 us    |  xradio_tx();
+ 1174.962644 |   3)   9.167 us    |  xradio_tx();
+ 1174.962674 |   3)   9.584 us    |  xradio_tx();
+ 1174.962705 |   3)   9.292 us    |  xradio_tx();
+ 1174.962735 |   3)   9.083 us    |  xradio_tx();
+ 1174.962766 |   3)   9.083 us    |  xradio_tx();
+ 1174.962796 |   3)   9.125 us    |  xradio_tx();
+ 1174.962826 |   3)   9.083 us    |  xradio_tx();
+ 1174.962901 |   3) + 11.542 us   |  xradio_tx();
+ 1174.962936 |   3)   9.792 us    |  xradio_tx();
+ 1174.962968 |   3) + 10.042 us   |  xradio_tx();
+ 1174.962975 |   1) ! 125.625 us  |    xradio_data_write();
+ 1174.962999 |   3)   9.375 us    |  xradio_tx();
+ 1174.963030 |   3)   9.167 us    |  xradio_tx();
+ 1174.963064 |   3)   9.375 us    |  xradio_tx();
+ 1174.963095 |   3)   9.375 us    |  xradio_tx();
+ 1174.963126 |   3)   9.375 us    |  xradio_tx();
+ 1174.963156 |   3)   9.250 us    |  xradio_tx();
+ 1174.963169 |   1) + 50.542 us   |    xradio_data_read();
+ 1174.963187 |   3)   9.167 us    |  xradio_tx();
+ 1174.963217 |   3)   9.250 us    |  xradio_tx();
+ 1174.963251 |   1) ! 115.833 us  |    xradio_data_write();
+ 1174.963374 |   1) + 53.333 us   |    xradio_data_read();
+ 1174.963551 |   1) ! 130.458 us  |    xradio_data_write();
+ 1174.963694 |   1) + 68.917 us   |    xradio_data_read();
+ 1174.963859 |   1) ! 121.208 us  |    xradio_data_write();
+ 1174.963988 |   1) + 54.000 us   |    xradio_data_read();
+ 1174.964180 |   1) ! 117.958 us  |    xradio_data_write();
+ 1174.964310 |   1) + 54.292 us   |    xradio_data_read();
+ 1174.964440 |   1) ! 116.709 us  |    xradio_data_write();
+ 1174.964566 |   1) + 50.208 us   |    xradio_data_read();
+ 1174.964693 |   1) ! 121.292 us  |    xradio_data_write();
+ 1174.964821 |   1) + 58.709 us   |    xradio_data_read();
+ 1174.964958 |   1) ! 116.666 us  |    xradio_data_write();
+ 1174.965083 |   1) + 50.833 us   |    xradio_data_read();
+ 1174.965209 |   1) ! 115.959 us  |    xradio_data_write();
+ 1174.965331 |   1) + 52.375 us   |    xradio_data_read();
+ 1174.965435 |   1) ! 116.875 us  |    xradio_data_write();
+ 1174.965444 |   0)   6.292 us    |  xradio_irq_handler();
+ 1174.965618 |   1) + 53.083 us   |    xradio_data_read();
+ 1174.965770 |   1) ! 116.667 us  |    xradio_data_write();
+ 1174.965836 |   0)   4.291 us    |  xradio_irq_handler();
+ 1174.965952 |   1) + 50.042 us   |    xradio_data_read();
+ 1174.966052 |   1) ! 120.250 us  |    xradio_data_write();
+ 1174.966244 |   1) ! 113.917 us  |    xradio_data_write();
+ 1174.966434 |   1) ! 113.667 us  |    xradio_data_write();
+ 1174.966614 |   1) ! 113.042 us  |    xradio_data_write();
+ 1174.966794 |   1) ! 126.625 us  |    xradio_data_write();
+ 1174.966843 |   0)   4.292 us    |  xradio_irq_handler();
+ 1174.966986 |   1) + 50.625 us   |    xradio_data_read();
+ 1174.967109 |   1) ! 116.625 us  |    xradio_data_write();
+ 1174.967241 |   0)   4.916 us    |  xradio_irq_handler();
+ 1174.967294 |   1) + 53.125 us   |    xradio_data_read();
+ 1174.967406 |   1) ! 115.042 us  |    xradio_data_write();
+ 1174.967592 |   1) ! 114.791 us  |    xradio_data_write();
+ 1174.967774 |   1) ! 114.208 us  |    xradio_data_write();
+ 1174.967882 |   0)   4.334 us    |  xradio_irq_handler();
+ 1174.967953 |   1) + 53.416 us   |    xradio_data_read();
+ 1174.968105 |   1) ! 117.250 us  |    xradio_data_write();
+ 1174.968231 |   1) + 54.000 us   |    xradio_data_read();
+ 1174.968655 |   1) + 19.875 us   |    xradio_tx();
+ 1174.968700 |   1) + 10.375 us   |    xradio_tx();
+ 1174.968733 |   1)   9.708 us    |    xradio_tx();
+ 1174.968764 |   1)   9.042 us    |    xradio_tx();
+ 1174.968795 |   1)   9.542 us    |    xradio_tx();
+ 1174.968825 |   1)   9.375 us    |    xradio_tx();
+ 1174.968856 |   1)   9.125 us    |    xradio_tx();
+ 1174.968887 |   1)   9.125 us    |    xradio_tx();
+ 1174.968917 |   1)   9.083 us    |    xradio_tx();
+ 1174.968948 |   1)   8.917 us    |    xradio_tx();
+ 1174.968978 |   1)   9.333 us    |    xradio_tx();
+ 1174.969009 |   1)   8.917 us    |    xradio_tx();
+ 1174.969038 |   1)   9.042 us    |    xradio_tx();
+ 1174.969068 |   1)   9.041 us    |    xradio_tx();
+ 1174.969098 |   1)   9.334 us    |    xradio_tx();
+ 1174.969128 |   1)   8.875 us    |    xradio_tx();
+ 1174.969158 |   1)   9.000 us    |    xradio_tx();
+ 1174.969187 |   1)   9.209 us    |    xradio_tx();
+ 1174.969218 |   1)   9.084 us    |    xradio_tx();
+ 1174.969253 |   1) + 14.625 us   |    xradio_tx();
+ 1174.969285 |   1)   9.250 us    |    xradio_tx();
+ 1174.969315 |   1)   8.916 us    |    xradio_tx();
+ 1174.969344 |   1)   9.250 us    |    xradio_tx();
+ 1174.969374 |   1)   9.250 us    |    xradio_tx();
+ 1174.969404 |   1)   8.959 us    |    xradio_tx();
+ 1174.969433 |   1)   9.375 us    |    xradio_tx();
+ 1174.969464 |   1)   9.292 us    |    xradio_tx();
+ 1174.969494 |   1)   8.917 us    |    xradio_tx();
+ 1174.969524 |   1)   8.958 us    |    xradio_tx();
+ 1174.969553 |   1)   9.208 us    |    xradio_tx();
+ 1174.969594 |   1) ! 122.209 us  |    xradio_data_write();
+ 1174.969727 |   1) + 60.959 us   |    xradio_data_read();
+ 1174.969910 |   1) ! 117.834 us  |    xradio_data_write();
+ 1174.970037 |   1) + 55.375 us   |    xradio_data_read();
+ 1174.970171 |   1) ! 117.208 us  |    xradio_data_write();
+ 1174.970297 |   1) + 52.791 us   |    xradio_data_read();
+ 1174.970445 |   1) ! 116.667 us  |    xradio_data_write();
+ 1174.970570 |   1) + 52.625 us   |    xradio_data_read();
+ 1174.970696 |   1) ! 116.583 us  |    xradio_data_write();
+ 1174.970821 |   1) + 89.708 us   |    xradio_data_read();
+ 1174.971048 |   1) ! 125.250 us  |    xradio_data_write();
+ 1174.971245 |   1) ! 115.666 us  |    xradio_data_write();
+ 1174.971430 |   1) ! 114.000 us  |    xradio_data_write();
+ 1174.971613 |   1) ! 114.208 us  |    xradio_data_write();
+ 1174.971794 |   1) ! 114.625 us  |    xradio_data_write();
+ 1174.971977 |   1) ! 114.334 us  |    xradio_data_write();
+ 1174.972160 |   1) ! 114.542 us  |    xradio_data_write();
+ 1174.972335 |   1) ! 114.250 us  |    xradio_data_write();
+ 1174.972513 |   1) ! 113.875 us  |    xradio_data_write();
+ 1174.972686 |   1) ! 113.875 us  |    xradio_data_write();
+ 1174.972859 |   1) ! 114.667 us  |    xradio_data_write();
+ 1174.973074 |   1) * 11353.33 us |  }
+ 1174.973080 |   1) + 52.958 us   |  xradio_bh_exchange();
+ 1174.981132 |   0)   8.750 us    |  xradio_irq_handler();
+ 1174.981176 |   1)               |  xradio_bh_exchange() {
+ 1174.981237 |   1) + 54.750 us   |    xradio_data_read();
+ 1174.981369 |   1) + 61.833 us   |    xradio_data_read();
+ 1174.981551 |   1) + 57.666 us   |    xradio_data_read();
+ 1174.981720 |   1) ! 543.583 us  |  }
+ 1174.982011 |   0)   8.416 us    |  xradio_irq_handler();
+ 1174.982048 |   1)               |  xradio_bh_exchange() {
+ 1174.982113 |   1) + 49.875 us   |    xradio_data_read();
+ 1174.982215 |   1) ! 115.333 us  |    xradio_data_write();
+ 1174.982434 |   1) ! 385.125 us  |  }
+ 1174.983933 |   0)   7.958 us    |  xradio_irq_handler();
+ 1174.983976 |   1)               |  xradio_bh_exchange() {
+ 1174.984039 |   1) + 50.291 us   |    xradio_data_read();
+ 1174.984163 |   1) ! 117.084 us  |    xradio_data_write();
+ 1174.984287 |   1) + 53.125 us   |    xradio_data_read();
+ 1174.984457 |   1) ! 480.959 us  |  }
+ 1174.984635 |   0)   8.042 us    |  xradio_irq_handler();
+ 1174.984666 |   1)               |  xradio_bh_exchange() {
+ 1174.984727 |   1) + 49.792 us   |    xradio_data_read();
+ 1174.984827 |   1) ! 115.458 us  |    xradio_data_write();
+ 1174.985073 |   1) + 50.209 us   |    xradio_data_read();
+ 1174.985195 |   1) ! 123.208 us  |    xradio_data_write();
+ 1174.985216 |   0)   5.375 us    |  xradio_irq_handler();
+ 1174.985379 |   1) + 53.125 us   |    xradio_data_read();
+ 1174.985547 |   1) ! 880.041 us  |  }
+ 1174.985552 |   1)               |  xradio_bh_exchange() {
+ 1174.985590 |   0)   4.583 us    |  xradio_irq_handler();
+ 1174.985622 |   1) + 84.792 us   |    xradio_data_read();
+ 1174.985765 |   1) ! 116.917 us  |    xradio_data_write();
+ 1174.985796 |   0)   5.250 us    |  xradio_irq_handler();
+ 1174.985940 |   1) + 53.209 us   |    xradio_data_read();
+ 1174.986143 |   1) ! 589.458 us  |  }
+ 1174.986149 |   1) + 54.292 us   |  xradio_bh_exchange();
+ 1174.986435 |   0)   7.959 us    |  xradio_irq_handler();
+ 1174.986468 |   1)               |  xradio_bh_exchange() {
+ 1174.986531 |   1) + 53.375 us   |    xradio_data_read();
+ 1174.986702 |   1) ! 233.292 us  |  }
+ 1174.986902 |   0)   9.416 us    |  xradio_irq_handler();
+ 1174.986940 |   1)               |  xradio_bh_exchange() {
+ 1174.987005 |   1) + 50.833 us   |    xradio_data_read();
+ 1174.987107 |   1) ! 116.042 us  |    xradio_data_write();
+ 1174.987229 |   0)   4.542 us    |  xradio_irq_handler();
+ 1174.987282 |   1) + 49.083 us   |    xradio_data_read();
+ 1174.987402 |   1) ! 122.958 us  |    xradio_data_write();
+ 1174.987473 |   0)   4.291 us    |  xradio_irq_handler();
+ 1174.987587 |   1) + 53.542 us   |    xradio_data_read();
+ 1174.987766 |   1) ! 825.000 us  |  }
+ 1174.987772 |   1) + 63.958 us   |  xradio_bh_exchange();
+ 1174.988114 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.988143 |   1)               |  xradio_bh_exchange() {
+ 1174.988211 |   1) + 50.792 us   |    xradio_data_read();
+ 1174.988314 |   1) ! 114.958 us  |    xradio_data_write();
+ 1174.988487 |   1) + 49.084 us   |    xradio_data_read();
+ 1174.988607 |   1) ! 122.500 us  |    xradio_data_write();
+ 1174.988725 |   0)   4.208 us    |  xradio_irq_handler();
+ 1174.988793 |   1) + 53.834 us   |    xradio_data_read();
+ 1174.988919 |   1) + 49.833 us   |    xradio_data_read();
+ 1174.989117 |   1) ! 973.209 us  |  }
+ 1174.989123 |   1)               |  xradio_bh_exchange() {
+ 1174.989160 |   0)   4.291 us    |  xradio_irq_handler();
+ 1174.989182 |   1) + 48.875 us   |    xradio_data_read();
+ 1174.989281 |   1) ! 116.291 us  |    xradio_data_write();
+ 1174.989506 |   1) ! 382.291 us  |  }
+ 1174.989512 |   1) + 54.542 us   |  xradio_bh_exchange();
+ 1174.989823 |   0)   7.709 us    |  xradio_irq_handler();
+ 1174.989851 |   1)               |  xradio_bh_exchange() {
+ 1174.989916 |   1) + 53.334 us   |    xradio_data_read();
+ 1174.990041 |   1) ! 116.709 us  |    xradio_data_write();
+ 1174.990164 |   1) + 52.667 us   |    xradio_data_read();
+ 1174.990290 |   1) + 49.666 us   |    xradio_data_read();
+ 1174.990481 |   1) ! 629.625 us  |  }
+ 1174.990556 |   0)   7.916 us    |  xradio_irq_handler();
+ 1174.990586 |   1)               |  xradio_bh_exchange() {
+ 1174.990648 |   1) + 57.667 us   |    xradio_data_read();
+ 1174.990756 |   1) ! 146.166 us  |    xradio_data_write();
+ 1174.990861 |   0)   4.209 us    |  xradio_irq_handler();
+ 1174.990964 |   1) + 54.375 us   |    xradio_data_read();
+ 1174.991114 |   1) + 61.583 us   |    xradio_data_read();
+ 1174.991293 |   1) + 61.166 us   |    xradio_data_read();
+ 1174.991406 |   1) ! 117.000 us  |    xradio_data_write();
+ 1174.991635 |   1) + 50.125 us   |    xradio_data_read();
+ 1174.991756 |   1) ! 116.750 us  |    xradio_data_write();
+ 1174.991807 |   0)   4.625 us    |  xradio_irq_handler();
+ 1174.991932 |   1) + 53.250 us   |    xradio_data_read();
+ 1174.992100 |   1) # 1514.333 us |  }
+ 1174.992106 |   1)               |  xradio_bh_exchange() {
+ 1174.992170 |   1) + 50.667 us   |    xradio_data_read();
+ 1174.992270 |   1) ! 121.792 us  |    xradio_data_write();
+ 1174.992296 |   0)   4.583 us    |  xradio_irq_handler();
+ 1174.992452 |   1) + 54.125 us   |    xradio_data_read();
+ 1174.992654 |   1) ! 546.292 us  |  }
+ 1174.992659 |   1)               |  xradio_bh_exchange() {
+ 1174.992720 |   1) + 49.500 us   |    xradio_data_read();
+ 1174.992819 |   1) ! 116.917 us  |    xradio_data_write();
+ 1174.992875 |   0)   4.500 us    |  xradio_irq_handler();
+ 1174.992996 |   1) + 53.792 us   |    xradio_data_read();
+ 1174.993193 |   1) ! 532.542 us  |  }
+ 1174.993199 |   1) + 55.834 us   |  xradio_bh_exchange();
+ 1174.993577 |   0)   7.625 us    |  xradio_irq_handler();
+ 1174.993610 |   1)               |  xradio_bh_exchange() {
+ 1174.993675 |   1) + 54.084 us   |    xradio_data_read();
+ 1174.993780 |   1) ! 116.166 us  |    xradio_data_write();
+ 1174.993903 |   1) + 53.083 us   |    xradio_data_read();
+ 1174.994051 |   1) + 56.084 us   |    xradio_data_read();
+ 1174.994220 |   1) ! 609.292 us  |  }
+ 1174.994371 |   0)   8.000 us    |  xradio_irq_handler();
+ 1174.994401 |   1)               |  xradio_bh_exchange() {
+ 1174.994467 |   1) + 49.916 us   |    xradio_data_read();
+ 1174.994567 |   1) ! 122.083 us  |    xradio_data_write();
+ 1174.994696 |   1) + 53.333 us   |    xradio_data_read();
+ 1174.994933 |   1) ! 530.750 us  |  }
+ 1174.995012 |   0)   8.917 us    |  xradio_irq_handler();
+ 1174.995043 |   1)               |  xradio_bh_exchange() {
+ 1174.995107 |   1) + 50.042 us   |    xradio_data_read();
+ 1174.995207 |   1) ! 115.583 us  |    xradio_data_write();
+ 1174.995435 |   1) ! 391.917 us  |  }
+ 1174.995713 |   0)   8.042 us    |  xradio_irq_handler();
+ 1174.995741 |   1)               |  xradio_bh_exchange() {
+ 1174.995801 |   1) + 59.166 us   |    xradio_data_read();
+ 1174.995935 |   1) ! 119.583 us  |    xradio_data_write();
+ 1174.996167 |   1) + 49.875 us   |    xradio_data_read();
+ 1174.996267 |   1) ! 115.375 us  |    xradio_data_write();
+ 1174.996491 |   1) ! 749.334 us  |  }
+ 1174.996629 |   0)   7.791 us    |  xradio_irq_handler();
+ 1174.996656 |   1)               |  xradio_bh_exchange() {
+ 1174.996717 |   1) + 49.458 us   |    xradio_data_read();
+ 1174.996837 |   1) ! 115.959 us  |    xradio_data_write();
+ 1174.997071 |   1) ! 413.625 us  |  }
+ 1174.997147 |   0)   7.791 us    |  xradio_irq_handler();
+ 1174.997176 |   1)               |  xradio_bh_exchange() {
+ 1174.997237 |   1) + 52.625 us   |    xradio_data_read();
+ 1174.997339 |   1) ! 115.708 us  |    xradio_data_write();
+ 1174.997566 |   1) ! 389.834 us  |  }
+ 1174.997636 |   0)   7.584 us    |  xradio_irq_handler();
+ 1174.997663 |   1)               |  xradio_bh_exchange() {
+ 1174.997725 |   1) + 48.708 us   |    xradio_data_read();
+ 1174.997897 |   1) ! 232.584 us  |  }
+ 1174.998124 |   0)   7.542 us    |  xradio_irq_handler();
+ 1174.998157 |   1)               |  xradio_bh_exchange() {
+ 1174.998224 |   1) + 49.250 us   |    xradio_data_read();
+ 1174.998368 |   1) ! 209.875 us  |  }
+ 1174.998552 |   0)   7.792 us    |  xradio_irq_handler();
+ 1174.998582 |   1)               |  xradio_bh_exchange() {
+ 1174.998648 |   1) + 49.250 us   |    xradio_data_read();
+ 1174.998765 |   0)   4.125 us    |  xradio_irq_handler();
+ 1174.998821 |   1) + 73.000 us   |    xradio_data_read();
+ 1174.999021 |   1) ! 438.667 us  |  }
+ 1174.999027 |   1)               |  xradio_bh_exchange() {
+ 1174.999097 |   1) + 91.459 us   |    xradio_data_read();
+ 1174.999498 |   0)   4.792 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 1)   xradio_-93   =>   ksoftir-22  
+ ------------------------------------------
+
+ 1174.999637 |   1) + 18.750 us   |  xradio_tx();
+ 1174.999682 |   1) + 10.417 us   |  xradio_tx();
+ 1174.999714 |   1)   9.833 us    |  xradio_tx();
+ 1174.999746 |   1)   9.541 us    |  xradio_tx();
+ 1174.999777 |   1)   9.666 us    |  xradio_tx();
+ 1174.999807 |   1)   9.458 us    |  xradio_tx();
+ 1174.999838 |   1)   9.333 us    |  xradio_tx();
+ 1174.999869 |   1)   9.125 us    |  xradio_tx();
+ 1174.999899 |   1)   9.209 us    |  xradio_tx();
+ 1174.999929 |   1)   9.500 us    |  xradio_tx();
+ 1174.999959 |   1)   9.459 us    |  xradio_tx();
+ 1174.999990 |   1)   9.250 us    |  xradio_tx();
+ 1175.000020 |   1)   9.208 us    |  xradio_tx();
+ 1175.000050 |   1)   9.167 us    |  xradio_tx();
+ 1175.000080 |   1)   9.167 us    |  xradio_tx();
+ 1175.000110 |   1)   9.125 us    |  xradio_tx();
+ 1175.000140 |   1)   9.209 us    |  xradio_tx();
+ 1175.000170 |   1)   9.083 us    |  xradio_tx();
+ 1175.000200 |   1)   9.209 us    |  xradio_tx();
+ 1175.000230 |   1)   9.000 us    |  xradio_tx();
+ 1175.000260 |   1)   9.500 us    |  xradio_tx();
+ 1175.000290 |   1)   9.167 us    |  xradio_tx();
+ ------------------------------------------
+ 1)   ksoftir-22   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.000395 |   1) ! 129.209 us  |    xradio_data_write();
+ 1175.000593 |   1) + 50.292 us   |    xradio_data_read();
+ 1175.000700 |   1) ! 116.708 us  |    xradio_data_write();
+ 1175.000824 |   1) + 53.500 us   |    xradio_data_read();
+ 1175.000980 |   1) ! 118.000 us  |    xradio_data_write();
+ 1175.001107 |   1) + 50.292 us   |    xradio_data_read();
+ 1175.001208 |   1) ! 116.459 us  |    xradio_data_write();
+ 1175.001331 |   1) + 59.750 us   |    xradio_data_read();
+ 1175.001464 |   1) ! 117.125 us  |    xradio_data_write();
+ 1175.001511 |   0)   4.125 us    |  xradio_irq_handler();
+ 1175.001651 |   1) + 49.667 us   |    xradio_data_read();
+ 1175.001758 |   1) ! 115.833 us  |    xradio_data_write();
+ 1175.001881 |   1) + 54.500 us   |    xradio_data_read();
+ 1175.002032 |   1) ! 117.834 us  |    xradio_data_write();
+ 1175.002158 |   1) + 52.458 us   |    xradio_data_read();
+ 1175.002334 |   1) # 3305.709 us |  } /* xradio_bh_exchange */
+ 1175.002340 |   1)               |  xradio_bh_exchange() {
+ 1175.002379 |   0)   4.334 us    |  xradio_irq_handler();
+ 1175.002408 |   1) + 49.125 us   |    xradio_data_read();
+ 1175.002507 |   1) ! 116.584 us  |    xradio_data_write();
+ 1175.002751 |   1) + 56.584 us   |    xradio_data_read();
+ 1175.002928 |   1) ! 119.833 us  |    xradio_data_write();
+ 1175.002950 |   0)   4.875 us    |  xradio_irq_handler();
+ 1175.003110 |   1) + 52.625 us   |    xradio_data_read();
+ 1175.003239 |   1) + 51.416 us   |    xradio_data_read();
+ 1175.003380 |   1) + 52.791 us   |    xradio_data_read();
+ 1175.003483 |   1) ! 116.583 us  |    xradio_data_write();
+ 1175.003717 |   1) # 1376.667 us |  }
+ 1175.003723 |   1) + 58.291 us   |  xradio_bh_exchange();
+ 1175.003862 |   0)   8.708 us    |  xradio_irq_handler();
+ 1175.003890 |   1)               |  xradio_bh_exchange() {
+ 1175.003953 |   1) + 55.792 us   |    xradio_data_read();
+ 1175.004083 |   1) ! 116.750 us  |    xradio_data_write();
+ 1175.004316 |   1) ! 424.750 us  |  }
+ 1175.004411 |   0)   7.875 us    |  xradio_irq_handler();
+ 1175.004439 |   1)               |  xradio_bh_exchange() {
+ 1175.004502 |   1) + 56.959 us   |    xradio_data_read();
+ 1175.004631 |   1) + 50.875 us   |    xradio_data_read();
+ 1175.004773 |   1) + 55.833 us   |    xradio_data_read();
+ 1175.004941 |   1) ! 501.958 us  |  }
+ 1175.006792 |   0)   10.000 us   |  xradio_irq_handler();
+ 1175.006830 |   1)               |  xradio_bh_exchange() {
+ 1175.006943 |   1) + 50.417 us   |    xradio_data_read();
+ 1175.007095 |   1) ! 116.792 us  |    xradio_data_write();
+ 1175.007255 |   0)   5.209 us    |  xradio_irq_handler();
+ 1175.007276 |   1) + 49.125 us   |    xradio_data_read();
+ 1175.007395 |   1) ! 122.209 us  |    xradio_data_write();
+ 1175.007636 |   1) ! 804.708 us  |  }
+ 1175.007642 |   1) + 60.167 us   |  xradio_bh_exchange();
+ 1175.007859 |   0)   7.917 us    |  xradio_irq_handler();
+ 1175.007888 |   1)               |  xradio_bh_exchange() {
+ 1175.007951 |   1) + 48.917 us   |    xradio_data_read();
+ 1175.008049 |   1) ! 115.833 us  |    xradio_data_write();
+ 1175.008282 |   1) ! 393.792 us  |  }
+ 1175.008347 |   0)   7.458 us    |  xradio_irq_handler();
+ 1175.008375 |   1)               |  xradio_bh_exchange() {
+ 1175.008443 |   1) + 50.208 us   |    xradio_data_read();
+ 1175.008561 |   0)   3.958 us    |  xradio_irq_handler();
+ 1175.008566 |   1) ! 123.000 us  |    xradio_data_write();
+ 1175.008753 |   1) + 53.875 us   |    xradio_data_read();
+ 1175.008883 |   1) + 52.500 us   |    xradio_data_read();
+ 1175.008988 |   0)   4.541 us    |  xradio_irq_handler();
+ 1175.009090 |   1) + 59.209 us   |    xradio_data_read();
+ 1175.009308 |   1) ! 932.292 us  |  }
+ 1175.009314 |   1)               |  xradio_bh_exchange() {
+ 1175.009382 |   1) + 54.667 us   |    xradio_data_read();
+ 1175.009488 |   1) ! 116.500 us  |    xradio_data_write();
+ 1175.009599 |   0)   4.625 us    |  xradio_irq_handler();
+ 1175.009669 |   1) + 53.625 us   |    xradio_data_read();
+ 1175.009876 |   1) ! 560.375 us  |  }
+ 1175.009882 |   1) + 60.833 us   |  xradio_bh_exchange();
+ 1175.010087 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.010114 |   1)               |  xradio_bh_exchange() {
+ 1175.010181 |   1) + 49.459 us   |    xradio_data_read();
+ 1175.010281 |   1) ! 115.750 us  |    xradio_data_write();
+ 1175.010518 |   1) ! 403.125 us  |  }
+ 1175.010575 |   0)   7.416 us    |  xradio_irq_handler();
+ 1175.010602 |   1)               |  xradio_bh_exchange() {
+ 1175.010666 |   1) + 49.125 us   |    xradio_data_read();
+ 1175.010787 |   1) ! 125.083 us  |    xradio_data_write();
+ 1175.010918 |   1) + 54.042 us   |    xradio_data_read();
+ 1175.011050 |   1) + 51.375 us   |    xradio_data_read();
+ 1175.011250 |   1) ! 646.542 us  |  }
+ 1175.011460 |   0)   8.000 us    |  xradio_irq_handler();
+ 1175.011489 |   1)               |  xradio_bh_exchange() {
+ 1175.011556 |   1) + 50.042 us   |    xradio_data_read();
+ 1175.011658 |   1) ! 116.000 us  |    xradio_data_write();
+ 1175.011896 |   1) ! 405.916 us  |  }
+ 1175.011948 |   0)   7.500 us    |  xradio_irq_handler();
+ 1175.011976 |   1)               |  xradio_bh_exchange() {
+ 1175.012040 |   1) + 50.083 us   |    xradio_data_read();
+ 1175.012162 |   1) ! 122.167 us  |    xradio_data_write();
+ 1175.012290 |   1) + 54.083 us   |    xradio_data_read();
+ 1175.012471 |   1) ! 493.959 us  |  }
+ 1175.012531 |   0) + 11.000 us   |  xradio_irq_handler();
+ 1175.012562 |   1)               |  xradio_bh_exchange() {
+ 1175.012631 |   1) + 49.625 us   |    xradio_data_read();
+ 1175.012731 |   1) ! 116.000 us  |    xradio_data_write();
+ 1175.012966 |   1) ! 403.250 us  |  }
+ 1175.013047 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.013074 |   1)               |  xradio_bh_exchange() {
+ 1175.013139 |   1) + 48.417 us   |    xradio_data_read();
+ 1175.013259 |   1) ! 122.042 us  |    xradio_data_write();
+ 1175.013447 |   1) + 49.041 us   |    xradio_data_read();
+ 1175.013614 |   1) ! 536.500 us  |  }
+ 1175.014084 |   0)   7.708 us    |  xradio_irq_handler();
+ 1175.014112 |   1)               |  xradio_bh_exchange() {
+ 1175.014177 |   1) + 48.459 us   |    xradio_data_read();
+ 1175.014346 |   1) ! 233.333 us  |  }
+ 1175.014573 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.014607 |   1)               |  xradio_bh_exchange() {
+ 1175.014670 |   1) + 49.292 us   |    xradio_data_read();
+ 1175.014811 |   1) ! 203.417 us  |  }
+ 1175.015183 |   0)   8.084 us    |  xradio_irq_handler();
+ 1175.015215 |   1)               |  xradio_bh_exchange() {
+ 1175.015276 |   1) + 48.667 us   |    xradio_data_read();
+ 1175.015450 |   1) ! 235.208 us  |  }
+ 1175.015671 |   0)   7.667 us    |  xradio_irq_handler();
+ 1175.015704 |   1)               |  xradio_bh_exchange() {
+ 1175.015767 |   1) + 48.417 us   |    xradio_data_read();
+ 1175.015908 |   1) ! 203.500 us  |  }
+ 1175.015977 |   0)   7.875 us    |  xradio_irq_handler();
+ 1175.016007 |   1)               |  xradio_bh_exchange() {
+ 1175.016068 |   1) + 49.834 us   |    xradio_data_read();
+ 1175.016237 |   1) ! 230.208 us  |  }
+ 1175.016678 |   0)   7.500 us    |  xradio_irq_handler();
+ 1175.016707 |   1)               |  xradio_bh_exchange() {
+ 1175.016773 |   1) + 53.292 us   |    xradio_data_read();
+ 1175.016918 |   1) ! 210.375 us  |  }
+ 1175.017289 |   0)   7.958 us    |  xradio_irq_handler();
+ 1175.017319 |   1)               |  xradio_bh_exchange() {
+ 1175.017380 |   1) + 49.833 us   |    xradio_data_read();
+ 1175.017556 |   1) ! 236.750 us  |  }
+ 1175.017716 |   0)   7.875 us    |  xradio_irq_handler();
+ 1175.017744 |   1)               |  xradio_bh_exchange() {
+ 1175.017804 |   1) + 48.917 us   |    xradio_data_read();
+ 1175.017945 |   1) ! 199.958 us  |  }
+ 1175.018082 |   0)   7.792 us    |  xradio_irq_handler();
+ 1175.018117 |   1)               |  xradio_bh_exchange() {
+ 1175.018181 |   1) + 49.250 us   |    xradio_data_read();
+ 1175.018351 |   1) ! 233.541 us  |  }
+ 1175.018418 |   0)   7.542 us    |  xradio_irq_handler();
+ 1175.018446 |   1)               |  xradio_bh_exchange() {
+ 1175.018506 |   1) + 48.959 us   |    xradio_data_read();
+ 1175.018645 |   1) ! 198.333 us  |  }
+ 1175.019120 |   0)   8.125 us    |  xradio_irq_handler();
+ 1175.019164 |   1)               |  xradio_bh_exchange() {
+ 1175.019230 |   1) + 50.500 us   |    xradio_data_read();
+ 1175.019410 |   1) ! 245.333 us  |  }
+ 1175.019486 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.019515 |   1)               |  xradio_bh_exchange() {
+ 1175.019576 |   1) + 49.333 us   |    xradio_data_read();
+ 1175.019718 |   1) ! 202.417 us  |  }
+ 1175.019944 |   0)   8.125 us    |  xradio_irq_handler();
+ 1175.019974 |   1)               |  xradio_bh_exchange() {
+ 1175.020035 |   1) + 48.917 us   |    xradio_data_read();
+ 1175.020205 |   1) ! 230.709 us  |  }
+ 1175.020310 |   0)   7.542 us    |  xradio_irq_handler();
+ 1175.020344 |   1)               |  xradio_bh_exchange() {
+ 1175.020408 |   1) + 48.958 us   |    xradio_data_read();
+ 1175.020549 |   1) ! 204.833 us  |  }
+ 1175.020768 |   0)   8.084 us    |  xradio_irq_handler();
+ 1175.020798 |   1)               |  xradio_bh_exchange() {
+ 1175.020860 |   1) + 48.416 us   |    xradio_data_read();
+ 1175.021028 |   1) ! 229.375 us  |  }
+ 1175.021378 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.021413 |   1)               |  xradio_bh_exchange() {
+ 1175.021478 |   1) + 48.959 us   |    xradio_data_read();
+ 1175.021618 |   1) ! 204.958 us  |  }
+ 1175.022385 |   0)   7.959 us    |  xradio_irq_handler();
+ 1175.022415 |   1)               |  xradio_bh_exchange() {
+ 1175.022483 |   1) + 52.208 us   |    xradio_data_read();
+ 1175.022721 |   0)   4.417 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 1)   xradio_-93   =>   ksoftir-22  
+ ------------------------------------------
+
+ 1175.022778 |   1) + 17.250 us   |  xradio_tx();
+ 1175.022820 |   1)   9.625 us    |  xradio_tx();
+ 1175.022891 |   1) + 11.375 us   |  xradio_tx();
+ 1175.022927 |   1)   9.750 us    |  xradio_tx();
+ 1175.022958 |   1)   9.167 us    |  xradio_tx();
+ 1175.022988 |   1)   9.292 us    |  xradio_tx();
+ 1175.023019 |   1)   9.084 us    |  xradio_tx();
+ 1175.023049 |   1)   9.250 us    |  xradio_tx();
+ 1175.023079 |   1)   9.292 us    |  xradio_tx();
+ 1175.023109 |   1)   9.250 us    |  xradio_tx();
+ 1175.023140 |   1)   9.416 us    |  xradio_tx();
+ 1175.023170 |   1)   9.333 us    |  xradio_tx();
+ 1175.023200 |   1)   9.541 us    |  xradio_tx();
+ 1175.023231 |   1)   9.167 us    |  xradio_tx();
+ 1175.023261 |   1)   9.292 us    |  xradio_tx();
+ 1175.023291 |   1)   9.083 us    |  xradio_tx();
+ 1175.023321 |   1)   9.209 us    |  xradio_tx();
+ 1175.023351 |   1)   9.167 us    |  xradio_tx();
+ 1175.023381 |   1)   8.833 us    |  xradio_tx();
+ ------------------------------------------
+ 1)   ksoftir-22   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.023447 |   1) ! 124.459 us  |    xradio_data_write();
+ 1175.023641 |   1) + 49.750 us   |    xradio_data_read();
+ 1175.023742 |   1) ! 115.417 us  |    xradio_data_write();
+ 1175.023864 |   1) + 54.083 us   |    xradio_data_read();
+ 1175.023994 |   1) ! 116.833 us  |    xradio_data_write();
+ 1175.024117 |   1) + 49.166 us   |    xradio_data_read();
+ 1175.024215 |   1) ! 116.209 us  |    xradio_data_write();
+ 1175.024395 |   1) ! 114.958 us  |    xradio_data_write();
+ 1175.024492 |   0)   5.208 us    |  xradio_irq_handler();
+ 1175.024568 |   1) + 48.833 us   |    xradio_data_read();
+ 1175.024686 |   1) ! 122.416 us  |    xradio_data_write();
+ 1175.024876 |   1) ! 116.667 us  |    xradio_data_write();
+ 1175.024949 |   0)   4.250 us    |  xradio_irq_handler();
+ 1175.025053 |   1) + 48.709 us   |    xradio_data_read();
+ 1175.025158 |   1) ! 115.125 us  |    xradio_data_write();
+ 1175.025336 |   1) ! 114.459 us  |    xradio_data_write();
+ 1175.025467 |   0)   4.375 us    |  xradio_irq_handler();
+ 1175.025513 |   1) + 49.334 us   |    xradio_data_read();
+ 1175.025632 |   1) ! 119.708 us  |    xradio_data_write();
+ 1175.025816 |   1) ! 120.166 us  |    xradio_data_write();
+ 1175.026004 |   1) ! 113.459 us  |    xradio_data_write();
+ 1175.026108 |   0)   5.291 us    |  xradio_irq_handler();
+ 1175.026174 |   1) + 53.250 us   |    xradio_data_read();
+ 1175.026299 |   1) ! 118.875 us  |    xradio_data_write();
+ 1175.026481 |   1) ! 114.791 us  |    xradio_data_write();
+ 1175.026657 |   1) ! 113.334 us  |    xradio_data_write();
+ 1175.026754 |   0)   5.083 us    |  xradio_irq_handler();
+ 1175.026829 |   1) ! 101.459 us  |    xradio_data_read();
+ 1175.026983 |   1) ! 117.084 us  |    xradio_data_write();
+ 1175.027169 |   1) ! 115.666 us  |    xradio_data_write();
+ 1175.027348 |   1) ! 114.250 us  |    xradio_data_write();
+ 1175.027453 |   0)   5.000 us    |  xradio_irq_handler();
+ 1175.027523 |   1) + 49.250 us   |    xradio_data_read();
+ 1175.027644 |   1) ! 117.167 us  |    xradio_data_write();
+ 1175.027695 |   0)   4.333 us    |  xradio_irq_handler();
+ 1175.027821 |   1) + 53.916 us   |    xradio_data_read();
+ 1175.027970 |   1) + 93.417 us   |    xradio_data_read();
+ 1175.028312 |   1) ! 101.708 us  |    xradio_data_read();
+ 1175.028637 |   1) + 95.875 us   |    xradio_data_read();
+ 1175.028966 |   1) + 95.667 us   |    xradio_data_read();
+ 1175.029266 |   1) + 53.625 us   |    xradio_data_read();
+ 1175.029412 |   1) + 57.000 us   |    xradio_data_read();
+ 1175.029527 |   0)   4.625 us    |  xradio_irq_handler();
+ 1175.029591 |   1) + 53.083 us   |    xradio_data_read();
+ 1175.029773 |   1) # 7357.416 us |  } /* xradio_bh_exchange */
+ 1175.029779 |   1)               |  xradio_bh_exchange() {
+ 1175.029832 |   0)   4.458 us    |  xradio_irq_handler();
+ 1175.029843 |   1) + 57.000 us   |    xradio_data_read();
+ 1175.029987 |   0)   4.167 us    |  xradio_irq_handler();
+ 1175.029997 |   1) + 55.625 us   |    xradio_data_read();
+ 1175.030204 |   1) ! 423.791 us  |  }
+ 1175.030210 |   1) + 60.708 us   |  xradio_bh_exchange();
+ 1175.030960 |   0)   8.209 us    |  xradio_irq_handler();
+ 1175.030998 |   1)               |  xradio_bh_exchange() {
+ 1175.031073 |   1) + 54.834 us   |    xradio_data_read();
+ 1175.031250 |   1) ! 251.083 us  |  }
+ 1175.031510 |   0)   8.208 us    |  xradio_irq_handler();
+ 1175.031541 |   1)               |  xradio_bh_exchange() {
+ 1175.031609 |   1) + 49.166 us   |    xradio_data_read();
+ 1175.031783 |   1) ! 241.583 us  |  }
+ 1175.031968 |   0)   7.708 us    |  xradio_irq_handler();
+ 1175.031996 |   1)               |  xradio_bh_exchange() {
+ 1175.032066 |   1) + 50.375 us   |    xradio_data_read();
+ 1175.032210 |   1) ! 213.084 us  |  }
+ 1175.032426 |   0)   8.000 us    |  xradio_irq_handler();
+ 1175.032461 |   1)               |  xradio_bh_exchange() {
+ 1175.032528 |   1) + 48.958 us   |    xradio_data_read();
+ 1175.032639 |   0)   4.208 us    |  xradio_irq_handler();
+ 1175.032702 |   1) + 55.250 us   |    xradio_data_read();
+ 1175.032877 |   1) ! 415.625 us  |  }
+ 1175.032883 |   1) + 63.125 us   |  xradio_bh_exchange();
+ 1175.033097 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.033125 |   1)               |  xradio_bh_exchange() {
+ 1175.033192 |   1) + 48.958 us   |    xradio_data_read();
+ 1175.033364 |   1) ! 238.709 us  |  }
+ 1175.033615 |   0)   7.625 us    |  xradio_irq_handler();
+ 1175.033649 |   1)               |  xradio_bh_exchange() {
+ 1175.033715 |   1) + 49.667 us   |    xradio_data_read();
+ 1175.033860 |   1) + 55.209 us   |    xradio_data_read();
+ ------------------------------------------
+ 1)   xradio_-93   =>   ksoftir-22  
+ ------------------------------------------
+
+ 1175.034207 |   1) + 17.416 us   |  xradio_tx();
+ 1175.034250 |   1) + 10.666 us   |  xradio_tx();
+ 1175.034283 |   1)   9.250 us    |  xradio_tx();
+ 1175.034314 |   1)   9.291 us    |  xradio_tx();
+ 1175.034344 |   1)   9.292 us    |  xradio_tx();
+ 1175.034377 |   1) + 12.042 us   |  xradio_tx();
+ 1175.034408 |   1)   9.458 us    |  xradio_tx();
+ 1175.034439 |   1)   9.375 us    |  xradio_tx();
+ 1175.034469 |   1)   9.083 us    |  xradio_tx();
+ 1175.034500 |   1)   9.208 us    |  xradio_tx();
+ 1175.034530 |   1)   8.833 us    |  xradio_tx();
+ 1175.034560 |   1)   9.542 us    |  xradio_tx();
+ 1175.034591 |   1)   9.166 us    |  xradio_tx();
+ 1175.034621 |   1)   9.333 us    |  xradio_tx();
+ 1175.034651 |   1)   9.042 us    |  xradio_tx();
+ 1175.034681 |   1)   9.333 us    |  xradio_tx();
+ 1175.034711 |   1)   9.125 us    |  xradio_tx();
+ 1175.034742 |   1)   9.208 us    |  xradio_tx();
+ 1175.034772 |   1)   9.041 us    |  xradio_tx();
+ 1175.034802 |   1)   9.292 us    |  xradio_tx();
+ 1175.034832 |   1)   9.000 us    |  xradio_tx();
+ 1175.034906 |   1) + 10.667 us   |  xradio_tx();
+ 1175.034939 |   1)   9.583 us    |  xradio_tx();
+ ------------------------------------------
+ 3)   ksoftir-32   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.034984 |   3) ! 126.458 us  |    xradio_data_write();
+ 1175.035120 |   3) + 55.667 us   |    xradio_data_read();
+ 1175.035266 |   3) ! 117.833 us  |    xradio_data_write();
+ 1175.035393 |   3) + 53.917 us   |    xradio_data_read();
+ 1175.035545 |   3) ! 118.292 us  |    xradio_data_write();
+ 1175.035671 |   3) + 55.833 us   |    xradio_data_read();
+ 1175.035804 |   3) ! 117.000 us  |    xradio_data_write();
+ 1175.035930 |   3) + 52.500 us   |    xradio_data_read();
+ 1175.036117 |   3) ! 123.791 us  |    xradio_data_write();
+ 1175.036248 |   3) + 55.708 us   |    xradio_data_read();
+ 1175.036394 |   0)   5.167 us    |  xradio_irq_handler();
+ 1175.036406 |   3) ! 119.000 us  |    xradio_data_write();
+ 1175.036593 |   3) + 58.250 us   |    xradio_data_read();
+ 1175.036702 |   3) ! 115.500 us  |    xradio_data_write();
+ 1175.036824 |   3) + 54.291 us   |    xradio_data_read();
+ 1175.036975 |   3) ! 117.542 us  |    xradio_data_write();
+ 1175.037094 |   0)   4.458 us    |  xradio_irq_handler();
+ 1175.037159 |   3) + 49.916 us   |    xradio_data_read();
+ 1175.037259 |   3) ! 122.958 us  |    xradio_data_write();
+ 1175.037308 |   0)   4.167 us    |  xradio_irq_handler();
+ 1175.037446 |   3) + 54.042 us   |    xradio_data_read();
+ 1175.037599 |   3) ! 118.541 us  |    xradio_data_write();
+ 1175.037727 |   3) + 53.625 us   |    xradio_data_read();
+ 1175.037854 |   3) ! 117.791 us  |    xradio_data_write();
+ 1175.037857 |   0)   4.000 us    |  xradio_irq_handler();
+ 1175.038038 |   3) + 54.125 us   |    xradio_data_read();
+ 1175.038165 |   3) ! 116.750 us  |    xradio_data_write();
+ 1175.038289 |   3) + 52.625 us   |    xradio_data_read();
+ 1175.038419 |   3) ! 117.458 us  |    xradio_data_write();
+ 1175.038612 |   3) ! 117.459 us  |    xradio_data_write();
+ 1175.038681 |   0)   4.041 us    |  xradio_irq_handler();
+ 1175.038794 |   3) ! 108.708 us  |    xradio_data_read();
+ 1175.038981 |   3) ! 119.334 us  |    xradio_data_write();
+ 1175.039170 |   3) ! 114.625 us  |    xradio_data_write();
+ 1175.039347 |   3) + 49.416 us   |    xradio_data_read();
+ 1175.039447 |   3) ! 116.458 us  |    xradio_data_write();
+ 1175.039630 |   3) ! 114.792 us  |    xradio_data_write();
+ 1175.039812 |   3) + 54.083 us   |    xradio_data_read();
+ 1175.039967 |   3) ! 118.125 us  |    xradio_data_write();
+ 1175.040094 |   3) + 53.583 us   |    xradio_data_read();
+ 1175.040228 |   3) ! 118.542 us  |    xradio_data_write();
+ 1175.040238 |   0)   4.959 us    |  xradio_irq_handler();
+ 1175.040413 |   3) + 50.417 us   |    xradio_data_read();
+ 1175.040536 |   3) ! 116.583 us  |    xradio_data_write();
+ 1175.040633 |   0)   4.250 us    |  xradio_irq_handler();
+ 1175.040717 |   3) + 49.333 us   |    xradio_data_read();
+ 1175.040816 |   3) ! 115.708 us  |    xradio_data_write();
+ 1175.040912 |   0)   4.083 us    |  xradio_irq_handler();
+ 1175.040996 |   3) + 58.500 us   |    xradio_data_read();
+ 1175.041152 |   3) ! 119.000 us  |    xradio_data_write();
+ 1175.041153 |   0)   4.083 us    |  xradio_irq_handler();
+ 1175.041337 |   3) + 53.667 us   |    xradio_data_read();
+ 1175.041514 |   3) # 7864.083 us |  } /* xradio_bh_exchange */
+ 1175.041519 |   3) + 65.625 us   |  xradio_bh_exchange();
+ 1175.041703 |   0)   8.084 us    |  xradio_irq_handler();
+ 1175.041731 |   3)               |  xradio_bh_exchange() {
+ 1175.041801 |   3) + 49.334 us   |    xradio_data_read();
+ 1175.041920 |   3) + 56.458 us   |    xradio_data_read();
+ 1175.042098 |   3) ! 366.042 us  |  }
+ 1175.042191 |   0)   8.042 us    |  xradio_irq_handler();
+ 1175.042222 |   3)               |  xradio_bh_exchange() {
+ 1175.042301 |   3) + 50.292 us   |    xradio_data_read();
+ 1175.042479 |   3) ! 256.417 us  |  }
+ 1175.042740 |   0)   7.917 us    |  xradio_irq_handler();
+ 1175.042769 |   3)               |  xradio_bh_exchange() {
+ 1175.042840 |   3) + 95.375 us   |    xradio_data_read();
+ 1175.042981 |   3) + 48.625 us   |    xradio_data_read();
+ 1175.043187 |   3) ! 418.000 us  |  }
+ 1175.043534 |   0)   8.334 us    |  xradio_irq_handler();
+ 1175.043568 |   3)               |  xradio_bh_exchange() {
+ 1175.043639 |   3) + 50.375 us   |    xradio_data_read();
+ 1175.043747 |   0)   4.042 us    |  xradio_irq_handler();
+ 1175.043789 |   3) + 56.125 us   |    xradio_data_read();
+ 1175.043940 |   3) + 56.458 us   |    xradio_data_read();
+ 1175.044114 |   3) ! 545.625 us  |  }
+ 1175.044120 |   3) + 66.750 us   |  xradio_bh_exchange();
+ 1175.044236 |   0)   8.125 us    |  xradio_irq_handler();
+ 1175.044265 |   3)               |  xradio_bh_exchange() {
+ 1175.044335 |   3) + 48.958 us   |    xradio_data_read();
+ 1175.044449 |   0)   4.250 us    |  xradio_irq_handler();
+ 1175.044512 |   3) + 55.083 us   |    xradio_data_read();
+ 1175.044689 |   3) ! 423.500 us  |  }
+ 1175.044694 |   3) + 71.916 us   |  xradio_bh_exchange();
+ 1175.044907 |   0)   8.125 us    |  xradio_irq_handler();
+ 1175.044936 |   3)               |  xradio_bh_exchange() {
+ 1175.045006 |   3) + 49.542 us   |    xradio_data_read();
+ 1175.045184 |   3) ! 246.917 us  |  }
+ 1175.045243 |   0)   8.000 us    |  xradio_irq_handler();
+ 1175.045271 |   3)               |  xradio_bh_exchange() {
+ 1175.045336 |   3) + 48.750 us   |    xradio_data_read();
+ 1175.045468 |   0)   4.375 us    |  xradio_irq_handler();
+ 1175.045478 |   3) + 55.500 us   |    xradio_data_read();
+ 1175.045678 |   3) ! 406.250 us  |  }
+ 1175.045684 |   3) + 56.166 us   |  xradio_bh_exchange();
+ 1175.045853 |   0)   7.750 us    |  xradio_irq_handler();
+ 1175.045888 |   3)               |  xradio_bh_exchange() {
+ 1175.045955 |   3) + 49.417 us   |    xradio_data_read();
+ 1175.046053 |   3) + 70.791 us   |    xradio_data_read();
+ ------------------------------------------
+ 3)   xradio_-93   =>   ksoftir-32  
+ ------------------------------------------
+
+ 1175.046469 |   3) + 17.333 us   |  xradio_tx();
+ 1175.046511 |   3) + 10.167 us   |  xradio_tx();
+ 1175.046545 |   3)   9.833 us    |  xradio_tx();
+ 1175.046576 |   3)   9.250 us    |  xradio_tx();
+ 1175.046606 |   3)   9.167 us    |  xradio_tx();
+ 1175.046637 |   3)   9.083 us    |  xradio_tx();
+ 1175.046667 |   3)   8.916 us    |  xradio_tx();
+ 1175.046698 |   3)   9.167 us    |  xradio_tx();
+ 1175.046709 |   0)   5.792 us    |  xradio_irq_handler();
+ 1175.046728 |   3)   9.000 us    |  xradio_tx();
+ 1175.046758 |   3)   9.083 us    |  xradio_tx();
+ 1175.046788 |   3)   9.208 us    |  xradio_tx();
+ 1175.046819 |   3)   9.417 us    |  xradio_tx();
+ 1175.046890 |   3) + 11.125 us   |  xradio_tx();
+ 1175.046926 |   3)   9.958 us    |  xradio_tx();
+ 1175.046958 |   3)   9.584 us    |  xradio_tx();
+ 1175.046989 |   3)   9.541 us    |  xradio_tx();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.046998 |   0) ! 125.709 us  |    xradio_data_write();
+ 1175.047020 |   3)   9.458 us    |  xradio_tx();
+ 1175.047051 |   3)   9.333 us    |  xradio_tx();
+ 1175.047081 |   3)   9.208 us    |  xradio_tx();
+ 1175.047112 |   3)   9.208 us    |  xradio_tx();
+ 1175.047142 |   3)   9.292 us    |  xradio_tx();
+ 1175.047173 |   3)   9.125 us    |  xradio_tx();
+ 1175.047203 |   3)   9.542 us    |  xradio_tx();
+ 1175.047211 |   0) + 58.791 us   |    xradio_data_read();
+ 1175.047234 |   3)   9.209 us    |  xradio_tx();
+ 1175.047264 |   3)   9.042 us    |  xradio_tx();
+ 1175.047295 |   3)   9.375 us    |  xradio_tx();
+ 1175.047325 |   3)   9.292 us    |  xradio_tx();
+ 1175.047356 |   3)   9.000 us    |  xradio_tx();
+ ------------------------------------------
+ 0)   xradio_-93   =>   ksoftir-14  
+ ------------------------------------------
+
+ 1175.047380 |   0)   4.958 us    |  xradio_irq_handler();
+ 1175.047386 |   3)   9.292 us    |  xradio_tx();
+ 1175.047416 |   3)   9.208 us    |  xradio_tx();
+ ------------------------------------------
+ 0)   ksoftir-14   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.047494 |   0) ! 116.208 us  |    xradio_data_write();
+ 1175.047679 |   0) + 53.083 us   |    xradio_data_read();
+ 1175.047785 |   0) ! 114.083 us  |    xradio_data_write();
+ 1175.047906 |   0) + 64.791 us   |    xradio_data_read();
+ 1175.048110 |   0) ! 116.875 us  |    xradio_data_write();
+ 1175.048236 |   0) + 66.416 us   |    xradio_data_read();
+ 1175.048378 |   0) ! 115.250 us  |    xradio_data_write();
+ 1175.048503 |   0) + 66.292 us   |    xradio_data_read();
+ 1175.048643 |   0) ! 114.166 us  |    xradio_data_write();
+ 1175.048764 |   0) + 53.375 us   |    xradio_data_read();
+ 1175.048895 |   0) ! 115.292 us  |    xradio_data_write();
+ 1175.049019 |   0) + 57.541 us   |    xradio_data_read();
+ 1175.049173 |   0) ! 115.125 us  |    xradio_data_write();
+ 1175.049297 |   0) + 56.958 us   |    xradio_data_read();
+ 1175.049405 |   0) ! 113.916 us  |    xradio_data_write();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.049576 |   0)   4.791 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.049603 |   0) + 53.416 us   |    xradio_data_read();
+ 1175.049735 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.049787 |   0)   5.292 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.049850 |   0) ! 115.125 us  |    }
+ 1175.049918 |   0) + 52.583 us   |    xradio_data_read();
+ 1175.050045 |   0) ! 115.334 us  |    xradio_data_write();
+ 1175.050170 |   0) + 53.542 us   |    xradio_data_read();
+ 1175.050319 |   0) ! 115.083 us  |    xradio_data_write();
+ 1175.050443 |   0) + 53.916 us   |    xradio_data_read();
+ 1175.050548 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>   ksoftir-14  
+ ------------------------------------------
+
+ 1175.050583 |   0)   4.458 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)   ksoftir-14   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.050662 |   0) ! 113.125 us  |    }
+ 1175.050733 |   0) + 56.084 us   |    xradio_data_read();
+ 1175.050898 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.050951 |   0)   4.833 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.051014 |   0) ! 116.167 us  |    }
+ 1175.051088 |   0) + 53.833 us   |    xradio_data_read();
+ 1175.051193 |   0) ! 114.333 us  |    xradio_data_write();
+ 1175.051314 |   0) + 53.291 us   |    xradio_data_read();
+ 1175.051466 |   0) ! 114.833 us  |    xradio_data_write();
+ 1175.051590 |   0) + 65.375 us   |    xradio_data_read();
+ 1175.051774 |   0) ! 116.208 us  |    xradio_data_write();
+ 1175.051900 |   0) + 54.167 us   |    xradio_data_read();
+ 1175.052027 |   0)               |    xradio_data_write() {
+ 1175.052048 |   0)   4.208 us    |      xradio_irq_handler();
+ 1175.052142 |   0) ! 114.416 us  |    }
+ 1175.052210 |   0) + 52.833 us   |    xradio_data_read();
+ 1175.052321 |   0) ! 119.417 us  |    xradio_data_write();
+ 1175.052448 |   0) + 69.917 us   |    xradio_data_read();
+ 1175.052618 |   0) ! 116.042 us  |    xradio_data_write();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.052791 |   0)   5.042 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.052820 |   0) + 53.041 us   |    xradio_data_read();
+ 1175.052924 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.052995 |   0)   4.916 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.053040 |   0) ! 115.000 us  |    }
+ 1175.053110 |   0) + 57.417 us   |    xradio_data_read();
+ 1175.053260 |   0) + 71.417 us   |    xradio_data_read();
+ 1175.053403 |   0) + 63.000 us   |    xradio_data_read();
+ 1175.053540 |   0) ! 115.250 us  |    xradio_data_write();
+ 1175.053665 |   0)   3.750 us    |      xradio_irq_handler();
+ 1175.053740 |   0) + 59.958 us   |    xradio_data_read();
+ 1175.053855 |   0) ! 119.833 us  |    xradio_data_write();
+ 1175.054039 |   0) + 52.583 us   |    xradio_data_read();
+ 1175.054165 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.054246 |   0)   4.917 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.054287 |   0) ! 121.583 us  |    }
+ 1175.054357 |   0) + 55.708 us   |    xradio_data_read();
+ 1175.054489 |   0) + 63.917 us   |    xradio_data_read();
+ 1175.054644 |   0) + 64.333 us   |    xradio_data_read();
+ 1175.054885 |   0) # 8996.209 us |  } /* xradio_bh_exchange */
+ 1175.054890 |   0)               |  xradio_bh_exchange() {
+ 1175.054983 |   0) + 55.292 us   |    xradio_data_read();
+ 1175.055090 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.055162 |   0)   4.750 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.055212 |   0) ! 121.500 us  |    }
+ 1175.055297 |   0) + 54.417 us   |    xradio_data_read();
+ 1175.055519 |   0) ! 627.542 us  |  } /* xradio_bh_exchange */
+ 1175.055525 |   0) + 65.042 us   |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.055680 |   0) + 12.500 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.055711 |   0)               |  xradio_bh_exchange() {
+ 1175.055780 |   0) + 52.541 us   |    xradio_data_read();
+ 1175.055884 |   0) ! 114.750 us  |    xradio_data_write();
+ 1175.056125 |   0) ! 413.041 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.056199 |   0) + 12.500 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.056229 |   0)               |  xradio_bh_exchange() {
+ 1175.056295 |   0) + 52.459 us   |    xradio_data_read();
+ 1175.056420 |   0) ! 120.583 us  |    xradio_data_write();
+ 1175.056547 |   0) + 61.667 us   |    xradio_data_read();
+ 1175.056748 |   0) ! 517.875 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.056963 |   0) + 13.750 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.056995 |   0)               |  xradio_bh_exchange() {
+ 1175.057071 |   0) + 56.417 us   |    xradio_data_read();
+ 1175.057181 |   0) ! 114.000 us  |    xradio_data_write();
+ 1175.057302 |   0) + 57.417 us   |    xradio_data_read();
+ 1175.057521 |   0) ! 524.916 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.057665 |   0) + 13.417 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.057696 |   0)               |  xradio_bh_exchange() {
+ 1175.057773 |   0) + 54.042 us   |    xradio_data_read();
+ 1175.057878 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>   ksoftir-14  
+ ------------------------------------------
+
+ 1175.057912 |   0)   4.417 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)   ksoftir-14   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.057994 |   0) ! 115.208 us  |    }
+ 1175.058062 |   0) + 53.416 us   |    xradio_data_read();
+ 1175.058208 |   0) + 63.834 us   |    xradio_data_read();
+ 1175.058410 |   0) ! 712.750 us  |  } /* xradio_bh_exchange */
+ 1175.058415 |   0)               |  xradio_bh_exchange() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.058489 |   0)   5.167 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.058520 |   0) + 54.625 us   |    xradio_data_read();
+ 1175.058627 |   0) ! 113.916 us  |    xradio_data_write();
+ 1175.058906 |   0) ! 489.834 us  |  } /* xradio_bh_exchange */
+ 1175.058912 |   0) + 70.000 us   |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.059068 |   0) + 12.500 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.059098 |   0)               |  xradio_bh_exchange() {
+ 1175.059187 |   0) + 53.750 us   |    xradio_data_read();
+ 1175.059416 |   0) ! 317.458 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.059770 |   0) + 12.542 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.059800 |   0)               |  xradio_bh_exchange() {
+ 1175.059873 |   0) + 52.000 us   |    xradio_data_read();
+ 1175.060060 |   0) ! 259.000 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.060198 |   0) + 13.625 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.060229 |   0)               |  xradio_bh_exchange() {
+ 1175.060306 |   0) + 70.917 us   |    xradio_data_read();
+ 1175.060544 |   0) ! 313.458 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.060686 |   0) + 13.625 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.060718 |   0)               |  xradio_bh_exchange() {
+ 1175.060803 |   0) + 53.583 us   |    xradio_data_read();
+ 1175.061005 |   0) ! 286.916 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.061235 |   0) + 12.875 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.061265 |   0)               |  xradio_bh_exchange() {
+ 1175.061337 |   0) + 52.250 us   |    xradio_data_read();
+ 1175.061502 |   0) ! 236.166 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.061601 |   0) + 13.250 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.061632 |   0)               |  xradio_bh_exchange() {
+ 1175.061719 |   0) + 57.250 us   |    xradio_data_read();
+ 1175.061849 |   0) + 72.500 us   |    xradio_data_read();
+ 1175.062277 |   0) + 18.167 us   |    xradio_tx();
+ 1175.062321 |   0) + 10.333 us   |    xradio_tx();
+ 1175.062354 |   0)   9.542 us    |    xradio_tx();
+ 1175.062386 |   0)   9.291 us    |    xradio_tx();
+ 1175.062425 |   0)   4.125 us    |      xradio_irq_handler();
+ 1175.062435 |   0) + 28.375 us   |    xradio_tx();
+ 1175.062468 |   0)   9.500 us    |    xradio_tx();
+ 1175.062499 |   0)   9.125 us    |    xradio_tx();
+ 1175.062530 |   0)   9.167 us    |    xradio_tx();
+ 1175.062560 |   0)   9.250 us    |    xradio_tx();
+ 1175.062590 |   0)   9.333 us    |    xradio_tx();
+ 1175.062621 |   0)   9.292 us    |    xradio_tx();
+ 1175.062651 |   0)   9.125 us    |    xradio_tx();
+ 1175.062682 |   0)   9.375 us    |    xradio_tx();
+ 1175.062712 |   0)   9.417 us    |    xradio_tx();
+ 1175.062742 |   0)   9.083 us    |    xradio_tx();
+ 1175.062772 |   0)   9.083 us    |    xradio_tx();
+ 1175.062803 |   0)   8.875 us    |    xradio_tx();
+ 1175.062833 |   0)   9.083 us    |    xradio_tx();
+ 1175.062907 |   0) + 10.458 us   |    xradio_tx();
+ 1175.062940 |   0)   9.292 us    |    xradio_tx();
+ 1175.062971 |   0)   9.125 us    |    xradio_tx();
+ 1175.063001 |   0)   9.167 us    |    xradio_tx();
+ 1175.063032 |   0)   9.375 us    |    xradio_tx();
+ 1175.063062 |   0)   9.000 us    |    xradio_tx();
+ 1175.063092 |   0)   8.959 us    |    xradio_tx();
+ 1175.063122 |   0)   9.166 us    |    xradio_tx();
+ 1175.063152 |   0)   9.084 us    |    xradio_tx();
+ 1175.063182 |   0)   9.083 us    |    xradio_tx();
+ 1175.063212 |   0)   9.166 us    |    xradio_tx();
+ 1175.063242 |   0)   9.000 us    |    xradio_tx();
+ 1175.063385 |   0) + 62.500 us   |    xradio_data_read();
+ 1175.063527 |   0) ! 116.542 us  |    xradio_data_write();
+ 1175.063650 |   0) + 55.250 us   |    xradio_data_read();
+ 1175.063864 |   0) ! 117.459 us  |    xradio_data_write();
+ 1175.063991 |   0) + 54.375 us   |    xradio_data_read();
+ 1175.064121 |   0) ! 115.958 us  |    xradio_data_write();
+ 1175.064246 |   0) + 60.833 us   |    xradio_data_read();
+ 1175.064406 |   0) ! 116.500 us  |    xradio_data_write();
+ 1175.064531 |   0) + 72.333 us   |    xradio_data_read();
+ 1175.064679 |   0) ! 114.708 us  |    xradio_data_write();
+ 1175.064801 |   0) + 66.208 us   |    xradio_data_read();
+ 1175.064964 |   0) ! 115.709 us  |    xradio_data_write();
+ 1175.065167 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.065271 |   0)   4.791 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.065296 |   0) ! 128.750 us  |    }
+ 1175.065366 |   0) + 53.625 us   |    xradio_data_read();
+ 1175.065471 |   0) ! 120.334 us  |    xradio_data_write();
+ 1175.065597 |   0) + 63.583 us   |    xradio_data_read();
+ 1175.065828 |   0) # 4195.666 us |  } /* xradio_bh_exchange */
+ 1175.065834 |   0)               |  xradio_bh_exchange() {
+ 1175.065910 |   0) + 65.625 us   |    xradio_data_read();
+ 1175.066027 |   0) ! 114.250 us  |    xradio_data_write();
+ 1175.066254 |   0) ! 418.750 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.066456 |   0) + 13.792 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.066487 |   0)               |  xradio_bh_exchange() {
+ 1175.066550 |   0) + 53.125 us   |    xradio_data_read();
+ 1175.066676 |   0) ! 114.542 us  |    xradio_data_write();
+ 1175.066947 |   0) + 80.500 us   |    xradio_data_read();
+ 1175.067075 |   0) ! 114.666 us  |    xradio_data_write();
+ 1175.067303 |   0) ! 814.916 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.067430 |   0) + 12.250 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.067459 |   0)               |  xradio_bh_exchange() {
+ 1175.067521 |   0) + 53.042 us   |    xradio_data_read();
+ 1175.067732 |   0) ! 271.542 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.068009 |   0) + 12.416 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.068040 |   0)               |  xradio_bh_exchange() {
+ 1175.068109 |   0) + 65.708 us   |    xradio_data_read();
+ 1175.068227 |   0) ! 118.625 us  |    xradio_data_write();
+ 1175.068476 |   0) ! 434.958 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.068681 |   0) + 12.459 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.068710 |   0)               |  xradio_bh_exchange() {
+ 1175.068772 |   0) + 57.334 us   |    xradio_data_read();
+ 1175.069059 |   0) ! 347.209 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.069505 |   0) + 18.208 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.069542 |   0)               |  xradio_bh_exchange() {
+ 1175.069606 |   0) + 53.250 us   |    xradio_data_read();
+ 1175.069720 |   0) ! 114.958 us  |    xradio_data_write();
+ 1175.069842 |   0) + 57.000 us   |    xradio_data_read();
+ 1175.070059 |   0) ! 515.916 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.070298 |   0) + 12.584 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.070329 |   0)               |  xradio_bh_exchange() {
+ 1175.070405 |   0) + 53.000 us   |    xradio_data_read();
+ 1175.070509 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>   ksoftir-14  
+ ------------------------------------------
+
+ 1175.070543 |   0)   4.459 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)   ksoftir-14   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.070624 |   0) ! 114.334 us  |    }
+ 1175.070692 |   0) + 53.375 us   |    xradio_data_read();
+ 1175.070957 |   0) ! 627.750 us  |  } /* xradio_bh_exchange */
+ 1175.070963 |   0)               |  xradio_bh_exchange() {
+ 1175.071029 |   0) + 52.959 us   |    xradio_data_read();
+ 1175.071134 |   0) ! 115.042 us  |    xradio_data_write();
+ 1175.071364 |   0) ! 399.791 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.071550 |   0) + 12.250 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.071579 |   0)               |  xradio_bh_exchange() {
+ 1175.071640 |   0) + 52.125 us   |    xradio_data_read();
+ 1175.071766 |   0) ! 114.083 us  |    xradio_data_write();
+ 1175.071886 |   0) + 53.125 us   |    xradio_data_read();
+ 1175.072074 |   0) ! 494.416 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.072109 |   0) + 17.917 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.072145 |   0)               |  xradio_bh_exchange() {
+ 1175.072221 |   0) + 56.500 us   |    xradio_data_read();
+ 1175.072328 |   0) ! 114.375 us  |    xradio_data_write();
+ 1175.072558 |   0) ! 412.500 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.082572 |   0) + 19.417 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.082617 |   0)               |  xradio_bh_exchange() {
+ 1175.082684 |   0) + 57.750 us   |    xradio_data_read();
+ 1175.082839 |   0) ! 103.000 us  |    xradio_data_read();
+ 1175.083077 |   0) ! 458.417 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.083666 |   0) + 14.375 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.083699 |   0)               |  xradio_bh_exchange() {
+ 1175.083768 |   0) + 53.666 us   |    xradio_data_read();
+ 1175.083875 |   0) ! 117.958 us  |    xradio_data_write();
+ 1175.083999 |   0) + 61.583 us   |    xradio_data_read();
+ 1175.084231 |   0) + 54.583 us   |    xradio_data_read();
+ 1175.084336 |   0) ! 114.250 us  |    xradio_data_write();
+ 1175.084568 |   0) ! 867.542 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.084855 |   0) + 12.750 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.084886 |   0)               |  xradio_bh_exchange() {
+ 1175.084949 |   0) + 51.667 us   |    xradio_data_read();
+ 1175.085154 |   0) ! 267.750 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.085618 |   0) + 17.166 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.085653 |   0)               |  xradio_bh_exchange() {
+ 1175.085720 |   0) + 53.083 us   |    xradio_data_read();
+ 1175.085825 |   0) ! 113.875 us  |    xradio_data_write();
+ 1175.086064 |   0) ! 409.750 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.086167 |   0) + 12.083 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.086197 |   0)               |  xradio_bh_exchange() {
+ 1175.086264 |   0) + 56.416 us   |    xradio_data_read();
+ 1175.086495 |   0) ! 296.292 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.086719 |   0) + 17.125 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.086752 |   0)               |  xradio_bh_exchange() {
+ 1175.086819 |   0) ! 100.292 us  |    xradio_data_read();
+ 1175.086972 |   0) ! 114.750 us  |    xradio_data_write();
+ 1175.087113 |   0)   4.333 us    |    xradio_irq_handler();
+ 1175.087178 |   0) + 54.666 us   |    xradio_data_read();
+ 1175.087307 |   0)               |    xradio_data_write() {
+ 1175.087326 |   0)   4.208 us    |      xradio_irq_handler();
+ 1175.087422 |   0) ! 114.541 us  |    }
+ 1175.087486 |   0) + 51.875 us   |    xradio_data_read();
+ 1175.087674 |   0) ! 921.500 us  |  }
+ 1175.087680 |   0) + 79.959 us   |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.087846 |   0) + 17.875 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.087884 |   0)               |  xradio_bh_exchange() {
+ 1175.087951 |   0) + 52.958 us   |    xradio_data_read();
+ 1175.088056 |   0) ! 114.084 us  |    xradio_data_write();
+ 1175.088235 |   0) + 53.000 us   |    xradio_data_read();
+ 1175.088382 |   0) + 71.834 us   |    xradio_data_read();
+ 1175.088589 |   0) ! 704.625 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.088628 |   0) + 13.459 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.088658 |   0)               |  xradio_bh_exchange() {
+ 1175.088726 |   0) + 52.750 us   |    xradio_data_read();
+ 1175.088830 |   0) ! 113.875 us  |    xradio_data_write();
+ 1175.089070 |   0) ! 411.084 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.089219 |   0) + 18.500 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.089255 |   0)               |  xradio_bh_exchange() {
+ 1175.089321 |   0) + 52.833 us   |    xradio_data_read();
+ 1175.089446 |   0) ! 114.250 us  |    xradio_data_write();
+ 1175.089566 |   0) + 64.708 us   |    xradio_data_read();
+ 1175.089774 |   0) ! 517.750 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.090074 |   0) + 13.833 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.090106 |   0)               |  xradio_bh_exchange() {
+ 1175.090187 |   0) + 53.375 us   |    xradio_data_read();
+ 1175.090291 |   0) ! 118.708 us  |    xradio_data_write();
+ 1175.090417 |   0) + 62.584 us   |    xradio_data_read();
+ 1175.090579 |   0) + 63.458 us   |    xradio_data_read();
+ ------------------------------------------
+ 0)   xradio_-93   =>   ksoftir-14  
+ ------------------------------------------
+
+ 1175.090714 |   0)   5.042 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)   ksoftir-14   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.090803 |   0) ! 125.375 us  |    xradio_data_read();
+ 1175.090982 |   0) ! 124.542 us  |    xradio_data_write();
+ 1175.091250 |   0) # 1143.083 us |  } /* xradio_bh_exchange */
+ 1175.091256 |   0) + 62.125 us   |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.091538 |   0) + 11.667 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.091567 |   0)               |  xradio_bh_exchange() {
+ 1175.091633 |   0) + 52.666 us   |    xradio_data_read();
+ 1175.091760 |   0) ! 114.833 us  |    xradio_data_write();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.091933 |   0)   4.958 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.091960 |   0) + 64.583 us   |    xradio_data_read();
+ 1175.092098 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.092149 |   0)   4.583 us    |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.092213 |   0) ! 114.792 us  |    }
+ 1175.092282 |   0) + 64.708 us   |    xradio_data_read();
+ 1175.092420 |   0) + 62.833 us   |    xradio_data_read();
+ 1175.092575 |   0) + 71.333 us   |    xradio_data_read();
+ 1175.092785 |   0) # 1216.584 us |  } /* xradio_bh_exchange */
+ 1175.092791 |   0) + 73.333 us   |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.093095 |   0) + 18.416 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.093132 |   0)               |  xradio_bh_exchange() {
+ 1175.093201 |   0) + 53.417 us   |    xradio_data_read();
+ 1175.093307 |   0) ! 114.542 us  |    xradio_data_write();
+ 1175.093429 |   0) + 66.084 us   |    xradio_data_read();
+ 1175.093652 |   0) ! 519.500 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.093888 |   0) + 12.709 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.093919 |   0)               |  xradio_bh_exchange() {
+ 1175.093999 |   0) + 53.042 us   |    xradio_data_read();
+ 1175.094164 |   0) ! 244.750 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.094835 |   0) + 18.042 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.094909 |   0)               |  xradio_bh_exchange() {
+ 1175.094983 |   0) + 57.500 us   |    xradio_data_read();
+ 1175.095111 |   0) + 69.458 us   |    xradio_data_read();
+ 1175.095319 |   0) ! 409.417 us  |  }
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.095720 |   0) + 18.000 us   |  xradio_irq_handler();
+ ------------------------------------------
+ 0)    <idle>-0    =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.095756 |   0)               |  xradio_bh_exchange() {
+ 1175.095838 |   0) + 57.458 us   |    xradio_data_read();
+ 1175.095963 |   0)   4.708 us    |    xradio_irq_handler();
+ 1175.096053 |   0) + 56.791 us   |    xradio_data_read();
+ 1175.096380 |   0) + 17.792 us   |    xradio_tx();
+ 1175.096424 |   0) + 10.125 us   |    xradio_tx();
+ 1175.096457 |   0)   9.333 us    |    xradio_tx();
+ 1175.096488 |   0)   8.958 us    |    xradio_tx();
+ 1175.096518 |   0)   9.125 us    |    xradio_tx();
+ 1175.096549 |   0)   8.875 us    |    xradio_tx();
+ 1175.096579 |   0)   9.125 us    |    xradio_tx();
+ 1175.096609 |   0)   9.291 us    |    xradio_tx();
+ 1175.096639 |   0)   9.041 us    |    xradio_tx();
+ 1175.096669 |   0)   9.125 us    |    xradio_tx();
+ 1175.096700 |   0)   9.250 us    |    xradio_tx();
+ 1175.096730 |   0)   9.333 us    |    xradio_tx();
+ 1175.096761 |   0)   9.292 us    |    xradio_tx();
+ 1175.096792 |   0)   8.958 us    |    xradio_tx();
+ 1175.096822 |   0)   9.375 us    |    xradio_tx();
+ 1175.096852 |   0)   9.250 us    |    xradio_tx();
+ 1175.096882 |   0)   9.250 us    |    xradio_tx();
+ 1175.096912 |   0)   9.042 us    |    xradio_tx();
+ 1175.096962 |   0) + 69.375 us   |    xradio_data_read();
+ 1175.097140 |   0) ! 117.792 us  |    xradio_data_write();
+ 1175.097267 |   0) + 54.959 us   |    xradio_data_read();
+ 1175.097401 |   0) ! 115.667 us  |    xradio_data_write();
+ 1175.097525 |   0) + 58.334 us   |    xradio_data_read();
+ 1175.097683 |   0) ! 120.875 us  |    xradio_data_write();
+ 1175.097813 |   0) + 75.417 us   |    xradio_data_read();
+ 1175.097966 |   0) ! 114.833 us  |    xradio_data_write();
+ 1175.098152 |   0) + 57.375 us   |    xradio_data_read();
+ 1175.098281 |   0) ! 115.166 us  |    xradio_data_write();
+ 1175.098492 |   0)               |    xradio_data_write() {
+ ------------------------------------------
+ 1)   ksoftir-22   =>   xradio_-93  
+ ------------------------------------------
+
+ 1175.098623 |   1) ! 130.209 us  |    } /* xradio_data_write */
+ 1175.098773 |   1) # 3015.750 us |  } /* xradio_bh_exchange */
+ 1175.098781 |   1) ! 105.584 us  |  xradio_bh_exchange();
+ ------------------------------------------
+ 0)   xradio_-93   =>    <idle>-0   
+ ------------------------------------------
+
+ 1175.099294 |   0) + 10.834 us   |  xradio_irq_handler();
+ 1175.099327 |   1)               |  xradio_bh_exchange() {
+ 1175.099396 |   1) + 51.625 us   |    xradio_data_read();
+ 1175.099515 |   1) + 93.875 us   |    xradio_data_write();
+ 1175.099638 |   1) + 22.916 us   |    xradio_data_read();
+ 1175.099656 |   0)   2.167 us    |  xradio_irq_handler();

@@ -1,0 +1,18 @@
+run 1 32.1 Mbit/s retr 2
+tx_ampdus 1603 tx_mpdus_in_ampdus 15930 rx_ampdus 1445 rx_mpdus_in_ampdus 2258 rx_octets_l32 644732 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 133 explicit_bar_fail 0 
+PlcpErrors 4 FcsErrors 93 TxFramesSuccess 15930 TxFrameFailures 3 TxFramesRetried 1314 TxFramesMultiRetried 112 AckFailures 1450 
+run 2 27.4 Mbit/s retr 0
+tx_ampdus 1311 tx_mpdus_in_ampdus 13317 rx_ampdus 1283 rx_mpdus_in_ampdus 1949 rx_octets_l32 545456 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 99 explicit_bar_fail 0 
+PlcpErrors 9 FcsErrors 100 TxFramesSuccess 13317 TxFrameFailures 0 TxFramesRetried 1199 TxFramesMultiRetried 88 AckFailures 1291 
+run 3 28.8 Mbit/s retr 1
+tx_ampdus 1433 tx_mpdus_in_ampdus 14280 rx_ampdus 1258 rx_mpdus_in_ampdus 2019 rx_octets_l32 585015 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 120 explicit_bar_fail 0 
+PlcpErrors 3 FcsErrors 76 TxFramesSuccess 14280 TxFrameFailures 2 TxFramesRetried 1225 TxFramesMultiRetried 67 AckFailures 1336 
+run 4 29.0 Mbit/s retr 0
+tx_ampdus 1399 tx_mpdus_in_ampdus 14176 rx_ampdus 1266 rx_mpdus_in_ampdus 2006 rx_octets_l32 585224 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 139 explicit_bar_fail 0 
+PlcpErrors 8 FcsErrors 102 TxFramesSuccess 14176 TxFrameFailures 0 TxFramesRetried 1399 TxFramesMultiRetried 239 AckFailures 1704 
+run 5 24.3 Mbit/s retr 2
+tx_ampdus 1564 tx_mpdus_in_ampdus 12156 rx_ampdus 1340 rx_mpdus_in_ampdus 2003 rx_octets_l32 507825 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 125 explicit_bar_fail 0 
+PlcpErrors 8 FcsErrors 94 TxFramesSuccess 12156 TxFrameFailures 2 TxFramesRetried 934 TxFramesMultiRetried 136 AckFailures 1099 
+run 6 31.1 Mbit/s retr 6
+tx_ampdus 2068 tx_mpdus_in_ampdus 15844 rx_ampdus 1728 rx_mpdus_in_ampdus 2570 rx_octets_l32 658252 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 183 explicit_bar_fail 0 
+PlcpErrors 3 FcsErrors 52 TxFramesSuccess 15844 TxFrameFailures 6 TxFramesRetried 1253 TxFramesMultiRetried 118 AckFailures 1408 

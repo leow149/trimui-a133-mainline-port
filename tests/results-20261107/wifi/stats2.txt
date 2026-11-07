@@ -1,0 +1,27 @@
+== -u -b 40M
+[  5]   0.00-8.00   sec  13.5 MBytes  14.2 Mbits/sec  0.000 ms  0/9776 (0%)  sender
+[  5]   0.00-8.05   sec  13.4 MBytes  14.0 Mbits/sec  2.147 ms  16/9748 (0.16%)  receiver
+[   18.110155] XRST2 flags0=2702
+[   20.120881] XRST2 cnf=2362 media_avg=25602 qdelay_avg=24841 fail=202
+[   20.127275] XRST2 rate21=2362
+[   20.130292] XRST2 flags0=2362
+[   22.126864] XRST2 cnf=2619 media_avg=23299 qdelay_avg=22613 fail=240
+[   22.133263] XRST2 rate21=2619
+[   22.136244] XRST2 flags0=2619
+[   24.131275] XRST2 cnf=2016 media_avg=29731 qdelay_avg=28838 fail=163
+[   24.137669] XRST2 rate20=1
+[   24.140387] XRST2 rate21=2015
+[   24.143379] XRST2 flags0=2016
+== 
+iperf3: error - unable to connect to server - server may have stopped running or use a different port, firewall issue, etc.: Connection refused
+[   18.110155] XRST2 flags0=2702
+[   20.120881] XRST2 cnf=2362 media_avg=25602 qdelay_avg=24841 fail=202
+[   20.127275] XRST2 rate21=2362
+[   20.130292] XRST2 flags0=2362
+[   22.126864] XRST2 cnf=2619 media_avg=23299 qdelay_avg=22613 fail=240
+[   22.133263] XRST2 rate21=2619
+[   22.136244] XRST2 flags0=2619
+[   24.131275] XRST2 cnf=2016 media_avg=29731 qdelay_avg=28838 fail=163
+[   24.137669] XRST2 rate20=1
+[   24.140387] XRST2 rate21=2015
+[   24.143379] XRST2 flags0=2016

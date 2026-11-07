@@ -1,0 +1,14 @@
+== -u -b 40M
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-8.00   sec  12.8 MBytes  13.4 Mbits/sec  0.000 ms  0/9271 (0%)  sender
+[  5]   0.00-8.03   sec  12.8 MBytes  13.3 Mbits/sec  0.994 ms  3/9242 (0.032%)  receiver
+
+iperf Done.
+== -P 4
+[ 11]   0.00-8.00   sec  1.88 MBytes  1.97 Mbits/sec    0            sender
+[ 11]   0.00-8.04   sec  1.62 MBytes  1.70 Mbits/sec                  receiver
+[SUM]   0.00-8.00   sec  11.6 MBytes  12.2 Mbits/sec    2             sender
+[SUM]   0.00-8.04   sec  10.5 MBytes  11.0 Mbits/sec                  receiver
+
+iperf Done.

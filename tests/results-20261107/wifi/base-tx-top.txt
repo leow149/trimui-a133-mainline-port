@@ -1,0 +1,23 @@
+Mem: 118464K used, 876916K free, 292K shrd, 4032K buff, 42340K cached
+CPU:   0% usr   2% sys   0% nic  95% idle   0% io   2% irq   0% sirq
+Load average: 0.07 1.21 1.41 2/99 582
+  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
+  581   577 root     R     1708   0%   3   2% top -b -n1 -H
+   14     2 root     SW       0   0%   0   2% [ksoftirqd/0]
+  455     1 root     S    10376   1%   3   0% wpa_supplicant -t -i wlan0 -c /etc/wpa_supplicant/home.conf
+  578   577 root     S     5948   1%   3   0% iperf3 -c 192.168.1.132 -p 5299 -t 10
+  580   577 root     S     5948   1%   3   0% iperf3 -c 192.168.1.132 -p 5299 -t 10
+  138     1 root     S     2792   0%   2   0% /bin/ash
+  576   131 root     S     1824   0%   2   0% dropbear -R -s -p 10.55.0.2:22
+  131     1 root     S     1804   0%   1   0% dropbear -R -s -p 10.55.0.2:22
+  577   576 root     S     1708   0%   2   0% sh -c iperf3 -c 192.168.1.132 -p 5299 -t 10 > /tmp/tx.txt & sleep 4; top -b -n1 -H | head -15; cat /proc/interrupts | grep -i "mmc\|wlan\|gpio" ; wait; tail -5 /tmp/tx.txt
+    1     0 root     S     1692   0%   3   0% /sbin/init
+  106     1 root     S     1688   0%   2   0% /sbin/watchdog -T 16 -t 5 /dev/watchdog
+ 336:     336699          0          0          0  GICv2             72 Level     sunxi-mmc
+ 338:       2414          0          0          0  GICv2             71 Level     sunxi-mmc
+ 339:        178          0          0          0  GICv2             73 Level     sunxi-mmc
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-10.00  sec  13.4 MBytes  11.2 Mbits/sec    4            sender
+[  5]   0.00-10.03  sec  13.0 MBytes  10.9 Mbits/sec                  receiver
+
+iperf Done.

@@ -1,0 +1,54 @@
+From 45b27fef6ce820f696b7fc82948aaf63f42d2cc6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 22:19:45 +0100
+Subject: [PATCH 68/69] wifi: xradio: detect HT peers so the firmware
+ aggregates TX (A-MPDU)
+
+xradio_is_ht() tested ht_oper->channel_type != NL80211_CHAN_NO_HT, but
+channel_type is never filled in (the assignment in bss_info_changed is
+commented out), so priv->htcap was always false.  As a result the
+"statically enable block ack for TX/RX" step on association was skipped
+and the firmware kept the TX block-ack TID mask at 0 (read back via
+MIB 0x100E: tx 0x00, rx 0xb1).  The firmware therefore never built a
+single TX A-MPDU (AMPDU counters: tx_ampdus 0); every MPDU went out
+alone, ~760 us each at MCS7 on a 20 MHz long-slot BSS.  The same
+mistake also left the HT association parameters (MPDU start spacing,
+greenfield), the 11n queue throttle and the block-ack statistics timer
+in their non-HT state.
+
+Use the peer's ht_cap.ht_supported instead.
+
+iperf3 to the LAN laptop, channel 1 / 20 MHz / MCS7, 10 s runs:
+  TX  before 10.3-11.2 Mbit/s typ.        after 25-29 Mbit/s typ. (best 32)
+  RX  before 19-21 Mbit/s                  after 27-30 Mbit/s
+Firmware now reports ~8 MPDUs per TX A-MPDU.  Known remaining issue:
+roughly one TX run in ten still stalls for a few seconds (also seen
+before this change).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/ht.h | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/xradio/ht.h b/drivers/net/wireless/xradio/ht.h
+index 346b425b4..ecc7de8b0 100644
+--- a/drivers/net/wireless/xradio/ht.h
++++ b/drivers/net/wireless/xradio/ht.h
+@@ -21,7 +21,11 @@ struct xradio_ht_oper {
+ 
+ static inline int xradio_is_ht(const struct xradio_ht_oper *ht_oper)
+ {
+-	return ht_oper->channel_type != NL80211_CHAN_NO_HT;
++	/*
++	 * channel_type is never filled in (see xradio_bss_info_changed), so use
++	 * the peer's HT capabilities instead.
++	 */
++	return ht_oper->ht_cap.ht_supported;
+ }
+ 
+ static inline int xradio_ht_greenfield(const struct xradio_ht_oper *ht_oper)
+-- 
+2.56.0
+

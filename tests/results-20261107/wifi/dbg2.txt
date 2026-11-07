@@ -1,0 +1,15 @@
+tx_tid_mask 0x00 rx_tid_mask 0xb1 (driver ba_tid_mask 0xb1)
+tx_tid_mask 0xb1 rx_tid_mask 0xb1 (driver ba_tid_mask 0xb1)
+[  5]   0.00-8.00   sec  24.2 MBytes  25.4 Mbits/sec    5            sender
+[  5]   0.00-8.03   sec  23.4 MBytes  24.4 Mbits/sec                  receiver
+tx_ampdus 2124
+tx_mpdus_in_ampdus 17040
+tx_octets_l32 26386463
+[   22.163816] XRST2 rate21=2825
+[   22.166825] XRST2 flags1=2825
+[   24.180184] XRST2 cnf=3966 media_avg=10621 qdelay_avg=5791 fail=559
+[   24.186498] XRST2 rate21=3966
+[   24.189479] XRST2 flags1=3966
+[   26.189908] XRST2 cnf=5185 media_avg=6674 qdelay_avg=3114 fail=555
+[   26.196142] XRST2 rate21=5185
+[   26.199158] XRST2 flags1=5185

@@ -1,0 +1,10 @@
+[  5]   0.00-10.00  sec  11.5 MBytes  9.65 Mbits/sec   22            sender
+[  5]   0.00-10.02  sec  11.2 MBytes  9.42 Mbits/sec                  receiver
+
+iperf Done.
+[   14.096862] XRST wake=22 exch=22 to=49 write=1 avgbufs=1 noavail=0 empty=43
+[   16.100961] XRST wake=577 exch=576 to=32 write=636 avgbufs=12 noavail=0 empty=1221
+[   18.120818] XRST wake=1041 exch=1042 to=7 write=958 avgbufs=8 noavail=0 empty=2155
+[   20.125975] XRST wake=1671 exch=1670 to=6 write=1844 avgbufs=10 noavail=0 empty=3457
+[   22.129200] XRST wake=1890 exch=1890 to=0 write=2134 avgbufs=10 noavail=0 empty=4002
+[   24.141903] XRST wake=1172 exch=1172 to=4 write=1211 avgbufs=11 noavail=0 empty=2402

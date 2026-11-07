@@ -1,0 +1,27 @@
+[  5]   0.00-8.00   sec  10.5 MBytes  11.0 Mbits/sec   19            sender
+[  5]   0.00-8.02   sec  10.2 MBytes  10.7 Mbits/sec                  receiver
+tx_ampdus 0
+tx_mpdus_in_ampdus 0
+tx_octets_l32 0
+tx_octets_h32 0
+rx_ampdus 2972
+rx_mpdus_in_ampdus 3416
+rx_octets_l32 423006
+rx_octets_h32 0
+rx_delim_crc_err 0
+implicit_bar_fail 0
+explicit_bar_fail 0
+PlcpErrors 24
+FcsErrors 127
+TxPackets 8608
+RxPackets 3912
+RxPacketErrors 151
+RtsSuccess 0
+RtsFailures 0
+RxFramesSuccess 11633
+TxFramesSuccess 7517
+TxFrameFailures 21
+TxFramesRetried 614
+TxFramesMultiRetried 115
+RxFrameDuplicates 5
+AckFailures 863

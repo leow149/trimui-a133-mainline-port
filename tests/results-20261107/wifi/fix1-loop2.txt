@@ -1,0 +1,24 @@
+--- after idle 3
+connected 38.8 32.5 28.3 35.7 29.3 18.9 30.6 29.3 
+tx_ampdus 1600 implicit_bar_fail 159 
+--- after idle 15
+connected 38.8 38.8 29.4 33.6 29.4 38.8 34.8 32.5 
+tx_ampdus 1729 implicit_bar_fail 151 
+--- after idle 3
+connected 31.4 34.6 11.5 0.00 0.00 0.00 12.9 11.5 
+tx_ampdus 719 implicit_bar_fail 58 
+--- after idle 25
+connected 45.0 23.1 21.0 14.7 37.7 36.6 29.7 27.9 
+tx_ampdus 1456 implicit_bar_fail 114 
+--- after idle 10
+connected 31.4 0.00 0.00 0.00 0.00 0.00 5.24 3.67 
+tx_ampdus 348 implicit_bar_fail 32 
+--- after idle 3
+connected 14.7 27.3 33.6 34.6 30.4 30.4 28.5 27.2 
+tx_ampdus 1447 implicit_bar_fail 131 
+--- after idle 20
+connected 14.7 13.6 17.8 32.5 30.4 21.0 21.7 20.9 
+tx_ampdus 1612 implicit_bar_fail 172 
+--- after idle 5
+connected 33.5 38.8 33.6 33.5 19.9 16.8 29.4 27.6 
+tx_ampdus 1451 implicit_bar_fail 121 

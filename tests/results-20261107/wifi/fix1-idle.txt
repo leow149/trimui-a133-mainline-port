@@ -1,0 +1,18 @@
+== TX after idle 1
+tx_ampdus 8411 tx_mpdus_in_ampdus 73653 TxFramesRetried 8976 TxFramesMultiRetried 831 AckFailures 10009 
+[  5]   0.00-8.00   sec  20.9 MBytes  21.9 Mbits/sec    4            sender
+tx_ampdus 2077 tx_mpdus_in_ampdus 14910 TxFramesRetried 1423 TxFramesMultiRetried 175 AckFailures 1638 
+[    6.123430] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[   50.243961] sunxi-mmc 4021000.mmc: data error, sending stop command
+== TX after idle 2
+tx_ampdus 0 tx_mpdus_in_ampdus 0 TxFramesRetried 0 TxFramesMultiRetried 0 AckFailures 0 
+[  5]   0.00-8.00   sec  23.4 MBytes  24.5 Mbits/sec    2            sender
+tx_ampdus 1975 tx_mpdus_in_ampdus 16526 TxFramesRetried 1604 TxFramesMultiRetried 112 AckFailures 1743 
+[    6.123430] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[   50.243961] sunxi-mmc 4021000.mmc: data error, sending stop command
+== TX after idle 3
+tx_ampdus 3 tx_mpdus_in_ampdus 4 TxFramesRetried 0 TxFramesMultiRetried 0 AckFailures 0 
+[  5]   0.00-8.00   sec  2.75 MBytes  2.88 Mbits/sec   17            sender
+tx_ampdus 267 tx_mpdus_in_ampdus 2029 TxFramesRetried 135 TxFramesMultiRetried 1 AckFailures 140 
+[    6.123430] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[   50.243961] sunxi-mmc 4021000.mmc: data error, sending stop command
