@@ -1,0 +1,40 @@
+From 6065ebe0d9aa7f9ae37b0c74f0c805b833186de6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 00:36:10 +0100
+Subject: [PATCH] usb: musb: sunxi: Preserve the session across system suspend
+
+musb_suspend() clears DEVCTL (ending the session) unless the glue sets
+MUSB_PRESERVE_SESSION, and it saves the context only after that, so
+musb_resume() has nothing to restore. On the sunxi glue the session is
+only (re)started by the mode-change work, which does not run on resume.
+After s2idle the controller is therefore left with no session: the UDC
+reads "not attached", the D+ pull-up is not seen by the host and the
+host fails to enumerate (descriptor read errors, -71).
+
+Set MUSB_PRESERVE_SESSION so suspend leaves DEVCTL alone and resume
+restores the session. Tested on the TrimUI Smart Pro (Allwinner A133)
+with the NCM gadget: 0 of 6 cycles re-enumerated before, 11 of 11 after.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/usb/musb/sunxi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
+index 417620e2e..d269e58bd 100644
+--- a/drivers/usb/musb/sunxi.c
++++ b/drivers/usb/musb/sunxi.c
+@@ -887,7 +887,7 @@ static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
+ #endif
+ 
+ static const struct musb_platform_ops sunxi_musb_ops = {
+-	.quirks		= MUSB_INDEXED_EP | SUNXI_MUSB_DMA_QUIRK,
++	.quirks		= MUSB_INDEXED_EP | MUSB_PRESERVE_SESSION | SUNXI_MUSB_DMA_QUIRK,
+ 	.init		= sunxi_musb_init,
+ 	.exit		= sunxi_musb_exit,
+ 	.enable		= sunxi_musb_enable,
+-- 
+2.56.0
+

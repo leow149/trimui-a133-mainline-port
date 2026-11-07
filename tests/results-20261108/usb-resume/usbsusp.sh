@@ -1,0 +1,32 @@
+#!/bin/sh
+# Runs ON THE TRIMUI. Usage: usbsusp.sh [cycles]. Suspend with 5 s RTC alarm, check UDC state, log regs.
+L=/root/usbsusp.log
+UDC=/sys/class/udc/musb-hdrc.2.auto/state
+G=/sys/kernel/config/usb_gadget/usbnet/UDC
+regs() {
+  echo "== regs $1"
+  for a in 0x05100400 0x05100410 0x05100440 0x05100460 0x05101810 0x05200810 0x05100040 0x05100060 0x03001A70 0x03001A8C 0x03001A74 0x03001A78 0x03001A7C 0x03001A80 0x03001A84 0x03001A88; do
+    echo "$a $(/root/devmem $a 2>&1 | sed 's/.*value=//')"
+  done
+}
+n=${1:-5}; i=1
+while [ $i -le $n ]; do
+  echo "--- cycle $i $(date +%T) state=$(cat $UDC)" >> $L
+  regs pre >> $L
+  echo 0 > /sys/class/rtc/rtc0/wakealarm; echo +5 > /sys/class/rtc/rtc0/wakealarm
+  sync; echo freeze > /sys/power/state
+  regs post >> $L
+  t=0; ok=0
+  while [ $t -lt 20 ]; do
+    [ "$(cat $UDC)" = configured ] && ok=1 && break
+    usleep 500000; t=$((t+1))
+  done
+  if [ $ok = 1 ]; then echo "cycle $i: configured within $((t/2)) s" >> $L
+  else
+    echo "cycle $i: FAILED state=$(cat $UDC)" >> $L
+    regs failed >> $L
+    echo "" > $G; sleep 1; echo musb-hdrc.2.auto > $G
+  fi
+  sleep 5; i=$((i+1))
+done
+echo "done" >> $L
