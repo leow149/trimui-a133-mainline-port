@@ -33,7 +33,12 @@ pidof xr829_bt_up >/dev/null && exit 0
 			if [ -x /usr/lib/bluetooth/bluetoothd ]; then
 				mkdir -p /run/dbus
 				dbus-uuidgen --ensure
-				pidof dbus-daemon >/dev/null || dbus-daemon --system
+				# /run is on the persistent rootfs here, so clear a stale pid file
+				# and socket from the previous boot or dbus-daemon refuses to start.
+				pidof dbus-daemon >/dev/null || {
+					rm -f /run/dbus/dbus.pid /run/dbus/system_bus_socket
+					dbus-daemon --system
+				}
 				pidof bluetoothd >/dev/null || /usr/lib/bluetooth/bluetoothd
 			fi
 			exit 0
