@@ -149,6 +149,9 @@ The register dumps behind these comparisons are in `vendor-notes/gpu_regdump/`.
 - VP9: the Hantro G2 shares clock and reset with Cedrus, which pulses the reset; needs a shared
   reset in both drivers and its IOMMU master.
 - Video encoding: there is no mainline encoder driver for this video engine.
-- GPU frequency scaling: `powervr` has no devfreq support; since vdd-gpu-sys is shared, it could
-  only lower the clock at a fixed voltage. The GPU is already powered off when idle.
+- GPU frequency scaling (assessed 2026-11-07, not implemented):
+  - `powervr` has no devfreq. vdd-gpu-sys is shared, so only the clock could drop, at a fixed voltage. That saves no energy per frame, and the GPU already powers off when idle.
+  - A live clock change would need the firmware dance: force idle, change the clock, send `ROGUE_FWIF_KCCB_CMD_CORECLKSPEEDCHANGE`. The `core_clock_speed` in the runtime config is only set at probe.
+  - The thermal case for it was checked with a 5 min soak (4 busy CPU cores + vkmark headless). With the thermal trips from patch 0067, the die levels at CPU 83-85 C / GPU 83 C through CPU throttling alone. Before 0067 it was 88/86 C and rising.
+  - So a GPU cooling device is not needed for now. Revisit if a GPU-only load (CPU idle) heats past the 88 C GPU trip.
 - `vkcube --wsi wayland` keeps running after the compositor exits.

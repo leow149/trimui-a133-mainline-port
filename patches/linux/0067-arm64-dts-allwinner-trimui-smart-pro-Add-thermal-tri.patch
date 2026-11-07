@@ -1,0 +1,120 @@
+From 7dc7116329eb94f329812f8040b5da1a53f64139 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 21:32:09 +0100
+Subject: [PATCH] arm64: dts: allwinner: trimui-smart-pro: Add thermal trips
+ for passive cooling
+
+The A100 dtsi has a single 80 C passive trip for the CPU and no trips on
+the GPU zone. On this passively cooled handheld, combined CPU+GPU load
+(4 busy cores + vkmark) let step_wise settle at 1.2 GHz while the die
+kept heating: CPU 88 C, GPU 86 C after 5 minutes, still rising. step_wise
+only adds throttling on samples with a rising trend, and a slow climb
+reads as stable.
+
+Cap the first trip at state 2 (1.2 GHz). Add 88 C and 95 C passive trips
+that force states 3-4 and 5-6. Give the GPU zone an 88 C passive trip
+(throttling the CPU, the only cooling device on the shared die) and a
+110 C critical trip.
+
+Same 5-minute load after this change: CPU levels at 83-85 C at 1080 MHz,
+GPU at 83 C. vkmark frame rates are unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 78 +++++++++++++++++++
+ 1 file changed, 78 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 07a09edac..dca900ed0 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -131,6 +131,84 @@ wifi_pwrseq: pwrseq {
+ 		reset-gpios = <&r_pio 0 5 GPIO_ACTIVE_LOW>; /* PL5 */
+ 		post-power-on-delay-ms = <200>;
+ 	};
++
++	/*
++	 * Passively cooled handheld: under combined CPU+GPU load the single
++	 * 80 C passive trip let step_wise settle at 1.2 GHz while the die kept
++	 * heating (CPU 88 C, GPU 86 C after 5 min, still rising). Add trips
++	 * that force deeper CPU throttling, and give the GPU zone trips too;
++	 * the GPU has no cooling device, but CPU and GPU share the die.
++	 * cpufreq cooling states: 0..6 = 1464/1320/1200/1080/816/600/408 MHz.
++	 */
++	thermal-zones {
++		cpu-thermal {
++			trips {
++				cpu_hot: cpu-hot {
++					temperature = <88000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				cpu_very_hot: cpu-very-hot {
++					temperature = <95000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					cooling-device = <&cpu0 THERMAL_NO_LIMIT 2>,
++							 <&cpu1 THERMAL_NO_LIMIT 2>,
++							 <&cpu2 THERMAL_NO_LIMIT 2>,
++							 <&cpu3 THERMAL_NO_LIMIT 2>;
++				};
++
++				map1 {
++					trip = <&cpu_hot>;
++					cooling-device = <&cpu0 3 4>, <&cpu1 3 4>,
++							 <&cpu2 3 4>, <&cpu3 3 4>;
++				};
++
++				map2 {
++					trip = <&cpu_very_hot>;
++					cooling-device = <&cpu0 5 THERMAL_NO_LIMIT>,
++							 <&cpu1 5 THERMAL_NO_LIMIT>,
++							 <&cpu2 5 THERMAL_NO_LIMIT>,
++							 <&cpu3 5 THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++
++		gpu-thermal {
++			polling-delay-passive = <500>;
++			polling-delay = <1000>;
++
++			trips {
++				gpu_hot: gpu-hot {
++					temperature = <88000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				gpu-crit {
++					temperature = <110000>;
++					hysteresis = <2000>;
++					type = "critical";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					trip = <&gpu_hot>;
++					cooling-device = <&cpu0 3 THERMAL_NO_LIMIT>,
++							 <&cpu1 3 THERMAL_NO_LIMIT>,
++							 <&cpu2 3 THERMAL_NO_LIMIT>,
++							 <&cpu3 3 THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++	};
+ };
+ 
+ /*
+-- 
+2.56.0
+
