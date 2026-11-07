@@ -1,0 +1,106 @@
+== vulkan
+GPU0:
+	apiVersion         = 1.2.366
+	deviceName         = PowerVR Rogue GE8300
+	driverName         = Imagination open-source Mesa driver
+	driverInfo         = Mesa 27.0.0-devel (git-01bab9302a)
+== wifi conf
+total 3
+drwxr-xr-x    2 root     root          1024 Nov  1 14:13 .
+drwxr-xr-x   19 root     root          1024 Nov  7 00:08 ..
+-rw-------    1 root     root            97 Nov  1 14:14 home.conf
+#!/bin/sh
+# Bring up WiFi with /etc/wpa_supplicant/home.conf (bring-up helper).
+# firmware is built into the kernel now; the driver comes up at boot
+
+ip link set wlan0 up
+pidof wpa_supplicant >/dev/null || \
+	setsid wpa_supplicant -t -i wlan0 -c /etc/wpa_supplicant/home.conf > /tmp/wpa.log 2>&1 < /dev/null &
+for i in $(seq 1 20); do
+	iw dev wlan0 link | grep -q Connected && break
+	sleep 1
+done
+udhcpc -i wlan0 -n -q -t 5
+== wifi scan
+	signal: -36.00 dBm
+	SSID: home-ssid
+		 * SSID List
+	signal: -35.00 dBm
+	SSID: home-ssid-mlo
+		 * SSID List
+	signal: -35.00 dBm
+		 * SSID List
+	signal: -78.00 dBm
+	SSID: neighbor-ssid-1
+	signal: -62.00 dBm
+	SSID: neighbor-ssid-2
+/usr/sbin/iw
+/sbin/wpa_supplicant
+/sbin/wpa_cli
+== audio ctl
+usage: tinymix [options] <command>
+options:
+	-h, --help               : prints this help message and exits
+	-v, --version            : prints this version of tinymix and exits
+	-D, --card NUMBER        : specifies the card number of the mixer
+
+commands:
+	get NAME|ID              : prints the values of a control
+	set NAME|ID VALUE(S) ... : sets the value of a control
+		VALUE(S): integers, percents, and relative values
+			Integers: 0, 100, -100 ...
+			Percents: 0%, 100% ...
+			Relative values: 1+, 1-, 1%+, 2%+ ...
+	controls                 : lists controls of the mixer
+	contents                 : lists controls of the mixer and their contents
+== usb host
+Linux 7.2.0 ehci_hcd
+EHCI Host Controller
+1-0:1.0
+2-0:1.0
+usb1
+usb2
+== slider/input caps
+event0: axp20x-pek driver= ev=3 sw=0 abs=0
+event1: A100 Audio Codec Headphone Jack driver=sun4i-codec ev=21 sw=4 abs=0
+event2: 5070800.lradc driver= ev=3 sw=0 abs=0
+event3: TrimUI Smart Pro Gamepad driver= ev=b sw=0 abs=1b
+event4: gpio-keys driver= ev=21 sw=2 abs=0
+== jack state (read-only)
+/root/tinymix
+== gamepad serdev
+[  167.190457] Hardware name: TrimUI Smart Pro (DT)
+[  169.366321] Hardware name: TrimUI Smart Pro (DT)
+== wdt
+[  167.155427] hantro_watchdog:127: frame processing timed out!
+[  167.195086] Workqueue: events hantro_watchdog
+[  167.305727]  hantro_watchdog+0x60/0xb8
+[  169.331444] hantro_watchdog:127: frame processing timed out!
+[  169.370937] Workqueue: events hantro_watchdog
+[  169.481162]  hantro_watchdog+0x60/0xb8
+   57 root      0:00 [watchdogd]
+  105 root      0:00 /sbin/watchdog -T 16 -t 5 /dev/watchdog
+  655 root      0:00 grep -iE watchdog|wdt
+== led test
+brightness
+device
+max_brightness
+multi_index
+multi_intensity
+multi_max_intensity
+power
+subsystem
+trigger
+uevent
+0
+255
+brightness
+device
+max_brightness
+multi_index
+multi_intensity
+multi_max_intensity
+power
+subsystem
+trigger
+uevent

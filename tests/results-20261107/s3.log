@@ -1,0 +1,31 @@
+1:[  167.155427] hantro_watchdog:127: frame processing timed out!
+3:[  167.165914] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#2: kworker/2:2/64
+8:[  167.195086] Workqueue: events hantro_watchdog
+10:[  167.206449] pc : reset_control_reset+0x1b8/0x1d0
+11:[  167.211084] lr : reset_control_reset+0x40/0x1d0
+24:[  167.293103]  reset_control_reset+0x1b8/0x1d0 (P)
+25:[  167.297745]  reset_control_reset+0xb0/0x1d0
+26:[  167.301949]  sunxi_vpu_reset+0x20/0x38
+27:[  167.305727]  hantro_watchdog+0x60/0xb8
+33:[  169.331444] hantro_watchdog:127: frame processing timed out!
+35:[  169.341839] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#2: kworker/2:2/64
+40:[  169.370937] Workqueue: events hantro_watchdog
+42:[  169.382265] pc : reset_control_reset+0x1b8/0x1d0
+43:[  169.386884] lr : reset_control_reset+0x40/0x1d0
+56:[  169.468593]  reset_control_reset+0x1b8/0x1d0 (P)
+57:[  169.473215]  reset_control_reset+0xb0/0x1d0
+58:[  169.477403]  sunxi_vpu_reset+0x20/0x38
+59:[  169.481162]  hantro_watchdog+0x60/0xb8
+[  167.155427] hantro_watchdog:127: frame processing timed out!
+[  167.161283] ------------[ cut here ]------------
+[  167.165914] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#2: kworker/2:2/64
+[  167.175341] Modules linked in:
+[  167.178425] CPU: 2 UID: 0 PID: 64 Comm: kworker/2:2 Tainted: G        W           7.2.0 #6 PREEMPT 
+[  167.187485] Tainted: [W]=WARN
+[  167.190457] Hardware name: TrimUI Smart Pro (DT)
+[  167.195086] Workqueue: events hantro_watchdog
+[  167.199473] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  167.206449] pc : reset_control_reset+0x1b8/0x1d0
+[  167.211084] lr : reset_control_reset+0x40/0x1d0
+[  167.215631] sp : ffff8000829bbcf0
+grep: /sys/kernel/debug/clk/clk_summary: No such file or directory

@@ -1,0 +1,2 @@
+Verification 2026-11-07, kernel 7.2.0 #6. See report; key logs: s1.log (inventory), ve_test.log, vp9.log, dmesg_after_vp9.txt, s6/s7.log, device_logs/suspend.log (ends at "alarm set": device rebooted instead of resuming).
+NOTE: s4.sh accidentally passed "32" to /root/devmem, which is a write value: wrote 0x32 to 0x01c00000/04/08/0c/40 (G2 regs, clock gated) and 0x02001690, 0x0200169c (CCU VE clk/BGR). Readback 0; H.264/H.265 re-verified bit-exact afterwards.

@@ -26,7 +26,7 @@ Not submitted upstream yet.
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
 | Not working yet | ❌ Bluetooth, VP9 decoding, video encoding, GPU frequency scaling |
 
-Suspend was last tested before the GPU and video engine were enabled.
+Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm is tested; wake by the power and volume keys is not.
 
 [`docs/gpu-video.md`](docs/gpu-video.md) describes the GPU and video bring-up in detail.
 

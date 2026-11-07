@@ -1,0 +1,53 @@
+chroot ready: chroot /tmp/edge /usr/bin/env PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1 vkcube --wsi display
+total 68020
+drwx------    8 root     root          4096 Nov  7 07:19 .
+drwxr-xr-x   19 root     root          4096 Nov  7 00:12 ..
+drwxr-xr-x    4 root     root          4096 Nov  3 08:08 .cache
+drwx------    3 root     root          4096 Nov  7 00:00 .config
+drwxr-xr-x    6 root     root          4096 Nov  3 08:34 .debug
+-rw-r--r--    1 root     root      50328275 Nov  3 07:32 bbb4k_60s.mp4
+drwxr-xr-x   25 root     root          4096 Nov  7 07:25 bluez-xradio
+drwx------   17 1000     1000          4096 Nov  7 00:16 ffmpeg-6.1.2
+-rw-r--r--    1 root     root      10466152 Nov  7 00:16 ffmpeg-6.1.2.tar.xz
+drwx------   17 1000     1000          4096 Nov  7 00:13 ffmpeg-9.0.2
+-rw-r--r--    1 root     root       1934408 Nov  3 08:06 t264.mp4
+-rw-r--r--    1 root     root       1314174 Nov  3 08:06 t265.mp4
+-rw-r--r--    1 root     root       5564988 Nov  3 08:06 tmpeg2.ts
+ffmpeg
+gst-device-monitor-1.0
+gst-discoverer-1.0
+gst-inspect-1.0
+gst-launch-1.0
+gst-play-1.0
+gst-stats-1.0
+gst-transcoder-1.0
+gst-typefind-1.0
+gstack
+v4l2-compliance
+v4l2-ctl
+v4l2-sysfs-path
+v4l2-tracer
+vkcube
+vkcubepp
+vulkaninfo
+codecalpha:  vp9alphadecodebin: VP9 Alpha Decoder
+libav:  avdec_vp9: libav Google VP9 decoder
+rtp:  rtpvp9depay: RTP VP9 depayloader
+rtp:  rtpvp9pay: RTP VP9 payloader
+v4l2codecs:  v4l2slh264dec: V4L2 Stateless H.264 Video Decoder
+v4l2codecs:  v4l2slh265dec: V4L2 Stateless H.265 Video Decoder
+v4l2codecs:  v4l2slmpeg2dec: V4L2 Stateless Mpeg2 Video Decoder
+v4l2codecs:  v4l2slvp8alphadecodebin: VP8 Alpha Decoder
+v4l2codecs:  v4l2slvp8dec: V4L2 Stateless VP8 Video Decoder
+v4l2codecs:  v4l2slvp9alphadecodebin: VP9 Alpha Decoder
+v4l2codecs:  v4l2slvp9dec: V4L2 Stateless VP9 Video Decoder
+videoparsersbad:  vp9parse: VP9 parser
+vpx:  vp8dec: On2 VP8 Decoder
+vpx:  vp8enc: On2 VP8 Encoder
+vpx:  vp9dec: On2 VP9 Decoder
+vpx:  vp9enc: On2 VP9 Encoder
+libgstlibav.so
+libgstmatroska.so
+libgstv4l2codecs.so
+libgstvpx.so
+ffmpeg version 9.0.2 Copyright (c) 2000-2026 the FFmpeg developers

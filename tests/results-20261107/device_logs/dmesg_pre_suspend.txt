@@ -1,0 +1,93 @@
+[  167.155427] hantro_watchdog:127: frame processing timed out!
+[  167.161283] ------------[ cut here ]------------
+[  167.165914] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#2: kworker/2:2/64
+[  167.175341] Modules linked in:
+[  167.178425] CPU: 2 UID: 0 PID: 64 Comm: kworker/2:2 Tainted: G        W           7.2.0 #6 PREEMPT 
+[  167.187485] Tainted: [W]=WARN
+[  167.190457] Hardware name: TrimUI Smart Pro (DT)
+[  167.195086] Workqueue: events hantro_watchdog
+[  167.199473] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  167.206449] pc : reset_control_reset+0x1b8/0x1d0
+[  167.211084] lr : reset_control_reset+0x40/0x1d0
+[  167.215631] sp : ffff8000829bbcf0
+[  167.218955] x29: ffff8000829bbcf0 x28: 0000000000000000 x27: 0000000000000000
+[  167.226125] x26: ffff00003fd8f2e8 x25: ffff8000824b1728 x24: ffff00000292aa05
+[  167.233296] x23: 0000000000000000 x22: ffff000003d56d08 x21: 0000000000000000
+[  167.240464] x20: ffff00000b500000 x19: ffff000003d56d00 x18: 0000000000000006
+[  167.247633] x17: 0000000000000000 x16: 0000000000000000 x15: ffff8000829bb7f0
+[  167.254802] x14: 0000000000000000 x13: 2174756f2064656d x12: 697420676e697373
+[  167.261970] x11: 65636f727020656d x10: ffff80008224d848 x9 : ffff800080876890
+[  167.269141] x8 : 3fffffffffffefff x7 : ffff80008224d848 x6 : bffffffffffff000
+[  167.276309] x5 : 0000000000000004 x4 : 0000000000000000 x3 : ffff80008080bad0
+[  167.283477] x2 : ffff000003a5d8a8 x1 : ffff800081c9f300 x0 : 0000000000000001
+[  167.290646] Call trace:
+[  167.293103]  reset_control_reset+0x1b8/0x1d0 (P)
+[  167.297745]  reset_control_reset+0xb0/0x1d0
+[  167.301949]  sunxi_vpu_reset+0x20/0x38
+[  167.305727]  hantro_watchdog+0x60/0xb8
+[  167.309498]  process_one_work+0x190/0x4f8
+[  167.313531]  worker_thread+0x198/0x328
+[  167.317278]  kthread+0x13c/0x150
+[  167.320508]  ret_from_fork+0x10/0x20
+[  167.324085] ---[ end trace 0000000000000000 ]---
+[  169.331444] hantro_watchdog:127: frame processing timed out!
+[  169.337221] ------------[ cut here ]------------
+[  169.341839] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#2: kworker/2:2/64
+[  169.351244] Modules linked in:
+[  169.354310] CPU: 2 UID: 0 PID: 64 Comm: kworker/2:2 Tainted: G        W           7.2.0 #6 PREEMPT 
+[  169.363355] Tainted: [W]=WARN
+[  169.366321] Hardware name: TrimUI Smart Pro (DT)
+[  169.370937] Workqueue: events hantro_watchdog
+[  169.375306] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  169.382265] pc : reset_control_reset+0x1b8/0x1d0
+[  169.386884] lr : reset_control_reset+0x40/0x1d0
+[  169.391415] sp : ffff8000829bbcf0
+[  169.394728] x29: ffff8000829bbcf0 x28: 0000000000000000 x27: 0000000000000000
+[  169.401871] x26: ffff00003fd8f2e8 x25: ffff8000824b1728 x24: ffff00000292aa05
+[  169.409015] x23: 0000000000000000 x22: ffff000003d56d08 x21: 0000000000000000
+[  169.416158] x20: ffff00000b500000 x19: ffff000003d56d00 x18: 0000000000000006
+[  169.423301] x17: ffff800082382cd0 x16: ffff800082382d40 x15: ffff8000829bb7f0
+[  169.430444] x14: 0000000000000000 x13: 2174756f2064656d x12: 697420676e697373
+[  169.437586] x11: 65636f727020656d x10: ffff80008224d848 x9 : ffff800080876890
+[  169.444719] x8 : 3fffffffffffefff x7 : ffff80008224d848 x6 : bffffffffffff000
+[  169.451862] x5 : 0000000000000005 x4 : 0000000000000000 x3 : ffff80008080bad0
+[  169.459004] x2 : ffff000003a5d8a8 x1 : ffff800081c9f300 x0 : 0000000000000001
+[  169.466146] Call trace:
+[  169.468593]  reset_control_reset+0x1b8/0x1d0 (P)
+[  169.473215]  reset_control_reset+0xb0/0x1d0
+[  169.477403]  sunxi_vpu_reset+0x20/0x38
+[  169.481162]  hantro_watchdog+0x60/0xb8
+[  169.484916]  process_one_work+0x190/0x4f8
+[  169.488935]  worker_thread+0x198/0x328
+[  169.492690]  kthread+0x13c/0x150
+[  169.495930]  ret_from_fork+0x10/0x20
+[  169.499516] ---[ end trace 0000000000000000 ]---
+[  320.536934] ieee80211 phy0: Interface ID:0 of type:2 added
+[  320.537338] ieee80211 phy0: vif 0, configuring tx
+[  320.537612] ieee80211 phy0: vif 0, configuring tx
+[  320.537875] ieee80211 phy0: vif 0, configuring tx
+[  320.538144] ieee80211 phy0: vif 0, configuring tx
+[  320.538420] ieee80211 phy0: ignore IEEE80211_CONF_CHANGE_MONITOR (1)IEEE80211_CONF_CHANGE_IDLE (1)
+[  338.811329] ieee80211 phy0: ignore IEEE80211_CONF_CHANGE_MONITOR (0)IEEE80211_CONF_CHANGE_IDLE (1)
+[  338.811489] ieee80211 phy0: Freq 2412 (wsm ch: 1).
+[  338.811899] wlan0: authenticate with xx:xx:xx:xx:xx:01 (local address=02:00:34:9a:30:3a)
+[  338.820068] wlan0: send auth to xx:xx:xx:xx:xx:01 (try 1/3)
+[  338.843973] wlan0: authenticated
+[  338.851461] wlan0: associate with xx:xx:xx:xx:xx:01 (try 1/3)
+[  338.912467] wlan0: RX AssocResp from xx:xx:xx:xx:xx:01 (capab=0x1031 status=0 aid=13)
+[  338.920445] ieee80211 phy0: vif 0, configuring tx
+[  338.921126] ieee80211 phy0: vif 0, configuring tx
+[  338.921748] ieee80211 phy0: vif 0, configuring tx
+[  338.922373] ieee80211 phy0: vif 0, configuring tx
+[  338.926504] wlan0: associated
+[  338.971507] ieee80211 phy0: CCMP_PAIRWISE keylen=16!
+[  338.971914] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[  338.972967] xradio_wlan mmc0:0001:1: received frame has no key status
+[  344.985693] wlan0: deauthenticating from xx:xx:xx:xx:xx:01 by local choice (Reason: 3=DEAUTH_LEAVING)
+[  344.997199] ieee80211 phy0: no station to remove
+[  345.002527] ieee80211 phy0: vif 0, configuring tx
+[  345.002821] ieee80211 phy0: vif 0, configuring tx
+[  345.003080] ieee80211 phy0: vif 0, configuring tx
+[  345.003340] ieee80211 phy0: vif 0, configuring tx
+[  345.003677] ieee80211 phy0: ignore IEEE80211_CONF_CHANGE_MONITOR (0)IEEE80211_CONF_CHANGE_IDLE (1)
+[  345.023459] ieee80211 phy0: !!! vif_id=0

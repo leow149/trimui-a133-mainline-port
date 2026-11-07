@@ -1,0 +1,44 @@
+t320 hw rc=1
+t320 sw rc=0
+t320 frames hw=0 sw=30 identical=0
+ERROR: from element /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0: Decoding frame took too long
+Additional debug info:
+../sys/v4l2codecs/gstv4l2codecvp9dec.c(1083): gst_v4l2_codec_vp9_dec_output_picture (): /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0
+ERROR: pipeline doesn't want to preroll.
+ERROR: from element /GstPipeline:pipeline0/GstMatroskaDemux:matroskademux0: Internal data stream e[  164.402669] x14: 0000000000000000 x13: 2174756f2064656d x12: 697420676e697373
+[  164.409838] x11: 65636f727020656d x10: ffff80008224d848 x9 : ffff800080876890
+[  164.417006] x8 : 3fffffffffffefff x7 : ffff80008224d848 x6 : bffffffffffff000
+[  164.424175] x5 : 0000000000000002 x4 : 0000000000000000 x3 : ffff80008080bad0
+[  164.431343] x2 : ffff000003a5d8a8 x1 : ffff800081c9f300 x0 : 0000000000000001
+[  164.438512] Call trace:
+[  164.440970]  reset_control_reset+0x1b8/0x1d0 (P)
+[  164.445611]  reset_control_reset+0xb0/0x1d0
+[  164.449815]  sunxi_vpu_reset+0x20/0x38
+[  164.453592]  hantro_watchdog+0x60/0xb8
+[  164.457364]  process_one_work+0x190/0x4f8
+[  164.461401]  worker_thread+0x198/0x328
+[  164.465175]  kthread+0x13c/0x150
+[  164.468436]  ret_from_fork+0x10/0x20
+[  164.472040] ---[ end trace 0000000000000000 ]---
+t720 hw rc=1
+t720 sw rc=0
+t720 frames hw=0 sw=30 identical=0
+ERROR: from element /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0: Decoding frame took too long
+Additional debug info:
+../sys/v4l2codecs/gstv4l2codecvp9dec.c(1083): gst_v4l2_codec_vp9_dec_output_picture (): /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0
+ERROR: pipeline doesn't want to preroll.
+ERROR: from element /GstPipeline:pipeline0/GstMatroskaDemux:matroskademux0: Internal data stream e[  169.430444] x14: 0000000000000000 x13: 2174756f2064656d x12: 697420676e697373
+[  169.437586] x11: 65636f727020656d x10: ffff80008224d848 x9 : ffff800080876890
+[  169.444719] x8 : 3fffffffffffefff x7 : ffff80008224d848 x6 : bffffffffffff000
+[  169.451862] x5 : 0000000000000005 x4 : 0000000000000000 x3 : ffff80008080bad0
+[  169.459004] x2 : ffff000003a5d8a8 x1 : ffff800081c9f300 x0 : 0000000000000001
+[  169.466146] Call trace:
+[  169.468593]  reset_control_reset+0x1b8/0x1d0 (P)
+[  169.473215]  reset_control_reset+0xb0/0x1d0
+[  169.477403]  sunxi_vpu_reset+0x20/0x38
+[  169.481162]  hantro_watchdog+0x60/0xb8
+[  169.484916]  process_one_work+0x190/0x4f8
+[  169.488935]  worker_thread+0x198/0x328
+[  169.492690]  kthread+0x13c/0x150
+[  169.495930]  ret_from_fork+0x10/0x20
+[  169.499516] ---[ end trace 0000000000000000 ]---

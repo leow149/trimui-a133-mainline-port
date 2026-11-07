@@ -1,0 +1,179 @@
+== dmesg warn/err
+[    0.054092] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[    1.015012] sunxi-wdt 30090a0.watchdog: Watchdog enabled (timeout=16 sec, nowayout=0)
+[    1.558944] sun4i-drm display-engine: [drm] Cannot find any crtc or sizes
+[    1.724380] sun4i-codec 5096000.codec: DTS/ACPI name 'rx' not found, legacy failed (-19)
+[    2.288680] faux_driver regulatory: Direct firmware load for regulatory.db failed with error -2
+[    2.288692] cfg80211: failed to load regulatory.db
+[    2.441980] EXT4-fs (mmcblk2p2): warning: mounting unchecked fs, running e2fsck is recommended
+== cmdline
+console=ttyS0,115200 root=PARTUUID=14c78a96-02 rootwait rw earlycon loglevel=7 powervr.exp_hw_support=1
+== blkid
+/dev/mmcblk1p10: UUID="10d24b0e-5af3-47c7-9c2d-0cac8b586785" TYPE="ext4"
+/dev/mmcblk1p6: UUID="f660326e-26fb-42cd-b0aa-a45b8f8044ec" TYPE="ext4"
+/dev/mmcblk1p5: UUID="57f8f4bc-abf4-655f-bf67-946fc0f9f25b" TYPE="ext4"
+/dev/mmcblk1p1: LABEL="Volumn" TYPE="vfat"
+/dev/mmcblk2p3: LABEL="TRIMUIDATA" UUID="4e3d4274-03f4-448d-b3c4-8521bca83ccb" TYPE="ext4"
+/dev/mmcblk2p2: LABEL="rootfs" UUID="00694970-120f-416d-b318-ee60353183ae" TYPE="ext2"
+/dev/mmcblk2p1: LABEL="TRIMUIBOOT" UUID="4F74-00E4" TYPE="vfat"
+/dev/dri/card0
+/dev/dri/card1
+/dev/dri/renderD128
+/dev/input/event0
+/dev/input/event1
+/dev/input/event2
+/dev/input/event3
+/dev/input/event4
+/dev/media0
+/dev/media1
+/dev/rtc0
+/dev/video0
+/dev/video1
+/dev/watchdog
+/dev/watchdog0
+== input
+/sys/class/input/input0: axp20x-pek
+/sys/class/input/input1: A100 Audio Codec Headphone Jack
+/sys/class/input/input2: 5070800.lradc
+/sys/class/input/input3: TrimUI Smart Pro Gamepad
+/sys/class/input/input4: gpio-keys
+== power
+-- /sys/class/power_supply/axp20x-battery
+type=Battery
+status=Not charging
+capacity=100
+voltage_now=4158000
+current_now=458000
+present=1
+online=1
+health=Good
+-- /sys/class/power_supply/axp20x-usb
+type=USB
+voltage_now=4600000
+present=1
+online=1
+health=Good
+== rtc
+sun6i-rtc 7000000.rtc
+1794154731
+Sun Nov  8 16:18:51 2026  0.000000 seconds
+Sun Nov  8 16:18:51 UTC 2026
+== cpufreq
+schedutil
+1080000
+408000 600000 816000 1080000 1200000 1320000 1464000 
+== thermal
+cpu-thermal 47837
+gpu-thermal 49383
+ddr-thermal 47636
+== backlight
+/sys/class/backlight/backlight 667/1333
+== leds
+23
+rgb:indicator-0
+rgb:indicator-1
+rgb:indicator-10
+rgb:indicator-11
+rgb:indicator-12
+rgb:indicator-13
+rgb:indicator-14
+rgb:indicator-15
+rgb:indicator-16
+rgb:indicator-17
+rgb:indicator-18
+rgb:indicator-19
+rgb:indicator-2
+rgb:indicator-20
+rgb:indicator-21
+rgb:indicator-22
+rgb:indicator-3
+rgb:indicator-4
+rgb:indicator-5
+rgb:indicator-6
+rgb:indicator-7
+rgb:indicator-8
+rgb:indicator-9
+== drm
+/sys/class/drm/card1-DSI-1 connected 720x1280 
+== watchdog
+watchdog0
+cat: can't open '/sys/class/watchdog/watchdog0/identity': No such file or directory
+cat: can't open '/sys/class/watchdog/watchdog0/state': No such file or directory
+== usb
+1-0:1.0
+2-0:1.0
+usb1
+usb2
+configured
+== iommu
+/sys/class/iommu:
+30f0000.iommu
+
+/sys/kernel/iommu_groups:
+0
+[    0.476731] iommu: Default domain type: Translated
+[    0.482035] iommu: DMA domain TLB invalidation policy: strict mode
+[    0.846362] platform 1c0e000.video-codec: Adding to iommu group 0
+[    1.184741] platform 6100000.mixer: Adding to iommu group 0
+== alsa
+ 0 [Codec          ]: sun4i-codec - A100 Audio Codec
+                      a100-audio-codec
+controlC0
+pcmC0D0p
+timer
+== lsmod
+Module                  Size  Used by    Not tainted
+== net
+BusyBox v1.37.0 (2025-11-21 22:40:56 UTC) multi-call binary.
+
+Usage: ip [OPTIONS] address|route|link|tunnel|neigh|rule [ARGS]
+
+OPTIONS := -f[amily] inet|inet6|link | -o[neline]
+
+ip addr add|del IFADDR dev IFACE | show|flush [dev IFACE] [to PREFIX]
+ip route list|flush|add|del|change|append|replace|test ROUTE
+ip link set IFACE [up|down] [arp on|off] [multicast on|off]
+	[promisc on|off] [mtu NUM] [name NAME] [qlen NUM] [address MAC]
+	[master IFACE | nomaster] [netns PID]
+ip tunnel add|change|del|show [NAME]
+	[mode ipip|gre|sit] [remote ADDR] [local ADDR] [ttl TTL]
+ip neigh show|flush [to PREFIX] [dev DEV] [nud STATE]
+ip rule [list] | add|del SELECTOR ACTION
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: wlan0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN qlen 1000
+    link/ether 02:00:34:9a:30:3a brd ff:ff:ff:ff:ff:ff
+3: usb0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
+    link/ether 02:54:53:50:00:01 brd ff:ff:ff:ff:ff:ff
+== bt
+0: rfkill-xr829-bt: bluetooth
+	Soft blocked: no
+	Hard blocked: no
+1: phy0: wlan
+	Soft blocked: no
+	Hard blocked: no
+[    0.562613] Bluetooth: Core ver 2.22
+[    0.566573] NET: Registered PF_BLUETOOTH protocol family
+[    0.572149] Bluetooth: HCI device and connection manager initialized
+[    0.579003] Bluetooth: HCI socket layer initialized
+[    0.584008] Bluetooth: L2CAP socket layer initialized
+[    0.589227] Bluetooth: SCO socket layer initialized
+[    1.023993] Bluetooth: HCI UART driver ver 2.3
+[    1.028880] Bluetooth: HCI UART protocol H4 registered
+[    1.034553] Bluetooth: HCI UART protocol LL registered
+[    1.040302] Bluetooth: HCI UART protocol Broadcom registered
+[    1.046265] Bluetooth: HCI UART protocol QCA registered
+[    1.052028] Bluetooth: HCI UART protocol Marvell registered
+[    1.762111] rfkill_gpio rfkill-bt: rfkill-xr829-bt device registered.
+[    2.280982] ehci-platform 5200000.usb: EHCI Host Controller
+[    2.281189] ohci-platform 5200400.usb: Generic Platform OHCI controller
+[    2.286674] ehci-platform 5200000.usb: new USB bus registered, assigned bus number 1
+[    2.293288] ohci-platform 5200400.usb: new USB bus registered, assigned bus number 2
+[    2.303600] ehci-platform 5200000.usb: irq 341, io mem 0x05200000
+[    2.311663] ohci-platform 5200400.usb: irq 342, io mem 0x05200400
+[    2.335412] ehci-platform 5200000.usb: USB 2.0 started, EHCI 1.00
+== v4l
+/sys/class/video4linux/video0 allwinner,sun50i-h6-vpu-g2-dec
+/sys/class/video4linux/video1 cedrus
+== mounts edge
+root

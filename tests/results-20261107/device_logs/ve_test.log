@@ -1,0 +1,4 @@
+H.264: hw rc=0 frames=150, sw frames=150, identical=150
+H.265: hw rc=0 frames=150, sw frames=150, identical=150
+MPEG-2: hw rc=0 frames=150, sw frames=150, identical=0
+[    1.081098] cedrus 1c0e000.video-codec: Device registered as /dev/video1

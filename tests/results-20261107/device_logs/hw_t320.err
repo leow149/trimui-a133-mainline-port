@@ -1,0 +1,11 @@
+ERROR: from element /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0: Decoding frame took too long
+Additional debug info:
+../sys/v4l2codecs/gstv4l2codecvp9dec.c(1083): gst_v4l2_codec_vp9_dec_output_picture (): /GstPipeline:pipeline0/v4l2slvp9dec:v4l2slvp9dec0
+ERROR: pipeline doesn't want to preroll.
+ERROR: from element /GstPipeline:pipeline0/GstMatroskaDemux:matroskademux0: Internal data stream error.
+Additional debug info:
+../gst/matroska/matroska-demux.c(6394): gst_matroska_demux_loop (): /GstPipeline:pipeline0/GstMatroskaDemux:matroskademux0:
+streaming stopped, reason error (-5)
+Details:
+details, flow-return=(int)-5;
+ERROR: pipeline doesn't want to preroll.

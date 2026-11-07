@@ -1,0 +1,5 @@
+Sun Nov  8 16:23:45 UTC 2026
+freeze mem disk
+[s2idle]
+/sys/class/rtc/rtc0/wakealarm
+alarm set: 1794155040

@@ -1,0 +1,45 @@
+Linux (none) 7.2.0 #6 SMP PREEMPT Sat Nov  7 16:13:18 UTC 2026 aarch64 Linux
+dmesg_after_vp9.txt
+dmesg_pre_suspend.txt
+dmesg_t320.txt
+dmesg_t720.txt
+h.err
+h.txt
+h2.err
+h2.sum
+h2.txt
+hw_t320.err
+hw_t320.sum
+hw_t320.txt
+hw_t720.err
+hw_t720.sum
+hw_t720.txt
+suspend.log
+suspend_dev.sh
+sw_t320.sum
+sw_t320.txt
+sw_t720.sum
+sw_t720.txt
+t320.webm
+t720.webm
+ve_test.log
+ve_test.sh
+Sun Nov  8 16:27:03 UTC 2026
+[    1.024714] sunxi-wdt 30090a0.watchdog: Watchdog enabled (timeout=16 sec, nowayout=0)
+[    1.745389] sun4i-codec 5096000.codec: DTS/ACPI name 'rx' not found, legacy failed (-19)
+[    2.311657] faux_driver regulatory: Direct firmware load for regulatory.db failed with error -2
+[    2.311671] cfg80211: failed to load regulatory.db
+[    2.312034] PM: genpd: Disabling unused power domains
+[    2.469953] EXT4-fs (mmcblk2p2): warning: mounting unchecked fs, running e2fsck is recommended
+total 0
+dr-xr-xr-x    2 root     root             0 Nov  8 16:27 .
+drwxr-xr-x    8 root     root             0 Nov  8 16:27 ..
+t264_4k.mp4
+t265_4k.mp4
+---
+/dev/dri/card0
+/dev/dri/card1
+/dev/dri/renderD128
+/dev/video0
+/dev/video1
+connected

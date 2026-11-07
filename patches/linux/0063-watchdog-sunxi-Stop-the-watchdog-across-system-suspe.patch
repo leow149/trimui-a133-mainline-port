@@ -1,0 +1,76 @@
+From 996985cd691ff35cddc4c1aacde17d3f88d14934 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 20:02:56 +0100
+Subject: [PATCH 63/65] watchdog: sunxi: Stop the watchdog across system
+ suspend
+
+The watchdog keeps counting during system sleep while the userspace daemon
+that pings it is frozen. With a 16 s maximum timeout, any s2idle suspend
+longer than that ends in a reset. Stop the watchdog on suspend and re-arm
+it with a fresh timeout on resume when it was active.
+
+Tested on the TrimUI Smart Pro (A133): a 20 s s2idle suspend no longer
+resets the board.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/watchdog/sunxi_wdt.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/watchdog/sunxi_wdt.c b/drivers/watchdog/sunxi_wdt.c
+index b6c761acc..7169a12ef 100644
+--- a/drivers/watchdog/sunxi_wdt.c
++++ b/drivers/watchdog/sunxi_wdt.c
+@@ -285,6 +285,7 @@ static int sunxi_wdt_probe(struct platform_device *pdev)
+ 	watchdog_set_restart_priority(&sunxi_wdt->wdt_dev, 128);
+ 
+ 	watchdog_set_drvdata(&sunxi_wdt->wdt_dev, sunxi_wdt);
++	platform_set_drvdata(pdev, sunxi_wdt);
+ 
+ 	sunxi_wdt_stop(&sunxi_wdt->wdt_dev);
+ 
+@@ -299,10 +300,39 @@ static int sunxi_wdt_probe(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++/*
++ * The watchdog keeps counting during system sleep while the userspace
++ * daemon that pings it is frozen, so stop it across suspend and re-arm it
++ * (with a fresh timeout) on resume.
++ */
++static int sunxi_wdt_suspend(struct device *dev)
++{
++	struct sunxi_wdt_dev *sunxi_wdt = dev_get_drvdata(dev);
++
++	if (watchdog_active(&sunxi_wdt->wdt_dev))
++		return sunxi_wdt_stop(&sunxi_wdt->wdt_dev);
++
++	return 0;
++}
++
++static int sunxi_wdt_resume(struct device *dev)
++{
++	struct sunxi_wdt_dev *sunxi_wdt = dev_get_drvdata(dev);
++
++	if (watchdog_active(&sunxi_wdt->wdt_dev))
++		return sunxi_wdt_start(&sunxi_wdt->wdt_dev);
++
++	return 0;
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(sunxi_wdt_pm_ops, sunxi_wdt_suspend,
++				sunxi_wdt_resume);
++
+ static struct platform_driver sunxi_wdt_driver = {
+ 	.probe		= sunxi_wdt_probe,
+ 	.driver		= {
+ 		.name		= DRV_NAME,
++		.pm		= pm_sleep_ptr(&sunxi_wdt_pm_ops),
+ 		.of_match_table	= sunxi_wdt_dt_ids,
+ 	},
+ };
+-- 
+2.56.0
+

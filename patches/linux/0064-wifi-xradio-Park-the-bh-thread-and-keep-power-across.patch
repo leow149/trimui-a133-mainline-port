@@ -1,0 +1,131 @@
+From 536db35635da35a049a0cffdd0ae375ca6bd7ec1 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 20:02:56 +0100
+Subject: [PATCH 64/65] wifi: xradio: Park the bh thread and keep power across
+ suspend
+
+The bh kthread is not freezable and polls the chip over SDIO every HZ/30.
+Only the WoWLAN suspend path parked it, and mac80211 skips that path
+without a wowlan config, so the thread kept issuing SDIO transfers while
+the host was suspended. It ended up owning the host, and
+mmc_sdio_resume() blocked forever in mmc_claim_host(). The board hung on
+every s2idle resume, also with the interface down.
+
+Park the bh thread in the SDIO function's suspend callback and release it
+in resume. The function device suspends before and resumes after its MMC
+card, so the thread is quiet for the whole host suspend/resume. Also
+request MMC_PM_KEEP_POWER (it was commented out) so the chip and its
+firmware stay powered. Without that the core powers the card off and
+re-initialises it under the driver. Move the bh PM state enum to bh.h for
+sdio.c.
+
+Tested on the TrimUI Smart Pro (A133, XR829): three consecutive 5 s s2idle
+cycles with WiFi associated. The link pings after each resume.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/bh.c   |  7 -------
+ drivers/net/wireless/xradio/bh.h   |  8 ++++++++
+ drivers/net/wireless/xradio/sdio.c | 33 +++++++++++++++++++++++++-----
+ 3 files changed, 36 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
+index 7442e47db..d89ce77f3 100644
+--- a/drivers/net/wireless/xradio/bh.c
++++ b/drivers/net/wireless/xradio/bh.c
+@@ -26,13 +26,6 @@
+ #define PIGGYBACK_CTRL_REG	(2)
+ #define EFFECTIVE_BUF_SIZE	(MAX_SZ_RD_WR_BUFFERS - PIGGYBACK_CTRL_REG)
+ 
+-/* Suspend state privates */
+-enum xradio_bh_pm_state {
+-	XRADIO_BH_RESUMED = 0,
+-	XRADIO_BH_SUSPEND,
+-	XRADIO_BH_SUSPENDED,
+-	XRADIO_BH_RESUME,
+-};
+ typedef int (*xradio_wsm_handler)(struct xradio_common *hw_priv, u8 *data, size_t size);
+ 
+ #ifdef MCAST_FWDING
+diff --git a/drivers/net/wireless/xradio/bh.h b/drivers/net/wireless/xradio/bh.h
+index ca9187e24..c9e016f43 100644
+--- a/drivers/net/wireless/xradio/bh.h
++++ b/drivers/net/wireless/xradio/bh.h
+@@ -18,6 +18,14 @@
+ 
+ #define SDIO_BLOCK_SIZE (528)
+ 
++/* bh thread suspend states (hw_priv->bh_suspend) */
++enum xradio_bh_pm_state {
++	XRADIO_BH_RESUMED = 0,
++	XRADIO_BH_SUSPEND,
++	XRADIO_BH_SUSPENDED,
++	XRADIO_BH_RESUME,
++};
++
+ int xradio_register_bh(struct xradio_common *hw_priv);
+ void xradio_unregister_bh(struct xradio_common *hw_priv);
+ void xradio_irq_handler(struct xradio_common *hw_priv);
+diff --git a/drivers/net/wireless/xradio/sdio.c b/drivers/net/wireless/xradio/sdio.c
+index 587c59416..2e626a9e1 100644
+--- a/drivers/net/wireless/xradio/sdio.c
++++ b/drivers/net/wireless/xradio/sdio.c
+@@ -21,6 +21,7 @@
+ #include "xradio.h"
+ #include "sdio.h"
+ #include "main.h"
++#include "bh.h"
+ 
+ /* sdio vendor id and device id*/
+ #define SDIO_VENDOR_ID_XRADIO 0x0020
+@@ -220,18 +221,40 @@ static void sdio_remove(struct sdio_func *func)
+ 
+ static int sdio_suspend(struct device *dev)
+ {
+-	int ret = 0;
+-	/*
+ 	struct sdio_func *func = dev_to_sdio_func(dev);
++	struct xradio_common *hw_priv = sdio_get_drvdata(func);
++	int ret;
++
++	/*
++	 * The bh thread is not freezable and polls the chip over SDIO every
++	 * HZ/30. Park it before the MMC card/host suspend, otherwise it ends up
++	 * owning the host across suspend and mmc_sdio_resume() blocks forever
++	 * in mmc_claim_host().
++	 */
++	if (hw_priv &&
++	    atomic_read(&hw_priv->bh_suspend) == XRADIO_BH_RESUMED &&
++	    xradio_bh_suspend(hw_priv))
++		dev_warn(dev, "bh thread did not park for suspend\n");
++
++	/* Keep the chip (and its firmware) powered across suspend. */
+ 	ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
+-	if (ret)
+-		sbus_printk(XRADIO_DBG_ERROR, "set MMC_PM_KEEP_POWER error\n");
+-	*/
++	if (ret) {
++		dev_err(dev, "set MMC_PM_KEEP_POWER failed: %d\n", ret);
++		if (hw_priv &&
++		    atomic_read(&hw_priv->bh_suspend) == XRADIO_BH_SUSPENDED)
++			xradio_bh_resume(hw_priv);
++	}
+ 	return ret;
+ }
+ 
+ static int sdio_resume(struct device *dev)
+ {
++	struct xradio_common *hw_priv = sdio_get_drvdata(dev_to_sdio_func(dev));
++
++	if (hw_priv &&
++	    atomic_read(&hw_priv->bh_suspend) == XRADIO_BH_SUSPENDED &&
++	    xradio_bh_resume(hw_priv))
++		dev_warn(dev, "bh thread did not resume\n");
+ 	return 0;
+ }
+ 
+-- 
+2.56.0
+

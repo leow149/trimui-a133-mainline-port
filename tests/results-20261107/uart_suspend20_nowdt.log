@@ -1,0 +1,13 @@
+[   85.117904] PM: suspend entry (s2idle)
+[   85.121846] Filesystems sync: 0.000 seconds
+[   85.150015] Freezing user space processes
+[   85.155286] Freezing user space processes completed (elapsed 0.001 seconds)
+[   85.162285] OOM killer disabled.
+[   85.165533] Freezing remaining freezable tasks
+[   85.171202] Freezing remaining freezable tasks completed (elapsed 0.001 seconds)
+[   85.183501] musb-sunxi 5100000.usb: sunxi-musb does not have ULPI bus control register
+[  106.080114] panel-orisetech-otm1289a 6504000.dsi.0: panel ID e8 85 76
+[  106.086600] panel-orisetech-otm1289a 6504000.dsi.0: using er68576 init sequence
+[  106.340875] usb usb1: root hub lost power or was reset
+[  106.399388] usb usb2: root hub lost power or was reset
+[  106.404584] musb-sunxi 5100000.usb: sunxi-musb does not have ULPI bus control register

@@ -1,0 +1,73 @@
+== audio
+Number of controls: 9
+ctl	type	num	name                                    
+0	INT	1	DAC Playback Volume                     
+1	INT	1	Line Out Playback Volume                
+2	BOOL	1	Line Out Playback Switch                
+3	BOOL	1	Line Out Differential Switch            
+4	INT	1	Headphone Playback Volume               
+5	BOOL	1	Headphone Jack                          
+6	BOOL	1	Speaker Jack                            
+7	BOOL	1	Speaker Switch                          
+8	BOOL	1	Headphone Switch                        
+4	INT	1	Headphone Playback Volume               4 (range 0->7)
+5	BOOL	1	Headphone Jack                          Off
+6	BOOL	1	Speaker Jack                            Off
+7	BOOL	1	Speaker Switch                          On
+8	BOOL	1	Headphone Switch                        On
+card: 0
+device: 0
+subdevice: 0
+== led
+0 0 0
+10
+0
+0 0 0
+== cpufreq under load
+1464000
+59396
+600000
+== wifi
+udhcpc: broadcasting discover
+udhcpc: broadcasting select for 192.168.1.185, server 192.168.1.1
+udhcpc: lease of 192.168.1.185 obtained from 192.168.1.1, lease time 43200
+Connected to xx:xx:xx:xx:xx:01 (on wlan0)
+	SSID: home-ssid
+	freq: 2412.0
+	RX: 18209 bytes (42 packets)
+	TX: 2457 bytes (17 packets)
+BusyBox v1.37.0 (2025-11-21 22:40:56 UTC) multi-call binary.
+
+Usage: ip [OPTIONS] address|route|link|tunnel|neigh|rule [ARGS]
+
+OPTIONS := -f[amily] inet|inet6|link | -o[neline]
+
+ip addr add|del IFADDR dev IFACE | show|flush [dev IFACE] [to PREFIX]
+ip route list|flush|add|del|change|append|replace|test ROUTE
+ip link set IFACE [up|down] [arp on|off] [multicast on|off]
+	[promisc on|off] [mtu NUM] [name NAME] [qlen NUM] [address MAC]
+	[master IFACE | nomaster] [netns PID]
+ip tunnel add|change|del|show [NAME]
+	[mode ipip|gre|sit] [remote ADDR] [local ADDR] [ttl TTL]
+ip neigh show|flush [to PREFIX] [dev DEV] [nud STATE]
+ip rule [list] | add|del SELECTOR ACTION
+--- 192.168.1.1 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 3.710/51.995/128.799 ms
+BusyBox v1.37.0 (2025-11-21 22:40:56 UTC) multi-call binary.
+
+Usage: ip [OPTIONS] address|route|link|tunnel|neigh|rule [ARGS]
+
+OPTIONS := -f[amily] inet|inet6|link | -o[neline]
+
+ip addr add|del IFADDR dev IFACE | show|flush [dev IFACE] [to PREFIX]
+ip route list|flush|add|del|change|append|replace|test ROUTE
+ip link set IFACE [up|down] [arp on|off] [multicast on|off]
+	[promisc on|off] [mtu NUM] [name NAME] [qlen NUM] [address MAC]
+	[master IFACE | nomaster] [netns PID]
+ip tunnel add|change|del|show [NAME]
+	[mode ipip|gre|sit] [remote ADDR] [local ADDR] [ttl TTL]
+ip neigh show|flush [to PREFIX] [dev DEV] [nud STATE]
+ip rule [list] | add|del SELECTOR ACTION
+== brightness readback
+667
