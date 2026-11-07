@@ -20,12 +20,12 @@ Not submitted upstream yet.
 | Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
 | Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
 | Wi-Fi | ✅ XR829, WPA2, 20 MHz: 29 Mbit/s receive, 12 Mbit/s send (iperf3); stable MAC address |
-| Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Not yet usable together with Wi-Fi (see below) |
+| Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Works alongside Wi-Fi at normal scan duty cycles (see docs/wifi-bt-coexistence.md) |
 | Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
 | Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
 | USB | ✅ Device mode with DMA (NCM network: 309 Mbit/s to the host, 154 Mbit/s from it), host mode on the second port |
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
-| Not working yet | ❌ Wi-Fi/Bluetooth coexistence (Bluetooth works on its own, see docs/bluetooth-bringup.md), video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
+| Not working yet | ❌ video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
 
 Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm is tested; wake by the power and volume keys is not.
 

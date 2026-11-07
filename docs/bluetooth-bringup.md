@@ -89,7 +89,7 @@ Bluetooth should follow once the serdev/UART plumbing and firmware-download appr
   - raising BT_WAKE before the first reset,
   - priming ttyS1 with stty.
   The next run syncs on the first 0x55. The script therefore does a throw-away 5 s probe (`-p`) first. Cause still unknown; probably UART/tty state the first process leaves behind.
-- **Wi-Fi/BT coexistence is broken (open):**
+- **Wi-Fi/BT coexistence: works.** The problem below was a 100% duty-cycle scan left running; see docs/wifi-bt-coexistence.md. Original observation:
 
   | BT state | Wi-Fi to the gateway |
   |---|---|
