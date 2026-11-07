@@ -1,0 +1,109 @@
+== 1566 D
+[<0>] synchronize_rcu_expedited+0x218/0x2b8
+[<0>] synchronize_net+0x34/0x58
+[<0>] __sta_info_flush+0x128/0x230
+[<0>] ieee80211_set_disassoc+0x4e0/0x680
+[<0>] ieee80211_mgd_deauth+0x144/0x5c0
+[<0>] ieee80211_deauth+0x20/0x38
+[<0>] cfg80211_mlme_deauth+0xb4/0x308
+[<0>] nl80211_deauthenticate+0xbc/0xe8
+[<0>] genl_family_rcv_msg_doit+0xe4/0x158
+[<0>] genl_rcv_msg+0x21c/0x2a8
+[<0>] netlink_rcv_skb+0x64/0x138
+[<0>] genl_rcv+0x40/0x60
+[<0>] netlink_unicast+0x324/0x3a8
+[<0>] netlink_sendmsg+0x170/0x3b8
+== 1622 D
+[<0>] rtnl_lock+0x24/0x38
+[<0>] nl80211_prepare_wdev_dump+0xa0/0x240
+[<0>] nl80211_dump_scan+0x70/0x1b0
+[<0>] genl_dumpit+0x48/0xd0
+[<0>] netlink_dump+0x130/0x410
+[<0>] __netlink_dump_start+0x25c/0x350
+[<0>] genl_family_rcv_msg_dumpit+0x90/0x118
+[<0>] genl_rcv_msg+0x128/0x2a8
+[<0>] netlink_rcv_skb+0x64/0x138
+[<0>] genl_rcv+0x40/0x60
+[<0>] netlink_unicast+0x324/0x3a8
+[<0>] netlink_sendmsg+0x170/0x3b8
+[<0>] ____sys_sendmsg+0x1c8/0x2c8
+[<0>] ___sys_sendmsg+0xb4/0x110
+ 1566 D    wpa_supplicant
+ 1617 D    ip
+ 1622 D    iw
+[  754.832189] x20: ffff80008338bdbc x19: ffff000003c0e6dc x18: ffff00003fdbcfec
+[  754.832197] x17: 0000000000001ab8 x16: 003fffffffffffff x15: 000000006bb153fa
+[  754.832205] x14: ffff00003fdbcfe0 x13: 000000000000000f x12: 0000000000000063
+[  754.832212] x11: ffff80008338bc2c x10: 0000000000000b50 x9 : ffff8000812db544
+[  754.832220] x8 : 00000000000000f0 x7 : 0000000000000000 x6 : 0000000000002cd2
+[  754.832227] x5 : ffff00000325b000 x4 : 0000000000000001 x3 : 0000000000000001
+[  754.832235] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000001
+[  754.832243] Call trace:
+[  754.832246]  queued_spin_lock_slowpath+0x78/0x570 (P)
+[  754.832255]  _raw_spin_lock+0x64/0x78
+[  754.832261]  wsm_get_tx+0x104/0x848
+[  754.832271]  xradio_bh_exchange+0x12c/0x5f8
+[  754.832278]  xradio_bh+0x15c/0x380
+[  754.832284]  kthread+0x13c/0x150
+[  754.832295]  ret_from_fork+0x10/0x20
+46:[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+47:[    0.000000] rcu: 	RCU event tracing is enabled.
+48:[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=4.
+52:[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+53:[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=4
+54:[    0.000000] RCU Tasks: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+55:[    0.000000] RCU Tasks Rude: Setting shift to 2 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=4.
+59:[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+71:[    0.061733] rcu: Hierarchical SRCU implementation.
+72:[    0.067009] rcu: 	Max phase no-delay instances is 1000.
+285:[    2.134778] xradio_wlan mmc0:0001:1:    Input buffers: 32 x 1632 bytes
+288:[    2.134832] xradio_wlan mmc0:0001:1: Firmware Label:XR_C09.08.52.73_DBG_02.122 2GHZ HT40 May 18 2021 13:36:09
+357:[  276.039461] xradio_wlan mmc0:0001:1: missed interrupt
+359:[  422.943452] xradio_wlan mmc0:0001:1: missed interrupt
+388:[  607.744109] WARNING: drivers/net/wireless/xradio/tx.c:1156 at xradio_tx_confirm_cb+0x490/0x540, CPU#2: xradio_bh/92
+390:[  607.757609] CPU: 2 UID: 0 PID: 92 Comm: xradio_bh Not tainted 7.2.0 #24 PREEMPT 
+391:[  607.765001] Hardware name: TrimUI Smart Pro (DT)
+393:[  607.776575] pc : xradio_tx_confirm_cb+0x490/0x540
+394:[  607.781286] lr : xradio_tx_confirm_cb+0xd4/0x540
+407:[  607.863342]  xradio_tx_confirm_cb+0x490/0x540 (P)
+[  571.633293] ieee80211 phy0: vif 0, configuring tx
+[  571.633722] ieee80211 phy0: vif 0, configuring tx
+[  571.636751] wlan0: associated
+[  571.683423] ieee80211 phy0: CCMP_PAIRWISE keylen=16!
+[  571.715413] ieee80211 phy0: key->cipher unknown(1027078)!
+[  571.720986] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:02
+[  607.720521] wlan0: deauthenticating from xx:xx:xx:xx:xx:02 by local choice (Reason: 3=DEAUTH_LEAVING)
+[  607.739466] ------------[ cut here ]------------
+[  607.744109] WARNING: drivers/net/wireless/xradio/tx.c:1156 at xradio_tx_confirm_cb+0x490/0x540, CPU#2: xradio_bh/92
+[  607.754548] Modules linked in:
+[  607.757609] CPU: 2 UID: 0 PID: 92 Comm: xradio_bh Not tainted 7.2.0 #24 PREEMPT 
+[  607.765001] Hardware name: TrimUI Smart Pro (DT)
+[  607.769616] pstate: 40000005 (nZcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  607.776575] pc : xradio_tx_confirm_cb+0x490/0x540
+[  607.781286] lr : xradio_tx_confirm_cb+0xd4/0x540
+[  607.785910] sp : ffff80008338bb70
+[  607.860886] Call trace:
+[  607.863342]  xradio_tx_confirm_cb+0x490/0x540 (P)
+[  607.868069]  wsm_tx_confirm+0x178/0x2e0
+[  607.871929]  wsm_handle_rx+0x158/0x1028
+[  607.875790]  xradio_bh_exchange+0x2c8/0x5f8
+[  607.879995]  xradio_bh+0x15c/0x380
+[  607.883419]  kthread+0x13c/0x150
+[  607.886680]  ret_from_fork+0x10/0x20
+[  607.890282] ---[ end trace 0000000000000000 ]---
+[  628.743311] rcu: INFO: rcu_preempt self-detected stall on CPU
+[  628.749073] rcu: 	2-....: (5213 ticks this GP) idle=205c/1/0x4000000000000000 softirq=4863/4863 fqs=2626
+[  628.758543] rcu: 	(t=5254 jiffies g=12345 q=47 ncpus=4)
+[  628.763769] CPU: 2 UID: 0 PID: 92 Comm: xradio_bh Tainted: G        W           7.2.0 #24 PREEMPT 
+[  628.763779] Tainted: [W]=WARN
+[  628.763781] Hardware name: TrimUI Smart Pro (DT)
+[  628.763785] pstate: 00000005 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  628.763790] pc : queued_spin_lock_slowpath+0x78/0x570
+[  628.763804] lr : _raw_spin_lock+0x64/0x78
+[  628.763810] sp : ffff80008338bc20
+[  628.763892] Call trace:
+[  628.763896]  queued_spin_lock_slowpath+0x78/0x570 (P)
+[  628.763905]  _raw_spin_lock+0x64/0x78
+[  628.763911]  wsm_get_tx+0x104/0x848
+[  628.763920]  xradio_bh_exchange+0x12c/0x5f8
+[  628.763927]  xradio_bh+0x15c/0x380
