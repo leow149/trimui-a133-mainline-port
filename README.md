@@ -19,7 +19,7 @@ Not submitted upstream yet.
 | GPU | ✅ PowerVR GE8300 at 696 MHz: Vulkan (Mesa, patched), OpenGL 3.2 / OpenGL ES 3.1 through Zink |
 | Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
 | Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
-| Wi-Fi | ✅ XR829, WPA2, 20 MHz: 29 Mbit/s receive, 12 Mbit/s send (iperf3); stable MAC address |
+| Wi-Fi | ✅ XR829, 2.4 GHz, WPA2 and WPA3 (SAE + management frame protection), HT40 + short GI: ~35-39 Mbit/s receive, ~30-32 Mbit/s send (iperf3, 40 MHz AP); stable MAC address |
 | Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Works alongside Wi-Fi at normal scan duty cycles (see docs/wifi-bt-coexistence.md) |
 | Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
 | Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
