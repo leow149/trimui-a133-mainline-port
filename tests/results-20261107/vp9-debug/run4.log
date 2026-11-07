@@ -1,0 +1,30 @@
+t320 hw rc=1 frames=1
+[   47.228409] hantro-vpu 1c00000.video-codec-g2: DBG ve[000]=c0000007
+[   47.234732] hantro-vpu 1c00000.video-codec-g2: DBG ve[004]=00000300
+[   47.241004] hantro-vpu 1c00000.video-codec-g2: DBG ve[01c]=00010000
+[   47.247278] hantro-vpu 1c00000.video-codec-g2: DBG ve[0e0]=00030210
+[   47.253547] hantro-vpu 1c00000.video-codec-g2: DBG ve[0e4]=00012010
+[   47.259979] hantro-vpu 1c00000.video-codec-g2: DBG vemode 0 -> c0000000 g2[0]=00000000 g2[4]=00000000
+[   47.269246] hantro-vpu 1c00000.video-codec-g2: DBG vemode 1 -> c0000001 g2[0]=00000000 g2[4]=00000000
+[   47.278513] hantro-vpu 1c00000.video-codec-g2: DBG vemode 2 -> c0000002 g2[0]=00000000 g2[4]=00000000
+[   47.287779] hantro-vpu 1c00000.video-codec-g2: DBG vemode 3 -> c0000003 g2[0]=00000000 g2[4]=00000000
+[   47.297048] hantro-vpu 1c00000.video-codec-g2: DBG vemode 4 -> c0000004 g2[0]=00000000 g2[4]=00000000
+[   47.306315] hantro-vpu 1c00000.video-codec-g2: DBG vemode 5 -> c0000005 g2[0]=00000000 g2[4]=00000000
+[   47.315588] hantro-vpu 1c00000.video-codec-g2: DBG vemode 6 -> c0000006 g2[0]=00000000 g2[4]=00000000
+[   47.324853] hantro-vpu 1c00000.video-codec-g2: DBG vemode 7 -> c0000007 g2[0]=00000000 g2[4]=00000000
+[   49.437693] hantro-vpu 1c00000.video-codec-g2: DBG ve[000]=c0000007
+[   49.444017] hantro-vpu 1c00000.video-codec-g2: DBG ve[004]=00000300
+[   49.450308] hantro-vpu 1c00000.video-codec-g2: DBG ve[01c]=00010000
+[   49.456591] hantro-vpu 1c00000.video-codec-g2: DBG ve[0e0]=00030210
+[   49.462866] hantro-vpu 1c00000.video-codec-g2: DBG ve[0e4]=00012010
+[   49.469293] hantro-vpu 1c00000.video-codec-g2: DBG vemode 0 -> c0000000 g2[0]=00000000 g2[4]=00000000
+[   49.478603] hantro-vpu 1c00000.video-codec-g2: DBG vemode 1 -> c0000001 g2[0]=00000000 g2[4]=00000000
+[   49.487924] hantro-vpu 1c00000.video-codec-g2: DBG vemode 2 -> c0000002 g2[0]=00000000 g2[4]=00000000
+[   49.497204] hantro-vpu 1c00000.video-codec-g2: DBG vemode 3 -> c0000003 g2[0]=00000000 g2[4]=00000000
+[   49.506483] hantro-vpu 1c00000.video-codec-g2: DBG vemode 4 -> c0000004 g2[0]=00000000 g2[4]=00000000
+[   49.515756] hantro-vpu 1c00000.video-codec-g2: DBG vemode 5 -> c0000005 g2[0]=00000000 g2[4]=00000000
+[   49.525026] hantro-vpu 1c00000.video-codec-g2: DBG vemode 6 -> c0000006 g2[0]=00000000 g2[4]=00000000
+[   49.534294] hantro-vpu 1c00000.video-codec-g2: DBG vemode 7 -> c0000007 g2[0]=00000000 g2[4]=00000000
+[   51.650761] hantro-vpu 1c00000.video-codec-g2: DBG ve[000]=c0000007
+[   51.657079] hantro-vpu 1c00000.video-codec-g2: DBG ve[004]=00000300
+[   51.663367] hantro-vpu 1c00000.video-codec-g2: DBG ve[01c]=00010000

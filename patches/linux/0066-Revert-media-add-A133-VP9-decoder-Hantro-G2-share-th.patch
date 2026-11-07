@@ -1,0 +1,136 @@
+From ddd6629a679a3a035deff438d4cc00670a79107d Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 20:28:11 +0100
+Subject: [PATCH] Revert "media: add A133 VP9 decoder (Hantro G2), share the VE
+ reset with cedrus"
+
+This reverts commit 6286915c3.
+
+The A133 has no Hantro G2 at 0x1c00000. The whole 0x1c00000-0x1c0dfff
+window reads as zero, also the G2 version register and registers the
+driver has just written. That holds with VE_CLK/VE_BGR enabled and the
+block out of reset, with every VE_BGR bit and every Cedrus VE_MODE value
+tried, and with MBUS_VE added. Cedrus at 0x1c0e000 responds normally at
+the same time. The A133 manual's memory map lists only the VE at
+0x1c0e000, the CCU has no VP9 clock or gate, and the manual specifies VP9
+as 720p30 through the VE plus firmware. The stock kernel has no VP9
+driver; its vp9@1c00000 DT node is a leftover.
+
+Every decode timed out in the hantro watchdog, which then pulsed the now
+shared VE reset and tripped the reset core's WARN. Drop the node and the
+driver hooks, and give cedrus its exclusive reset back.
+
+Tested on the TrimUI Smart Pro: no hantro probe, cedrus is /dev/video0,
+and H.264/H.265 decode is still 150/150 frames identical to software.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi         | 10 ----------
+ .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts |  4 ----
+ drivers/media/platform/verisilicon/hantro.h            |  1 -
+ drivers/media/platform/verisilicon/hantro_drv.c        |  5 +----
+ drivers/media/platform/verisilicon/sunxi_vpu_hw.c      |  1 -
+ drivers/staging/media/sunxi/cedrus/cedrus_hw.c         |  4 ++--
+ 6 files changed, 3 insertions(+), 22 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index fcfedb846..1a08364ec 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -203,16 +203,6 @@ video-codec@1c0e000 {
+ 			iommus = <&iommu 2>;
+ 		};
+ 
+-		vp9: video-codec-g2@1c00000 {
+-			compatible = "allwinner,sun50i-h6-vpu-g2";
+-			reg = <0x01c00000 0x1000>;
+-			interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+-			clocks = <&ccu CLK_BUS_VE>, <&ccu CLK_VE>;
+-			clock-names = "bus", "mod";
+-			resets = <&ccu RST_BUS_VE>;
+-			status = "disabled";
+-		};
+-
+ 		gic: interrupt-controller@3021000 {
+ 			compatible = "arm,gic-400";
+ 			reg = <0x03021000 0x1000>, <0x03022000 0x2000>,
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 54cecd045..07a09edac 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -378,10 +378,6 @@ &gpu {
+ 	status = "okay";
+ };
+ 
+-&vp9 {
+-	status = "okay";
+-};
+-
+ &mmc0 {
+ 	bus-width = <4>;
+ 	vmmc-supply = <&reg_cldo3>;
+diff --git a/drivers/media/platform/verisilicon/hantro.h b/drivers/media/platform/verisilicon/hantro.h
+index de79419b9..0353de154 100644
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -102,7 +102,6 @@ struct hantro_variant {
+ 	unsigned int double_buffer : 1;
+ 	unsigned int legacy_regs : 1;
+ 	unsigned int late_postproc : 1;
+-	unsigned int shared_reset : 1;
+ 	const struct of_device_id *shared_devices;
+ };
+ 
+diff --git a/drivers/media/platform/verisilicon/hantro_drv.c b/drivers/media/platform/verisilicon/hantro_drv.c
+index b59561a36..ad71c0402 100644
+--- a/drivers/media/platform/verisilicon/hantro_drv.c
++++ b/drivers/media/platform/verisilicon/hantro_drv.c
+@@ -1134,10 +1134,7 @@ static int hantro_probe(struct platform_device *pdev)
+ 			return PTR_ERR(vpu->clocks[0].clk);
+ 	}
+ 
+-	if (vpu->variant->shared_reset)
+-		vpu->resets = devm_reset_control_array_get_shared(&pdev->dev);
+-	else
+-		vpu->resets = devm_reset_control_array_get_optional_exclusive(&pdev->dev);
++	vpu->resets = devm_reset_control_array_get_optional_exclusive(&pdev->dev);
+ 	if (IS_ERR(vpu->resets))
+ 		return PTR_ERR(vpu->resets);
+ 
+diff --git a/drivers/media/platform/verisilicon/sunxi_vpu_hw.c b/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
+index 125f6920e..02ce8b064 100644
+--- a/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/sunxi_vpu_hw.c
+@@ -126,5 +126,4 @@ const struct hantro_variant sunxi_vpu_variant = {
+ 	.double_buffer = 1,
+ 	.legacy_regs = 1,
+ 	.late_postproc = 1,
+-	.shared_reset = 1,
+ };
+diff --git a/drivers/staging/media/sunxi/cedrus/cedrus_hw.c b/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
+index a199ef914..444fb5387 100644
+--- a/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
++++ b/drivers/staging/media/sunxi/cedrus/cedrus_hw.c
+@@ -203,7 +203,7 @@ int cedrus_hw_resume(struct device *device)
+ 	struct cedrus_dev *dev = dev_get_drvdata(device);
+ 	int ret;
+ 
+-	ret = reset_control_deassert(dev->rstc);
++	ret = reset_control_reset(dev->rstc);
+ 	if (ret) {
+ 		dev_err(dev->dev, "Failed to apply reset\n");
+ 
+@@ -304,7 +304,7 @@ int cedrus_hw_probe(struct cedrus_dev *dev)
+ 		goto err_sram;
+ 	}
+ 
+-	dev->rstc = devm_reset_control_get_shared(dev->dev, NULL);
++	dev->rstc = devm_reset_control_get(dev->dev, NULL);
+ 	if (IS_ERR(dev->rstc)) {
+ 		dev_err(dev->dev, "Failed to get reset control\n");
+ 
+-- 
+2.56.0
+

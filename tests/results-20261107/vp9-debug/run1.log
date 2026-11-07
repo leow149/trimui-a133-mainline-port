@@ -1,0 +1,36 @@
+t320 hw rc=1 frames=0
+[   56.887376] hantro-vpu 1c00000.video-codec-g2: DBG pre  r00: 00000000 00000000 00000000 00000000
+[   56.896222] hantro-vpu 1c00000.video-codec-g2: DBG pre  r04: 00000000 00000000 00000000 00000000
+[   56.905008] hantro-vpu 1c00000.video-codec-g2: DBG pre  r08: 00000000 00000000 00000000 00000000
+[   56.913793] hantro-vpu 1c00000.video-codec-g2: DBG pre  r12: 00000000 00000000 00000000 00000000
+[   56.922577] hantro-vpu 1c00000.video-codec-g2: DBG pre  r16: 00000000 00000000 00000000 00000000
+[   56.931367] hantro-vpu 1c00000.video-codec-g2: DBG pre  r20: 00000000 00000000 00000000 00000000
+[   56.940150] hantro-vpu 1c00000.video-codec-g2: DBG pre  r24: 00000000 00000000 00000000 00000000
+[   56.948934] hantro-vpu 1c00000.video-codec-g2: DBG pre  r28: 00000000 00000000 00000000 00000000
+[   56.957816] hantro-vpu 1c00000.video-codec-g2: DBG post start int=00000000
+[   58.894356] hantro_watchdog:127: frame processing timed out!
+[   58.900104] hantro-vpu 1c00000.video-codec-g2: DBG wd r00: 00000000 00000000 00000000 00000000
+[   58.908774] hantro-vpu 1c00000.video-codec-g2: DBG wd r04: 00000000 00000000 00000000 00000000
+[   58.917455] hantro-vpu 1c00000.video-codec-g2: DBG wd r08: 00000000 00000000 00000000 00000000
+[   58.926111] hantro-vpu 1c00000.video-codec-g2: DBG wd r12: 00000000 00000000 00000000 00000000
+[   58.939492] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#1: kworker/1:1/67
+[   58.964207] Workqueue: events hantro_watchdog
+[   59.074914]  hantro_watchdog+0x60/0xb8
+[   59.098321] hantro-vpu 1c00000.video-codec-g2: DBG pre  r00: 00000000 00000000 00000000 00000000
+[   59.107162] hantro-vpu 1c00000.video-codec-g2: DBG pre  r04: 00000000 00000000 00000000 00000000
+[   59.115948] hantro-vpu 1c00000.video-codec-g2: DBG pre  r08: 00000000 00000000 00000000 00000000
+[   59.124730] hantro-vpu 1c00000.video-codec-g2: DBG pre  r12: 00000000 00000000 00000000 00000000
+[   59.133511] hantro-vpu 1c00000.video-codec-g2: DBG pre  r16: 00000000 00000000 00000000 00000000
+[   59.142298] hantro-vpu 1c00000.video-codec-g2: DBG pre  r20: 00000000 00000000 00000000 00000000
+[   59.151080] hantro-vpu 1c00000.video-codec-g2: DBG pre  r24: 00000000 00000000 00000000 00000000
+[   59.159863] hantro-vpu 1c00000.video-codec-g2: DBG pre  r28: 00000000 00000000 00000000 00000000
+[   59.168743] hantro-vpu 1c00000.video-codec-g2: DBG post start int=00000000
+[   61.102339] hantro_watchdog:127: frame processing timed out!
+[   61.108092] hantro-vpu 1c00000.video-codec-g2: DBG wd r00: 00000000 00000000 00000000 00000000
+[   61.116763] hantro-vpu 1c00000.video-codec-g2: DBG wd r04: 00000000 00000000 00000000 00000000
+[   61.125438] hantro-vpu 1c00000.video-codec-g2: DBG wd r08: 00000000 00000000 00000000 00000000
+[   61.134097] hantro-vpu 1c00000.video-codec-g2: DBG wd r12: 00000000 00000000 00000000 00000000
+[   61.147481] WARNING: drivers/reset/core.c:395 at reset_control_reset+0x1b8/0x1d0, CPU#3: kworker/3:1/50
+[   61.169136] Tainted: [W]=WARN
+[   61.176738] Workqueue: events hantro_watchdog
+[   61.287427]  hantro_watchdog+0x60/0xb8

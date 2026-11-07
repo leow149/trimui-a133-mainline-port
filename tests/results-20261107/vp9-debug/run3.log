@@ -1,0 +1,139 @@
+t320 hw rc=1 frames=1
+[   54.996084] hantro-vpu 1c00000.video-codec-g2: DBG scan page 0 nz=0 first=00000000
+[   55.003804] hantro-vpu 1c00000.video-codec-g2: DBG scan page 1 nz=0 first=00000000
+[   55.011483] hantro-vpu 1c00000.video-codec-g2: DBG scan page 2 nz=0 first=00000000
+[   55.019133] hantro-vpu 1c00000.video-codec-g2: DBG scan page 3 nz=0 first=00000000
+[   55.026787] hantro-vpu 1c00000.video-codec-g2: DBG scan page 4 nz=0 first=00000000
+[   55.034429] hantro-vpu 1c00000.video-codec-g2: DBG scan page 5 nz=0 first=00000000
+[   55.042069] hantro-vpu 1c00000.video-codec-g2: DBG scan page 6 nz=0 first=00000000
+[   55.049710] hantro-vpu 1c00000.video-codec-g2: DBG scan page 7 nz=0 first=00000000
+[   55.057354] hantro-vpu 1c00000.video-codec-g2: DBG scan page 8 nz=0 first=00000000
+[   55.065024] hantro-vpu 1c00000.video-codec-g2: DBG scan page 9 nz=0 first=00000000
+[   55.072664] hantro-vpu 1c00000.video-codec-g2: DBG scan page a nz=0 first=00000000
+[   55.080306] hantro-vpu 1c00000.video-codec-g2: DBG scan page b nz=0 first=00000000
+[   55.087953] hantro-vpu 1c00000.video-codec-g2: DBG scan page c nz=0 first=00000000
+[   55.095594] hantro-vpu 1c00000.video-codec-g2: DBG scan page d nz=0 first=00000000
+[   55.103271] hantro-vpu 1c00000.video-codec-g2: DBG scan page e nz=5 first=c0000007
+[   55.110951] hantro-vpu 1c00000.video-codec-g2: DBG scan page f nz=5 first=c0000007
+[   55.118570] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit1 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.127891] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit2 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.137208] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit3 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.146524] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit4 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.155838] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit5 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.165155] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit6 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.174470] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit7 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.183786] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit8 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.193102] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit9 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.202422] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit10 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.211824] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit11 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.221225] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit12 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.230627] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit13 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.240034] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit14 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.249438] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit15 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.258841] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit17 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.268243] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit18 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.277646] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit19 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.287054] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit20 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.296457] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit21 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.305861] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit22 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.315264] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit23 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.324658] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit24 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.334061] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit25 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.343462] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit26 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.352864] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit27 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.362272] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit28 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.371674] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit29 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.381078] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit30 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   55.390479] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit31 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.217477] hantro-vpu 1c00000.video-codec-g2: DBG scan page 0 nz=0 first=00000000
+[   57.225198] hantro-vpu 1c00000.video-codec-g2: DBG scan page 1 nz=0 first=00000000
+[   57.232868] hantro-vpu 1c00000.video-codec-g2: DBG scan page 2 nz=0 first=00000000
+[   57.240521] hantro-vpu 1c00000.video-codec-g2: DBG scan page 3 nz=0 first=00000000
+[   57.248168] hantro-vpu 1c00000.video-codec-g2: DBG scan page 4 nz=0 first=00000000
+[   57.255835] hantro-vpu 1c00000.video-codec-g2: DBG scan page 5 nz=0 first=00000000
+[   57.263507] hantro-vpu 1c00000.video-codec-g2: DBG scan page 6 nz=0 first=00000000
+[   57.271171] hantro-vpu 1c00000.video-codec-g2: DBG scan page 7 nz=0 first=00000000
+[   57.278834] hantro-vpu 1c00000.video-codec-g2: DBG scan page 8 nz=0 first=00000000
+[   57.286491] hantro-vpu 1c00000.video-codec-g2: DBG scan page 9 nz=0 first=00000000
+[   57.294134] hantro-vpu 1c00000.video-codec-g2: DBG scan page a nz=0 first=00000000
+[   57.301779] hantro-vpu 1c00000.video-codec-g2: DBG scan page b nz=0 first=00000000
+[   57.309420] hantro-vpu 1c00000.video-codec-g2: DBG scan page c nz=0 first=00000000
+[   57.317059] hantro-vpu 1c00000.video-codec-g2: DBG scan page d nz=0 first=00000000
+[   57.324740] hantro-vpu 1c00000.video-codec-g2: DBG scan page e nz=5 first=c0000007
+[   57.332415] hantro-vpu 1c00000.video-codec-g2: DBG scan page f nz=5 first=c0000007
+[   57.340049] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit1 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.349369] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit2 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.358692] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit3 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.368014] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit4 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.377339] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit5 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.386655] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit6 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.395971] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit7 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.405287] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit8 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.414602] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit9 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.423916] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit10 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.433319] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit11 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.442722] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit12 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.452122] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit13 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.461529] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit14 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.470931] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit15 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.480334] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit17 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.489736] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit18 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.499140] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit19 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.508545] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit20 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.517947] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit21 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.527349] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit22 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.536751] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit23 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.546157] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit24 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.555559] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit25 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.564963] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit26 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.574363] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit27 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.583770] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit28 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.593176] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit29 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.602580] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit30 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   57.611981] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit31 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.429899] hantro-vpu 1c00000.video-codec-g2: DBG scan page 0 nz=0 first=00000000
+[   59.437591] hantro-vpu 1c00000.video-codec-g2: DBG scan page 1 nz=0 first=00000000
+[   59.445231] hantro-vpu 1c00000.video-codec-g2: DBG scan page 2 nz=0 first=00000000
+[   59.452870] hantro-vpu 1c00000.video-codec-g2: DBG scan page 3 nz=0 first=00000000
+[   59.460509] hantro-vpu 1c00000.video-codec-g2: DBG scan page 4 nz=0 first=00000000
+[   59.468149] hantro-vpu 1c00000.video-codec-g2: DBG scan page 5 nz=0 first=00000000
+[   59.475795] hantro-vpu 1c00000.video-codec-g2: DBG scan page 6 nz=0 first=00000000
+[   59.483435] hantro-vpu 1c00000.video-codec-g2: DBG scan page 7 nz=0 first=00000000
+[   59.491075] hantro-vpu 1c00000.video-codec-g2: DBG scan page 8 nz=0 first=00000000
+[   59.498716] hantro-vpu 1c00000.video-codec-g2: DBG scan page 9 nz=0 first=00000000
+[   59.506354] hantro-vpu 1c00000.video-codec-g2: DBG scan page a nz=0 first=00000000
+[   59.513993] hantro-vpu 1c00000.video-codec-g2: DBG scan page b nz=0 first=00000000
+[   59.521632] hantro-vpu 1c00000.video-codec-g2: DBG scan page c nz=0 first=00000000
+[   59.529269] hantro-vpu 1c00000.video-codec-g2: DBG scan page d nz=0 first=00000000
+[   59.536952] hantro-vpu 1c00000.video-codec-g2: DBG scan page e nz=5 first=c0000007
+[   59.544626] hantro-vpu 1c00000.video-codec-g2: DBG scan page f nz=5 first=c0000007
+[   59.552243] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit1 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.561564] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit2 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.570880] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit3 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.580195] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit4 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.589512] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit5 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.598827] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit6 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.608142] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit7 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.617462] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit8 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.626777] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit9 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.636091] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit10 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.645493] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit11 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.654899] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit12 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.664301] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit13 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.673703] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit14 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.683104] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit15 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.692510] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit17 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.701914] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit18 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.711313] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit19 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.720714] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit20 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.730114] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit21 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.739515] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit22 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.748916] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit23 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.758318] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit24 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.767724] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit25 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.777127] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit26 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.786529] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit27 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.795930] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit28 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.805336] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit29 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.814744] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit30 -> 00010001 g2[0]=00000000 g2[4]=00000000
+[   59.824147] hantro-vpu 1c00000.video-codec-g2: DBG bgr bit31 -> 00010001 g2[0]=00000000 g2[4]=00000000

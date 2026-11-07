@@ -114,3 +114,20 @@ ls /dev/video* /dev/media*
 
 `CONFIG_VIDEO_HANTRO=m` is already in the defconfig, but the rootfs has no module auto-loading, so
 either load it manually or flip it to `=y` in a follow-up if VP9 is wanted at boot.
+
+## Result (2026-11-07): no G2 on the A133, patch 0061 reverted (0066)
+
+Hardware testing showed the A133 has no Hantro G2:
+- The whole 0x1c00000-0x1c0dfff window reads as zero, also the G2 version register and registers the driver has just written.
+- That holds with VE_CLK/VE_BGR on and the block out of reset, with every VE_BGR bit set one by one, with all eight Cedrus VE_MODE values, and with MBUS_VE added as a clock.
+- Cedrus at 0x1c0e000 responds normally at the same time.
+- The manual's memory map has only the VE at 0x1c0e000, the CCU has no VP9 clock or gate, and VP9 is specified as 720p30 through the VE plus "video control firmware".
+- The stock kernel has no VP9 driver; its vp9@1c00000 DT node is a leftover.
+
+Every decode timed out in the hantro watchdog. The WARN in reset_control_reset came from that timeout pulsing the shared reset.
+
+Patch 0066 reverts 0061: no G2 node, and Cedrus has its exclusive reset back. VP9 plays through the CPU decoder (avdec_vp9 / libvpx).
+
+A firmware-assisted VE VP9 path would need Allwinner's userspace libraries (libcedarc and the VP9 firmware) reverse-engineered. That is not planned.
+
+Debug logs: tests/results-20261107/vp9-debug/. Instrumentation: linux branch vp9-debug-wip.
