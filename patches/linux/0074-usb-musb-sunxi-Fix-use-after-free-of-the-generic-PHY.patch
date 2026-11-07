@@ -1,0 +1,97 @@
+From 724e81767c6b15c31c085cd71f123c2c09085f66 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 00:43:16 +0100
+Subject: [PATCH] usb: musb: sunxi: Fix use-after-free of the generic PHY on
+ unbind
+
+probe() registers a generic usb_phy device and then takes a devres-managed
+reference to it with devm_usb_get_phy(). remove() unregistered the generic
+PHY device directly, which frees the usb_phy, and devres then ran
+devm_usb_phy_release() -> usb_put_phy() on the freed PHY after remove()
+returned. Unbinding the driver oopsed with a NULL dereference in
+devm_usb_phy_release, and a later reboot hung. The probe error path had the
+same ordering.
+
+Register the generic PHY unregistration as a devres action before taking
+the reference. devres then releases in reverse order: put the PHY reference
+first, then unregister the PHY device.
+
+Tested on the TrimUI Smart Pro (A133): three unbind/bind cycles of
+5100000.usb with the NCM gadget re-attached each time, no oops, gadget
+throughput unchanged (310 Mbit/s).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/usb/musb/sunxi.c | 26 ++++++++++++++++++--------
+ 1 file changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
+index d269e58bd..29ad94de8 100644
+--- a/drivers/usb/musb/sunxi.c
++++ b/drivers/usb/musb/sunxi.c
+@@ -984,6 +984,11 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_a100 = {
+ 	.ram_bits	= SUNXI_MUSB_RAM_BITS,
+ };
+ 
++static void sunxi_musb_unregister_usb_phy(void *data)
++{
++	usb_phy_generic_unregister(data);
++}
++
+ static int sunxi_musb_probe(struct platform_device *pdev)
+ {
+ 	struct musb_hdrc_platform_data	pdata;
+@@ -1078,11 +1083,22 @@ static int sunxi_musb_probe(struct platform_device *pdev)
+ 		return PTR_ERR(glue->usb_phy);
+ 	}
+ 
++	/*
++	 * Unregister the generic PHY through devres, so that it happens after
++	 * devres has dropped the reference taken by devm_usb_get_phy() below.
++	 * Unregistering it first (as remove() used to) frees the PHY before
++	 * devm_usb_phy_release() puts it, which oopses on unbind.
++	 */
++	ret = devm_add_action_or_reset(&pdev->dev, sunxi_musb_unregister_usb_phy,
++				       glue->usb_phy);
++	if (ret)
++		return ret;
++
+ 	glue->xceiv = devm_usb_get_phy(&pdev->dev, USB_PHY_TYPE_USB2);
+ 	if (IS_ERR(glue->xceiv)) {
+ 		ret = PTR_ERR(glue->xceiv);
+ 		dev_err(&pdev->dev, "Error getting usb-phy %d\n", ret);
+-		goto err_unregister_usb_phy;
++		return ret;
+ 	}
+ 
+ 	platform_set_drvdata(pdev, glue);
+@@ -1102,23 +1118,17 @@ static int sunxi_musb_probe(struct platform_device *pdev)
+ 	if (IS_ERR(glue->musb_pdev)) {
+ 		ret = PTR_ERR(glue->musb_pdev);
+ 		dev_err(&pdev->dev, "Error registering musb dev: %d\n", ret);
+-		goto err_unregister_usb_phy;
++		return ret;
+ 	}
+ 
+ 	return 0;
+-
+-err_unregister_usb_phy:
+-	usb_phy_generic_unregister(glue->usb_phy);
+-	return ret;
+ }
+ 
+ static void sunxi_musb_remove(struct platform_device *pdev)
+ {
+ 	struct sunxi_glue *glue = platform_get_drvdata(pdev);
+-	struct platform_device *usb_phy = glue->usb_phy;
+ 
+ 	platform_device_unregister(glue->musb_pdev);
+-	usb_phy_generic_unregister(usb_phy);
+ }
+ 
+ static const struct sunxi_musb_cfg sun4i_a10_musb_cfg = {
+-- 
+2.56.0
+
