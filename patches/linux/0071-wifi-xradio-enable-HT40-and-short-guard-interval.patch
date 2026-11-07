@@ -1,0 +1,142 @@
+From d8502ca63a6f7b9aadb2fccca1fa0270e1fa9976 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 22:59:08 +0100
+Subject: [PATCH 71/72] wifi: xradio: enable HT40 and short guard interval
+
+Advertise SUP_WIDTH_20_40, SGI_20 and SGI_40 in the 2.4 GHz HT
+capabilities and tell the XR829 firmware (HT40 API) about the channel
+width. The PHY mode word of the join request now carries the width and
+the primary channel position (secondary above = 1, below = 0) taken
+from mac80211's channel definition; the association mode keeps that
+width, as a mismatch between join and association stalls the link, and
+adds the SGI bit when the peer supports it at that width. RX already
+decoded the 40 MHz and SGI bits of the firmware rate entry, and the TX
+rate policy already encoded them.
+
+A 40 MHz AP that mac80211 narrows to 20 MHz (tested with
+disable_ht40=1) still associates and passes traffic.
+
+home-ssid (WPA2/WPA3 mixed, 2.4 GHz, 40 MHz AP), iperf3 vs host laptop:
+  before (20 MHz): TX 25-29 Mbit/s, RX 27-30 Mbit/s
+  after  (HT40):   TX 28.7-29.3,    RX 36.5-36.9 (iw: 40MHz, SGI)
+TX is unchanged here because TX status still folds the rate entries
+into 20 MHz rate indices (next patch).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/main.c   |  3 ++
+ drivers/net/wireless/xradio/wsm.c    | 42 +++++++++++++++++++++++++---
+ drivers/net/wireless/xradio/wsm.h    |  1 +
+ drivers/net/wireless/xradio/xradio.h |  1 +
+ 4 files changed, 43 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
+index d30e92ff1..e0ac9b7f8 100644
+--- a/drivers/net/wireless/xradio/main.c
++++ b/drivers/net/wireless/xradio/main.c
+@@ -111,6 +111,9 @@ static struct ieee80211_supported_band xradio_band_2ghz = {
+ 	.n_bitrates = xradio_g_rates_size,
+ 	.ht_cap = {
+ 		.cap = IEEE80211_HT_CAP_GRN_FLD |
++		       IEEE80211_HT_CAP_SUP_WIDTH_20_40 |
++		       IEEE80211_HT_CAP_SGI_20 |
++		       IEEE80211_HT_CAP_SGI_40 |
+ 		       (1 << IEEE80211_HT_CAP_RX_STBC_SHIFT),
+ 		.ht_supported  = 1,
+ 		.ampdu_factor  = IEEE80211_HT_MAX_AMPDU_32K,
+diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
+index 7b867f74b..076eca1e1 100644
+--- a/drivers/net/wireless/xradio/wsm.c
++++ b/drivers/net/wireless/xradio/wsm.c
+@@ -447,6 +447,26 @@ struct wsm_association_mode_ht40 {
+ #define WSM_ASSOC_HT40_USE_BASIC_RATE_SET	BIT(1)
+ #define WSM_ASSOC_HT40_USE_MPDU_START_SPACING	BIT(2)
+ 
++/*
++ * PHY mode word for the channel mac80211 is operating on: 20 or 40 MHz
++ * (the primary channel position follows the secondary channel offset).
++ */
++static u16 wsm_phy_mode_cur(struct xradio_common *hw_priv, u8 band)
++{
++	const struct cfg80211_chan_def *def = &hw_priv->hw->conf.chandef;
++	u16 mode = wsm_phy_mode_20mhz(band);
++
++	if (def->chan && def->width == NL80211_CHAN_WIDTH_40 &&
++	    def->chan == hw_priv->channel) {
++		mode |= WSM_PHY_MODE_WIDTH_40 << WSM_PHY_MODE_WIDTH_SHIFT;
++		/* secondary above (HT40+) = 1, below (HT40-) = 0 */
++		if (def->center_freq1 > def->chan->center_freq)
++			mode |= 1 << WSM_PHY_MODE_PRI_CH_SHIFT;
++	}
++	dev_dbg(hw_priv->pdev, "phy mode %04x (conf width %d)\n", mode, def->width);
++	return mode;
++}
++
+ int wsm_set_association_mode(struct xradio_common *hw_priv,
+ 			     struct wsm_association_mode *arg, int if_id)
+ {
+@@ -466,9 +486,22 @@ int wsm_set_association_mode(struct xradio_common *hw_priv,
+ 		ht.flags |= WSM_ASSOC_HT40_USE_BASIC_RATE_SET;
+ 	if (arg->flags & WSM_ASSOCIATION_MODE_USE_MPDU_START_SPACING)
+ 		ht.flags |= WSM_ASSOC_HT40_USE_MPDU_START_SPACING;
+-	ht.phy_mode = __cpu_to_le16(wsm_phy_mode_20mhz(band) |
+-		(arg->preambleType << WSM_PHY_MODE_PREAMBLE_SHIFT) |
+-		(arg->greenfieldMode ? WSM_PHY_MODE_GF : 0));
++	/*
++	 * The firmware wants the same width and primary channel as at join
++	 * time, even if mac80211 narrows the channel afterwards.
++	 */
++	ht.phy_mode = hw_priv->join_phy_mode ?: wsm_phy_mode_20mhz(band);
++	{
++		const struct ieee80211_sta_ht_cap *cap = &hw_priv->ht_oper.ht_cap;
++		bool w40 = hw_priv->hw->conf.chandef.width == NL80211_CHAN_WIDTH_40;
++
++		if (cap->cap & (w40 ? IEEE80211_HT_CAP_SGI_40 :
++				IEEE80211_HT_CAP_SGI_20))
++			ht.phy_mode |= WSM_PHY_MODE_SGI;
++	}
++	ht.phy_mode |= (arg->preambleType << WSM_PHY_MODE_PREAMBLE_SHIFT) |
++		(arg->greenfieldMode ? WSM_PHY_MODE_GF : 0);
++	ht.phy_mode = __cpu_to_le16(ht.phy_mode);
+ 	ht.mpduStartSpacing = arg->mpduStartSpacing;
+ 	ht.basicRateSet = arg->basicRateSet;
+ 	return wsm_write_mib(hw_priv, WSM_MIB_ID_SET_ASSOCIATION_MODE, &ht,
+@@ -714,7 +747,8 @@ int wsm_join(struct xradio_common *hw_priv, struct wsm_join *arg,
+ 	wsm_cmd_lock(hw_priv);
+ 
+ 	if (xradio_ht40_api(hw_priv)) {
+-		WSM_PUT16(buf, wsm_phy_mode_20mhz(arg->band));
++		hw_priv->join_phy_mode = wsm_phy_mode_cur(hw_priv, arg->band);
++		WSM_PUT16(buf, hw_priv->join_phy_mode);
+ 		WSM_PUT16(buf, arg->channelNumber);
+ 		WSM_PUT(buf, &arg->bssid[0], sizeof(arg->bssid));
+ 		WSM_PUT16(buf, arg->atimWindow);
+diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
+index 0d3abc5f1..5044c002e 100644
+--- a/drivers/net/wireless/xradio/wsm.h
++++ b/drivers/net/wireless/xradio/wsm.h
+@@ -916,6 +916,7 @@ struct wsm_tx_ht40 {
+ #define WSM_PHY_MODE_MODEM_A		BIT(1)	/* OFDM */
+ #define WSM_PHY_MODE_MODEM_N		BIT(2)	/* HT */
+ #define WSM_PHY_MODE_WIDTH_SHIFT	4	/* 0: 20 MHz, 2: 40 MHz */
++#define WSM_PHY_MODE_WIDTH_40		2
+ #define WSM_PHY_MODE_PRI_CH_SHIFT	6
+ #define WSM_PHY_MODE_BAND_SHIFT		8
+ #define WSM_PHY_MODE_PREAMBLE_SHIFT	12
+diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
+index 3fe7d7b5f..678c01905 100644
+--- a/drivers/net/wireless/xradio/xradio.h
++++ b/drivers/net/wireless/xradio/xradio.h
+@@ -287,6 +287,7 @@ struct xradio_common {
+ 	struct ieee80211_low_level_stats stats;
+ 
+ 	struct xradio_ht_oper		ht_oper;
++	u16				join_phy_mode;	/* HT40 API PHY mode word used at join */
+ 	int				tx_burst_idx;
+ 
+ 	struct ieee80211_iface_limit		if_limits1[2];
+-- 
+2.56.0
+

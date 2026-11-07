@@ -1,0 +1,13 @@
+tx_ampdus 0 tx_mpdus_in_ampdus 0 tx_octets_l32 0 tx_octets_h32 0 rx_ampdus 0 rx_mpdus_in_ampdus 0 rx_octets_l32 0 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 0 explicit_bar_fail 0 
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-8.00   sec  57.3 MBytes  60.0 Mbits/sec  0.000 ms  0/41459 (0%)  sender
+[  5]   0.00-8.00   sec  12.7 MBytes  13.3 Mbits/sec  11.175 ms  30449/39642 (77%)  receiver
+
+iperf Done.
+tx_ampdus 0 tx_mpdus_in_ampdus 0 tx_octets_l32 0 tx_octets_h32 0 rx_ampdus 0 rx_mpdus_in_ampdus 0 rx_octets_l32 0 rx_octets_h32 0 rx_delim_crc_err 0 implicit_bar_fail 0 explicit_bar_fail 0 	tx retries:	2038
+	tx failed:	10
+[  123.821705] xradio_wlan mmc0:0001:1: received frame has no key status
+[  123.855495] ieee80211 phy0: CCMP_PAIRWISE keylen=16!
+[  123.879492] ieee80211 phy0: key->cipher unknown(1027078)!
+[  135.918825] sunxi-mmc 4021000.mmc: data error, sending stop command
+[  265.751516] xradio_wlan mmc0:0001:1: missed interrupt

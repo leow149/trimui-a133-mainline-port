@@ -1,0 +1,149 @@
+From 48981f6f89f71531a685135715f046ce27abd0c3 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 22:59:08 +0100
+Subject: [PATCH 72/72] wifi: xradio: report the real TX rate entries to
+ mac80211
+
+With the HT40 API the firmware's TX confirm lists whole rate entries
+(modem, bandwidth, SGI, index). The driver folded them into 20 MHz rate
+indices, so minstrel_ht saw feedback for the wrong rate group once
+40 MHz and short GI rates were in use. Keep the six entries and turn
+them one-to-one into ieee80211_tx_rate (index, retry count, MCS, 40 MHz,
+SGI, short preamble flags), adding the successful attempt as the
+firmware only counts the failed ones.
+
+home-ssid (40 MHz), iperf3 vs host laptop, 10 s runs:
+  before: TX 28.7-29.3 Mbit/s, RX 36.5-36.9; iw tx rate MCS7 65 Mbit/s (20 MHz)
+  after:  TX 29.5-31.8,        RX 35.1-38.4; iw tx rate MCS7 135-150 Mbit/s 40MHz
+Total vs. 20 MHz before HT40: TX +10%, RX +25-30%.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/tx.c  | 62 ++++++++++++++++++++++++++++++-
+ drivers/net/wireless/xradio/wsm.c |  5 ++-
+ drivers/net/wireless/xradio/wsm.h |  4 ++
+ 3 files changed, 69 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index 1c4ec2074..e26d35f8a 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -1097,6 +1097,22 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
+ 	return;
+ }
+ 
++/* mac80211 TX rate flags of a HT40 API rate entry */
++static u8 xradio_entry_to_rc_flags(u16 e, u8 ht_flags)
++{
++	u8 f = 0;
++
++	if ((e >> WSM_RATE_ENTRY_MODEM_SHIFT) == WSM_RATE_ENTRY_MODEM_HT)
++		f |= ht_flags;
++	if (((e >> WSM_RATE_ENTRY_BW_SHIFT) & 0x3) == WSM_RATE_ENTRY_BW_40M)
++		f |= IEEE80211_TX_RC_40_MHZ_WIDTH;
++	if (e & WSM_RATE_ENTRY_F_SGI)
++		f |= IEEE80211_TX_RC_SHORT_GI;
++	if (e & WSM_RATE_ENTRY_F_SHORT_PRE)
++		f |= IEEE80211_TX_RC_USE_SHORT_PREAMBLE;
++	return f;
++}
++
+ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
+ 			  struct wsm_tx_confirm *arg)
+ {
+@@ -1228,8 +1244,52 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
+ 			//}
+ 		}
+ 		
++		/*
++		 * HT40 API: the firmware reports whole rate entries (with
++		 * bandwidth and guard interval), keep them as they are so
++		 * that minstrel sees what was really used.  The entries
++		 * carry the failed attempts only; add the successful one.
++		 */
++		if (xradio_ht40_api(hw_priv)) {
++			bool found = false;
++
++			for (i = 0; i < 6 && rate_num < IEEE80211_TX_MAX_RATES; i++) {
++				u16 e = arg->rateTryEntry[i];
++				struct ieee80211_tx_rate *r = &tx->status.rates[rate_num];
++				s8 idx;
++
++				if (((e >> WSM_RATE_ENTRY_INDEX_SHIFT) & 0xf) ==
++				    WSM_RATE_ENTRY_INDEX_DEFAULT)
++					break;
++				idx = xradio_get_rate_idx_2g(wsm_rate_entry_to_index(e));
++				if (idx < 0)
++					continue;
++				r->idx = idx;
++				r->count = e & 0xf;
++				r->flags = xradio_entry_to_rc_flags(e, ht_flags);
++				if (!arg->status && !found &&
++				    (e & 0xfff0) == (arg->txedRateEntry & 0xfff0)) {
++					r->count++;
++					found = true;
++				}
++				rate_num++;
++			}
++			if (!arg->status && !found && rate_num < IEEE80211_TX_MAX_RATES) {
++				struct ieee80211_tx_rate *r = &tx->status.rates[rate_num];
++				s8 idx = xradio_get_rate_idx_2g(arg->txedRate);
++
++				if (idx >= 0) {
++					r->idx = idx;
++					r->count = 1;
++					r->flags = xradio_entry_to_rc_flags(arg->txedRateEntry, ht_flags);
++					rate_num++;
++				}
++			}
++			success_idx = -1;
++		}
++
+ 		//each nibble of rate_try contains the retries per hw_idx
+-		for(i = 2; i >= 0; i--) {
++		for(i = 2; i >= 0 && !xradio_ht40_api(hw_priv); i--) {
+ 			u8 hw_idx, retries;
+ 			s8 nibble, txed_idx;
+ 			if(likely(!arg->rate_try[i])) continue;
+diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
+index 076eca1e1..b7e313a14 100644
+--- a/drivers/net/wireless/xradio/wsm.c
++++ b/drivers/net/wireless/xradio/wsm.c
+@@ -634,13 +634,16 @@ static int wsm_tx_confirm(struct xradio_common *hw_priv,
+ 		 * Rate entries instead of rate indices; translate them into
+ 		 * the old form (retries per rate index, 4 bits each).
+ 		 */
+-		tx_confirm.txedRate = wsm_rate_entry_to_index(WSM_GET16(buf));
++		tx_confirm.txedRateEntry = WSM_GET16(buf);
++		tx_confirm.txedRate = wsm_rate_entry_to_index(tx_confirm.txedRateEntry);
+ 		tx_confirm.ackFailures = WSM_GET8(buf);
+ 		tx_confirm.flags = WSM_GET8(buf);
+ 		memset(tx_confirm.rate_try, 0, sizeof(tx_confirm.rate_try));
+ 		for (i = 0; i < 6; i++) {
+ 			u16 entry = WSM_GET16(buf);
+ 			u8 idx = wsm_rate_entry_to_index(entry);
++
++			tx_confirm.rateTryEntry[i] = entry;
+ 			u32 tries, shift;
+ 
+ 			if (idx >= 24)		/* end of list / unused */
+diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
+index 5044c002e..c9bf6e7d9 100644
+--- a/drivers/net/wireless/xradio/wsm.h
++++ b/drivers/net/wireless/xradio/wsm.h
+@@ -829,6 +829,10 @@ struct wsm_tx_confirm {
+ 	//rate feed back, add by yangfh
+ 	/* [out] */ u32 rate_try[3];
+ 
++	/* HT40 API (XR829): the firmware's rate entries, as reported */
++	/* [out] */ u16 txedRateEntry;
++	/* [out] */ u16 rateTryEntry[6];
++
+ 	/* The total time in microseconds that the frame spent in */
+ 	/* the WLAN device before transmission as completed. */
+ 	/* [out] */ u32 mediaDelay;
+-- 
+2.56.0
+

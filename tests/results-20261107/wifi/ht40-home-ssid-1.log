@@ -1,0 +1,28 @@
+== iperf 
+[  5]   0.00-10.00  sec  34.2 MBytes  28.7 Mbits/sec    0            sender
+[  5]   0.00-10.02  sec  32.8 MBytes  27.4 Mbits/sec                  receiver
+== iperf -R
+[  5]   0.00-10.01  sec  47.2 MBytes  39.6 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  43.5 MBytes  36.5 Mbits/sec                  receiver
+== iperf 
+[  5]   0.00-10.00  sec  34.9 MBytes  29.3 Mbits/sec    0            sender
+[  5]   0.00-10.01  sec  33.6 MBytes  28.2 Mbits/sec                  receiver
+== iperf -R
+[  5]   0.00-10.11  sec  47.0 MBytes  39.0 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  44.0 MBytes  36.9 Mbits/sec                  receiver
+	rx bitrate: 120.0 MBit/s MCS 5 40MHz short GI
+	tx bitrate: 65.0 MBit/s MCS 7
+	tx bitrate:	65.0 MBit/s MCS 7
+	rx bitrate:	120.0 MBit/s MCS 5 40MHz short GI
+tx_ampdus 10307
+tx_mpdus_in_ampdus 81050
+tx_octets_l32 78303861
+tx_octets_h32 0
+rx_ampdus 7948
+rx_mpdus_in_ampdus 75595
+rx_octets_l32 108748364
+rx_octets_h32 0
+rx_delim_crc_err 0
+implicit_bar_fail 766
+explicit_bar_fail 0
+tx_tid_mask 0xb1 rx_tid_mask 0xb1 (driver ba_tid_mask 0xb1)

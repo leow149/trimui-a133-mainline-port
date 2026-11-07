@@ -1,0 +1,20 @@
+== iperf 
+[  5]   0.00-29.41  sec  13.8 MBytes  3.92 Mbits/sec    6            sender
+[  5]   0.00-29.41  sec  0.00 Bytes  0.00 bits/sec                  receiver
+== iperf -R
+[  5]   0.00-10.01  sec  17.2 MBytes  14.5 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  14.5 MBytes  12.2 Mbits/sec                  receiver
+== iperf 
+[  5]   0.00-10.00  sec  6.25 MBytes  5.24 Mbits/sec   32            sender
+[  5]   0.00-10.01  sec  5.62 MBytes  4.71 Mbits/sec                  receiver
+== iperf -R
+[  5]   0.00-10.03  sec  18.4 MBytes  15.4 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  15.0 MBytes  12.6 Mbits/sec                  receiver
+	SSID: home-ssid-mlo
+	rx bitrate: 135.0 MBit/s MCS 6 40MHz short GI
+	tx bitrate: 150.0 MBit/s MCS 7 40MHz short GI
+tx_ampdus 0
+tx_mpdus_in_ampdus 0
+rx_ampdus 0
+implicit_bar_fail 0
+tx_tid_mask 0xb1 rx_tid_mask 0xb1 (driver ba_tid_mask 0xb1)

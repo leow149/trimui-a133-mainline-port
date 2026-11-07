@@ -1,0 +1,24 @@
+clock:		50000000 Hz
+actual clock:	50000000 Hz
+bus width:	2 (4 bits)
+timing spec:	2 (sd high-speed)
+clock:		52000000 Hz
+actual clock:	50000000 Hz
+bus width:	3 (8 bits)
+timing spec:	8 (mmc DDR52)
+clock:		50000000 Hz
+actual clock:	50000000 Hz
+bus width:	2 (4 bits)
+timing spec:	2 (sd high-speed)
+Mem: 78388K used, 916992K free, 292K shrd, 864K buff, 12588K cached
+CPU:   0% usr   4% sys   0% nic  91% idle   0% io   2% irq   2% sirq
+Load average: 0.66 0.23 0.08 2/115 230
+  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
+   89     2 root     SW       0   0%   0   2% [xradio_bh]
+   14     2 root     SW       0   0%   0   2% [ksoftirqd/0]
+   81     2 root     SW       0   0%   1   2% [sugov:0]
+  163     1 root     S    10244   1%   2   0% wpa_supplicant -t -i wlan0 -c /etc/wpa_supplicant/home.conf
+  224     1 root     S     5948   1%   2   0% iperf3 -c 192.168.1.132 -p 5299 -t 8
+  141     1 root     S     2792   0%   0   0% /bin/ash
+  219   134 root     S     1824   0%   2   0% dropbear -R -s -p 10.55.0.2:22
+  134     1 root     S     1804   0%   1   0% dropbear -R -s -p 10.55.0.2:22

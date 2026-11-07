@@ -1,0 +1,12 @@
+== iperf 
+== iperf -R
+== iperf 
+== iperf -R
+	SSID: home-ssid
+	rx bitrate: 1.0 MBit/s
+	tx bitrate: 81.0 MBit/s MCS 4 40MHz
+tx_ampdus 48
+tx_mpdus_in_ampdus 48
+rx_ampdus 0
+implicit_bar_fail 8
+tx_tid_mask 0xb1 rx_tid_mask 0xb1 (driver ba_tid_mask 0xb1)
