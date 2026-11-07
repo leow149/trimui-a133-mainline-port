@@ -1,0 +1,12 @@
+== BROM sync @115200
+sync: no answer after 16 tries, power cycle
+sync: no answer after 32 tries, power cycle
+sync: no answer after 48 tries, power cycle
+sync: no answer after 64 tries, power cycle
+sync: no answer after 80 tries, power cycle
+sync: no answer after 96 tries, power cycle
+sync failed
+1
+ gpio-2   (                    |shutdown            ) out hi 
+ gpio-3   (                    |bt-hostwake         ) in  lo 
+ gpio-4   (                    |bt-wake             ) out hi 

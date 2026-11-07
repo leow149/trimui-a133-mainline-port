@@ -1,0 +1,11 @@
+unsolicited rx after reset: 0 bytes
+== BROM sync @115200
+BROM answered OK
+== BROM sync @1.5M
+== upload /lib/firmware/xr829/fw_xr829_bt.bin (319920 bytes)
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+dbg 1500000 flow=0 passive rx 0
+  rx [0]:
+dbg 1500000 flow=0 reset rx 7
+  rx [7]: 00 00 00 00 00 00 00

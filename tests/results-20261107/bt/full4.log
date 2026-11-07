@@ -1,0 +1,8 @@
+vendor baud [7]: 04 0e 04 05 18 fc 00
+set bdaddr [7]: 04 0e 04 05 0a fc 00
+HCI reset 2 [7]: 04 0e 04 05 03 0c 00
+attached as H4; staying resident
+hci0
+  393 root      0:00 sh -c timeout 90 /root/bt/xr829_bt_up -F 0 -q -a 02:00:00:aa:bb:01 2>&1 | tail -4; ls /sys/class/bluetooth; ps | grep [x]r829; ip -br a | grep -E 'wlan|usb|eth'
+  397 root      0:00 timeout 90 /root/bt/xr829_bt_up -F 0 -q -a 02:00:00:aa:bb:01
+  398 root      0:00 /root/bt/xr829_bt_up -F 0 -q -a 02:00:00:aa:bb:01

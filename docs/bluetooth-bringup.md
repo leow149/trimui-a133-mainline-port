@@ -1,6 +1,6 @@
 # Bluetooth (XR829) bring-up — status
 
-Status: **kernel + userspace implemented 2026-11-06; firmware download (BROM sync) not yet working.**
+Status: **WORKING 2026-11-07 via userspace uploader `tools/bt/xr829_bt_up` (hci0 up, scans see devices).** Kernel driver still open.
 This is roadmap item **1.1**.
 
 ## What's done
@@ -14,7 +14,23 @@ This is roadmap item **1.1**.
   with the `xr829` protocol. The firmware download is done in userspace (a "BROM" command
   protocol over UART1: 0x55 sync → SETUART → 1KB SEQWR chunks → SETPC jump → HCI reset/bdaddr).
 
-## Open issue: the BROM sync never gets "OK"
+## Working bring-up (2026-11-07)
+
+No DT/kernel change was needed: WiFi had already powered bldo1/aldo3, osc32k-fanout (32 kHz) was running and
+PL5 (WL_REG_ON) was high. The old "no reply" was timing: 0x55 spam started 5 ms after reset release. The chip's
+ROM answers "OK" on the first 0x55 when the tool waits ~150 ms after releasing reset (rfkill 0 -> 1) before syncing.
+
+Sequence (`tools/bt/xr829_bt_up -F 0 -a 02:00:00:aa:bb:01`, build with `tools/bt/build.sh`, installed as `/root/bt/xr829_bt_up`;
+firmware in `/lib/firmware/xr829/fw_xr829_bt.bin`): rfkill 0/1 -> btwake=1, lpm=0 -> wait 150 ms -> 0x55 sync "OK" @115200 ->
+SET_UART 1.5M (checksum byte order in the protocol doc is correct) -> sync @1.5M -> 313 SEQWR chunks (all acked) -> SET_PC 0 ->
+**wait 300 ms** (fw boot; a reset sent after 15 ms is lost) -> firmware runs at **115200, no flow control** (CRTSCTS must stay off:
+only PG6/PG7 matter, a floating CTS would stall TX) -> HCI reset OK -> 0xFC18 (1.5M) -> host 1.5M -> 0xFC0A bdaddr -> reset ->
+TIOCSETD N_HCI + `HCIUARTSETPROTO` (argument **by value**, not pointer) -> hci0. The tool stays resident (forked child holds the fd).
+BD address used: 02:00:00:aa:bb:01 (locally administered placeholder; the chip has no valid default).
+Result: `hciconfig hci0 up` UP RUNNING, name XR829_BT, classic scan and LE scan see devices
+(tests/results-20261107/bt/). Open: boot-time start script, persistent BD address, LPM, WiFi/BT coexistence, serdev driver.
+
+## (Historical) Open issue: the BROM sync never gets "OK"
 
 `hciattach /dev/ttyS1 xr829` runs, power-cycles the BT via rfkill, asserts bt_wake, then sends
 0x55 and reads `00 00` instead of `OK`, forever (even after the 500 ms power-cycle workaround).

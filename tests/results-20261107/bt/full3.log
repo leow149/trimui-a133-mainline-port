@@ -1,0 +1,14 @@
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 20 00 00 00 00 00 00
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 a0 00 00 00 00 00 00
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 0c 00 00 00 00 00 00
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== HCI
+HCI reset [7]: 04 0e 04 05 03 0c 00
+vendor baud [7]: 04 0e 04 05 18 fc 00
+set bdaddr [7]: 04 0e 04 05 0a fc 00
+HCI reset 2 [7]: 04 0e 04 05 03 0c 00
+HCIUARTSETPROTO: Protocol not supported

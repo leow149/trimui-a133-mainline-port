@@ -1,0 +1,33 @@
+hci0
+hci0:	Type: Primary  Bus: UART
+	BD Address: 02:00:00:AA:BB:01  ACL MTU: 1021:8  SCO MTU: 0:0
+	DOWN 
+	RX bytes:578 acl:0 sco:0 events:27 errors:0
+	TX bytes:371 acl:0 sco:0 commands:27 errors:0
+	Features: 0xbf 0xfe 0xcd 0xfe 0xdb 0xfd 0x7b 0x87
+	Packet type: DM1 DM3 DM5 DH1 DH3 DH5 HV1 HV2 HV3 
+	Link policy: RSWITCH SNIFF 
+	Link mode: PERIPHERAL ACCEPT 
+
+hci0:	Type: Primary  Bus: UART
+	BD Address: 02:00:00:AA:BB:01  ACL MTU: 1021:8  SCO MTU: 0:0
+	UP RUNNING 
+	RX bytes:1156 acl:0 sco:0 events:54 errors:0
+	TX bytes:742 acl:0 sco:0 commands:54 errors:0
+	Features: 0xbf 0xfe 0xcd 0xfe 0xdb 0xfd 0x7b 0x87
+	Packet type: DM1 DM3 DM5 DH1 DH3 DH5 HV1 HV2 HV3 
+	Link policy: RSWITCH SNIFF 
+	Link mode: PERIPHERAL ACCEPT 
+	Name: 'XR829_BT'
+	Class: 0x000000
+	Service Classes: Unspecified
+2
+classic:
+1
+le:
+27
+wifi:
+Connected to xx:xx:xx:xx:xx:01 (on wlan0)
+	SSID: home-ssid
+round-trip min/avg/max = 13.102/62.904/112.707 ms
+	UP RUNNING 

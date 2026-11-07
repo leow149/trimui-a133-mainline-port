@@ -28,6 +28,9 @@
 !tools/
 !tools/backup_restore/
 !tools/backup_restore/**
+!tools/bt/
+!tools/bt/*.c
+!tools/bt/*.sh
 !tools/padview/
 !tools/padview/**
 !tools/gpu/

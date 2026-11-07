@@ -1,0 +1,34 @@
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+dbg 1500000 flow=0 passive rx 0
+  rx [0]:
+dbg 1500000 flow=0 reset rx 7
+  rx [7]: 00 00 00 00 00 00 00
+dbg 115200 flow=0 passive rx 0
+  rx [0]:
+dbg 115200 flow=0 reset rx 7
+  rx [7]: 04 0e 04 05 03 0c 00
+dbg 921600 flow=0 passive rx 0
+  rx [0]:
+dbg 921600 flow=0 reset rx 7
+  rx [7]: 00 00 00 00 e0 00 00
+dbg 3000000 flow=0 passive rx 0
+  rx [0]:
+dbg 3000000 flow=0 reset rx 0
+  rx [0]:
+dbg 2000000 flow=0 passive rx 0
+  rx [0]:
+dbg 2000000 flow=0 reset rx 0
+  rx [0]:
+dbg 460800 flow=0 passive rx 0
+  rx [0]:
+dbg 460800 flow=0 reset rx 0
+  rx [0]:
+dbg 230400 flow=0 passive rx 0
+  rx [0]:
+dbg 230400 flow=0 reset rx 0
+  rx [0]:
+dbg 57600 flow=0 passive rx 0
+  rx [0]:
+dbg 57600 flow=0 reset rx 0
+  rx [0]:

@@ -1,0 +1,24 @@
+unsolicited rx after reset: 0 bytes
+unsol [0]:
+== BROM sync @115200
+sync rx 2 byte(s): 4f 4b (try 1)
+BROM answered OK
+SET_UART [17]: 42 52 4f 4d 04 00 e9 6f 00 00 00 05 10 03 16 e3 60
+SET_UART ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== BROM sync @1.5M
+sync rx 2 byte(s): 4f 4b (try 1)
+== upload /lib/firmware/xr829/fw_xr829_bt.bin (319920 bytes)
+chunk0 hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk0 data ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 20 00 00 00 00 00 00
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 a0 00 00 00 00 00 00
+chunk hdr ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+chunk data ack [12]: 42 52 4f 4d 02 0c 00 00 00 00 00 00
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== HCI
+HCI reset [0]:
+HCI reset failed
+sh: hciconfig: not found

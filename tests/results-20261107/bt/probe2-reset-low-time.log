@@ -1,0 +1,12 @@
+--- r=20
+sync rx 2 byte(s): 4f 4b (try 1)
+BROM answered OK
+--- r=20
+sync rx 2 byte(s): 4f 4b (try 1)
+BROM answered OK
+--- r=100
+sync rx 2 byte(s): 4f 4b (try 1)
+BROM answered OK
+--- r=300
+sync rx 2 byte(s): 4f 4b (try 1)
+BROM answered OK

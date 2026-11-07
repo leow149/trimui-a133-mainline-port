@@ -1,0 +1,21 @@
+=== -F 0 -B 115200
+== upload /lib/firmware/xr829/fw_xr829_bt.bin (319920 bytes)
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== HCI
+HCI reset [0]:
+HCI reset failed
+=== -F 0 -B 1500000
+== upload /lib/firmware/xr829/fw_xr829_bt.bin (319920 bytes)
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== HCI
+HCI reset [0]:
+HCI reset failed
+=== -F 1 -B 115200
+== upload /lib/firmware/xr829/fw_xr829_bt.bin (319920 bytes)
+upload done
+SET_PC ack [12]: 42 52 4f 4d 02 00 00 00 00 00 00 00
+== HCI
+HCI reset [0]:
+HCI reset failed
