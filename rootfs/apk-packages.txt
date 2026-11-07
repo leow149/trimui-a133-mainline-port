@@ -3,3 +3,5 @@
 # (wpa_supplicant, iw, iperf3, dropbear etc. were added earlier outside apk.)
 dbus
 bluez
+hostapd
+dnsmasq

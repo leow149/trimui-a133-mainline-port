@@ -77,3 +77,11 @@ Results:
 Next lead: AP-initiated BA session / PN state in the firmware with PMF on. That needs an over-the-air capture (frame headers and BA/BAR timing are visible even when encrypted). Logs: tests/results-20261107/wifi/pmf-*.log.
 
 Recommendation until then: use WPA2 (the home-ssid mixed-mode SSID) on this device.
+
+## Hotspot / AP mode (2026-11-08)
+
+`/root/ap-up.sh` (rootfs/root) runs an AP-only hotspot: SSID `trimui-ap`, WPA2, channel 1, DHCP via dnsmasq on 10.66.0.0/24, no NAT. The passphrase is generated once into /etc/hostapd/ap.pass. `ap-up.sh stop` reconnects the station.
+- Verified: a phone associated, got a DHCP lease and answered pings (3/5, 9-93 ms, phone power save).
+- xradio only accepts its two registered MACs (wlan0's and wlan0's + 1), so ap0 uses MAC + 1, and the BT address moved to MAC + 2.
+- The AP comes up at 20 MHz even with `ht_capab=[HT40+]` (the hostapd HT40 setup reports "Could not configure driver mode").
+- **Open:** station + AP at the same time. The driver advertises 1 managed + 1 AP on one channel, but with ap0 up the wlan0 station stops passing traffic (still associated), until ap0 is removed and the station fully reassociates. Hence AP-only.

@@ -1,7 +1,8 @@
 #!/bin/sh
 # Bring up XR829 Bluetooth as hci0: upload the firmware over ttyS1 and attach H4
 # (tools/bt/xr829_bt_up, see docs/bluetooth-xr829-protocol.md). The BD address is the
-# Wi-Fi MAC (stable, derived from the SoC ID by U-Boot) with the last byte + 1.
+# Wi-Fi MAC (stable, derived from the SoC ID by U-Boot) with the last byte + 2
+# (+1 is xradio's second-interface address, used by the AP in ap-up.sh).
 # The uploader leaves a resident child holding the tty; kill it to detach hci0.
 # Runs in the background: the Wi-Fi driver loads its firmware into the same chip at
 # boot, and a BT reset during that makes the BT boot ROM miss the sync. Wait for Wi-Fi,
@@ -17,7 +18,7 @@ pidof xr829_bt_up >/dev/null && exit 0
 	sleep 3
 	MAC=$(cat /sys/class/net/wlan0/address 2>/dev/null)
 	if [ -n "$MAC" ]; then
-		ADDR=$(printf '%s:%02x' "${MAC%:*}" $(( (0x${MAC##*:} + 1) % 256 )))
+		ADDR=$(printf '%s:%02x' "${MAC%:*}" $(( (0x${MAC##*:} + 2) % 256 )))
 	else
 		ADDR=02:00:00:aa:bb:01
 	fi
