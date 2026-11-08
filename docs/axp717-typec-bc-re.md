@@ -161,3 +161,5 @@ Meter values read off its display (its PC link times out in this setup, see belo
 - A reliable PC signal is the gadget being configured by a host (UDC state "configured"; musb calls
   usb_phy_set_power() with the configured bMaxPower).
 - OTG host check after patch 0084: a USB stick on an OTG adapter got VBUS (0x13 = 0x01) and enumerated (EHCI, high speed).
+- DECISION (user, 2026-11-08): keep it. PC ports also get 2.5 A like stock; VINDPM limits the draw to what the port
+  gives. No 500 mA cap from the gadget state.
