@@ -1,0 +1,72 @@
+From 9bd777a28c5c1c6fe746eb6cbced50729558f801 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:38 +0100
+Subject: [PATCH 94/94] arm64: dts: allwinner: trimui-smart-pro: vcc-pad off in
+ suspend, mcu node names
+
+Give the LED controller vcc-pad as its vled-supply, so the consumers (both pad MCUs and the LEDs) switch it off in system sleep; regulator-off-in-suspend has no effect in s2idle, drop it. Name the pad MCU nodes mcu, as serial.yaml expects, and fix a stale comment on USB host VBUS.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../dts/allwinner/sun50i-a133-trimui-smartpro.dts     | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 27fa32d82..e65a6173a 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -109,7 +109,6 @@ reg_vcc_pad: regulator-vcc-pad {
+ 		regulator-max-microvolt = <5000000>;
+ 		gpio = <&pio 3 11 GPIO_ACTIVE_HIGH>; /* PD11 */
+ 		enable-active-high;
+-		regulator-off-in-suspend;
+ 		vin-supply = <&reg_vcc5v>;
+ 	};
+ 
+@@ -240,11 +239,12 @@ &cpu0 {
+  * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
+  * right one. The rings are GRB (the stock DT says "RGB", but red shows green
+  * with it), the logo LED is RGB. Timings from the stock firmware. They are
+- * powered from vcc-pad, which the gamepad driver switches on.
++ * powered from vcc-pad, shared with the gamepad MCUs; it goes off in suspend.
+  */
+ &ledc {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&ledc_pe5_pin>;
++	vled-supply = <&reg_vcc_pad>;
+ 	allwinner,t0h-ns = <400>;
+ 	allwinner,t0l-ns = <850>;
+ 	allwinner,t1h-ns = <800>;
+@@ -685,7 +685,7 @@ &uart3 {
+ 	pinctrl-0 = <&uart3_pd_pins>;
+ 	status = "okay";
+ 
+-	pad_right: gamepad {
++	pad_right: mcu {
+ 		compatible = "trimui,smart-pro-pad-right";
+ 		power-supply = <&reg_vcc_pad>;
+ 	};
+@@ -697,7 +697,7 @@ &uart4 {
+ 	pinctrl-0 = <&uart4_pd_pins>;
+ 	status = "okay";
+ 
+-	gamepad {
++	mcu {
+ 		compatible = "trimui,smart-pro-pad-left";
+ 		power-supply = <&reg_vcc_pad>;
+ 		trimui,right-pad = <&pad_right>;
+@@ -707,8 +707,7 @@ gamepad {
+ /*
+  * Charging/data USB-C port, OTG: the ID pin is PH8 (pulled up on the board,
+  * low when an OTG adapter is plugged in) and VBUS presence comes from the
+- * AXP717. No usb0_vbus-supply is described yet, so in host mode the board
+- * does not drive VBUS: only self-powered devices work through an adapter.
++ * AXP717. In host mode VBUS comes from the AXP717 boost (see &usbphy).
+  */
+ &usb_otg {
+ 	dr_mode = "otg";
+-- 
+2.56.0
+

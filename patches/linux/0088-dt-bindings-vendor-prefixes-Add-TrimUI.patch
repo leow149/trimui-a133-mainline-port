@@ -1,0 +1,30 @@
+From 30738749565decce5ab13874507dcf7f6a7e1483 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:36 +0100
+Subject: [PATCH 88/94] dt-bindings: vendor-prefixes: Add TrimUI
+
+TrimUI makes handheld game consoles, e.g. the Smart Pro.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ Documentation/devicetree/bindings/vendor-prefixes.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+index 6780b651a..3e3893f1f 100644
+--- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
++++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+@@ -1755,6 +1755,8 @@ patternProperties:
+     description: Transpeed
+   "^traverse,.*":
+     description: Traverse Technologies Australia Pty Ltd
++  "^trimui,.*":
++    description: TrimUI
+   "^tronfy,.*":
+     description: Tronfy
+   "^tronsmart,.*":
+-- 
+2.56.0
+

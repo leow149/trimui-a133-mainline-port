@@ -1,0 +1,117 @@
+From c1a0bdbf14e70362f70618ddefbbf179e30d0763 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:38 +0100
+Subject: [PATCH 93/94] Input: trimui-smartpro-pad: Power the MCUs down in
+ system sleep
+
+Drop the vcc-pad reference in suspend; it goes off once the LED controller drops its reference as well. On resume, power up, wait for the MCUs and set the UART up again: the DesignWare UART ignored its line settings while the unpowered MCU held RX low. None of the wake keys go through the MCUs.
+
+Tested: after a 10 s s2idle both MCUs stream again and a button press arrives 0.6 s after resume.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/input/joystick/trimui-smartpro-pad.c | 55 ++++++++++++++++++--
+ 1 file changed, 51 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
+index 96c334017..0e1d98ca6 100644
+--- a/drivers/input/joystick/trimui-smartpro-pad.c
++++ b/drivers/input/joystick/trimui-smartpro-pad.c
+@@ -84,6 +84,7 @@ struct tsp_pad_axis_cal {
+ 
+ struct tsp_pad_half {
+ 	struct serdev_device *serdev;
++	struct regulator *power;
+ 	const struct tsp_pad_side *side;
+ 	spinlock_t lock;		/* protects input */
+ 	struct input_dev *input;
+@@ -279,6 +280,18 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
+ 	return devm_add_action_or_reset(dev, tsp_pad_detach, right);
+ }
+ 
++static void tsp_pad_power_off(void *data)
++{
++	regulator_disable(data);
++}
++
++static int tsp_pad_setup_uart(struct serdev_device *serdev)
++{
++	serdev_device_set_baudrate(serdev, TSP_PAD_BAUD);
++	serdev_device_set_flow_control(serdev, false);
++	return serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
++}
++
+ static int tsp_pad_probe(struct serdev_device *serdev)
+ {
+ 	struct device *dev = &serdev->dev;
+@@ -301,20 +314,53 @@ static int tsp_pad_probe(struct serdev_device *serdev)
+ 			return ret;
+ 	}
+ 
+-	ret = devm_regulator_get_enable(dev, "power");
++	half->power = devm_regulator_get(dev, "power");
++	if (IS_ERR(half->power))
++		return dev_err_probe(dev, PTR_ERR(half->power), "cannot get power\n");
++	ret = regulator_enable(half->power);
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "cannot enable power\n");
++	ret = devm_add_action_or_reset(dev, tsp_pad_power_off, half->power);
++	if (ret)
++		return ret;
+ 	msleep(TSP_PAD_POWER_UP_MS);
+ 
+ 	ret = devm_serdev_device_open(dev, serdev);
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "cannot open UART\n");
+ 
+-	serdev_device_set_baudrate(serdev, TSP_PAD_BAUD);
+-	serdev_device_set_flow_control(serdev, false);
+-	return serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
++	return tsp_pad_setup_uart(serdev);
++}
++
++/*
++ * The pad MCUs and the LED chain share vcc-pad. The regulator core leaves
++ * supplies alone in s2idle, so drop our reference here; vcc-pad goes off once
++ * the other consumers have done the same. None of the wake keys (power,
++ * volume) go through the MCUs. The stick calibration is kept.
++ */
++static int tsp_pad_suspend(struct device *dev)
++{
++	struct tsp_pad_half *half = dev_get_drvdata(dev);
++
++	return regulator_disable(half->power);
+ }
+ 
++static int tsp_pad_resume(struct device *dev)
++{
++	struct tsp_pad_half *half = dev_get_drvdata(dev);
++	int ret;
++
++	ret = regulator_enable(half->power);
++	if (ret)
++		return ret;
++	msleep(TSP_PAD_POWER_UP_MS);
++
++	/* The UART ignored its line settings while the unpowered MCU held RX low. */
++	return tsp_pad_setup_uart(half->serdev);
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(tsp_pad_pm, tsp_pad_suspend, tsp_pad_resume);
++
+ static const struct of_device_id tsp_pad_of_match[] = {
+ 	{ .compatible = "trimui,smart-pro-pad-left", .data = &tsp_pad_left },
+ 	{ .compatible = "trimui,smart-pro-pad-right", .data = &tsp_pad_right },
+@@ -326,6 +372,7 @@ static struct serdev_device_driver tsp_pad_driver = {
+ 	.driver = {
+ 		.name = "trimui-smartpro-pad",
+ 		.of_match_table = tsp_pad_of_match,
++		.pm = pm_sleep_ptr(&tsp_pad_pm),
+ 	},
+ 	.probe = tsp_pad_probe,
+ };
+-- 
+2.56.0
+

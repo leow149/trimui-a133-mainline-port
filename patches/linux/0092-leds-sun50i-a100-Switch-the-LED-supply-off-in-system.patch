@@ -1,0 +1,146 @@
+From c3aed9cb9aa50bfefcf0c36d52afb09adefd1567 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:38 +0100
+Subject: [PATCH 92/94] leds: sun50i-a100: Switch the LED supply off in system
+ sleep
+
+Take an optional vled-supply. Turn it off in system sleep and on again on resume, and send the colour buffer again then, as the LEDs forget it without power. The regulator core leaves supplies alone in s2idle, so the consumers have to do this.
+
+Tested on the TrimUI Smart Pro: the 23 LEDs go dark in s2idle and come back with their colours.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/leds/leds-sun50i-a100.c | 80 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 78 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/leds/leds-sun50i-a100.c b/drivers/leds/leds-sun50i-a100.c
+index 24f5721c9..bcc052a70 100644
+--- a/drivers/leds/leds-sun50i-a100.c
++++ b/drivers/leds/leds-sun50i-a100.c
+@@ -19,6 +19,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/pm.h>
+ #include <linux/property.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/reset.h>
+ #include <linux/spinlock.h>
+ 
+@@ -89,6 +90,8 @@ struct sun50i_a100_ledc {
+ 	u32 format;
+ 	struct sun50i_a100_ledc_timing timing;
+ 
++	struct regulator *vled;
++
+ 	u32 max_addr;
+ 	u32 num_leds;
+ 	struct sun50i_a100_ledc_led leds[] __counted_by(num_leds);
+@@ -384,6 +387,11 @@ static void sun50i_a100_ledc_dma_cleanup(void *data)
+ 	dma_release_channel(priv->dma_chan);
+ }
+ 
++static void sun50i_a100_ledc_disable_vled(void *data)
++{
++	regulator_disable(data);
++}
++
+ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ {
+ 	struct dma_slave_config dma_cfg = {};
+@@ -491,6 +499,22 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
++	priv->vled = devm_regulator_get_optional(dev, "vled");
++	if (IS_ERR(priv->vled)) {
++		if (PTR_ERR(priv->vled) != -ENODEV)
++			return dev_err_probe(dev, PTR_ERR(priv->vled),
++					     "cannot get vled supply\n");
++		priv->vled = NULL;
++	} else {
++		ret = regulator_enable(priv->vled);
++		if (ret)
++			return ret;
++		ret = devm_add_action_or_reset(dev, sun50i_a100_ledc_disable_vled,
++					       priv->vled);
++		if (ret)
++			return ret;
++	}
++
+ 	ret = sun50i_a100_ledc_resume(dev);
+ 	if (ret)
+ 		return ret;
+@@ -559,6 +583,58 @@ static void sun50i_a100_ledc_remove(struct platform_device *pdev)
+ 	sun50i_a100_ledc_suspend(&pdev->dev);
+ }
+ 
++/*
++ * System sleep: besides the controller, switch the LEDs' own supply off. The
++ * LEDs forget their colour without power, so send the buffer again on resume.
++ */
++static int sun50i_a100_ledc_pm_suspend(struct device *dev)
++{
++	struct sun50i_a100_ledc *priv = dev_get_drvdata(dev);
++	int ret;
++
++	ret = sun50i_a100_ledc_suspend(dev);
++	if (ret || !priv->vled)
++		return ret;
++
++	return regulator_disable(priv->vled);
++}
++
++static int sun50i_a100_ledc_pm_resume(struct device *dev)
++{
++	struct sun50i_a100_ledc *priv = dev_get_drvdata(dev);
++	unsigned long flags;
++	bool xfer_active;
++	int ret;
++
++	if (priv->vled) {
++		ret = regulator_enable(priv->vled);
++		if (ret)
++			return ret;
++		/* Let the LEDs' own controllers power up. */
++		usleep_range(1000, 2000);
++	}
++
++	ret = sun50i_a100_ledc_resume(dev);
++	if (ret)
++		return ret;
++
++	if (!priv->vled)
++		return 0;
++
++	spin_lock_irqsave(&priv->lock, flags);
++	xfer_active = priv->xfer_active;
++	if (xfer_active)
++		priv->next_length = priv->max_addr + 1;
++	else
++		priv->xfer_active = true;
++	spin_unlock_irqrestore(&priv->lock, flags);
++
++	if (!xfer_active)
++		sun50i_a100_ledc_start_xfer(priv, priv->max_addr + 1);
++
++	return 0;
++}
++
+ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
+ 	{ .compatible = "allwinner,sun50i-a100-ledc" },
+ 	{}
+@@ -566,8 +642,8 @@ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
+ MODULE_DEVICE_TABLE(of, sun50i_a100_ledc_of_match);
+ 
+ static DEFINE_SIMPLE_DEV_PM_OPS(sun50i_a100_ledc_pm,
+-				sun50i_a100_ledc_suspend,
+-				sun50i_a100_ledc_resume);
++				sun50i_a100_ledc_pm_suspend,
++				sun50i_a100_ledc_pm_resume);
+ 
+ static struct platform_driver sun50i_a100_ledc_driver = {
+ 	.probe		= sun50i_a100_ledc_probe,
+-- 
+2.56.0
+

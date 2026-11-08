@@ -1,0 +1,63 @@
+From f76272e0e593f3a02bb3eb628f427c3fa78c4cc5 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:37 +0100
+Subject: [PATCH 91/94] dt-bindings: leds: sun50i-a100-ledc: Per-LED channel
+ order, LED supply
+
+A chain can mix LEDs with different channel orders (the TrimUI Smart Pro has an RGB logo LED in front of GRB stick rings): allow led@0..2 subnodes giving the colour of each channel. Also allow vled-supply, the regulator powering the LEDs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../leds/allwinner,sun50i-a100-ledc.yaml      | 27 +++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml b/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
+index 0b73fe5b6..f7fefc627 100644
+--- a/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
++++ b/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
+@@ -56,6 +56,9 @@ properties:
+   dma-names:
+     const: tx
+ 
++  vled-supply:
++    description: Regulator powering the LEDs. Switched off in system sleep.
++
+   allwinner,pixel-format:
+     description: Pixel format (subpixel transmission order), default is "grb"
+     enum:
+@@ -97,6 +100,30 @@ patternProperties:
+         maximum: 1023
+         description: Index of the LED in the series (must be contiguous)
+ 
++      "#address-cells":
++        const: 1
++
++      "#size-cells":
++        const: 0
++
++    patternProperties:
++      "^led@[0-2]$":
++        type: object
++        $ref: common.yaml#
++        unevaluatedProperties: false
++        description:
++          Optional, for a chain that mixes LED types with different channel
++          orders. Gives the colour of channel N (in the order of
++          allwinner,pixel-format) of this LED. Without these subnodes the
++          channels are red, green and blue in that order.
++        properties:
++          reg:
++            maximum: 2
++
++        required:
++          - reg
++          - color
++
+     required:
+       - reg
+ 
+-- 
+2.56.0
+
