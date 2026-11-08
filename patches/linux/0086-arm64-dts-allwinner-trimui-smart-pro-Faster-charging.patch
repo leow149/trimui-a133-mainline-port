@@ -1,0 +1,53 @@
+From 11afcb8bde705289fb5f9d04be8de8fb44012199 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:27:26 +0100
+Subject: [PATCH] arm64: dts: allwinner: trimui-smart-pro: Faster charging (2.5
+ A in, 1.92 A charge)
+
+Input: 2.5 A from a charger, as the stock firmware (pmu_usbad_cur). PC
+ports get 500 mA (or 1.5 A for a CDP) from the driver.
+
+Charge current: stock uses 1.95 A when suspended or off and 1 A while
+running. Use the nearest AXP717 step, 1.92 A, all the time; the PMIC's
+thermal regulation backs off under load.
+
+Tested with a 140 W USB-C charger: 0x62 = 0x1e after boot, input
+limit 2.5 A, input power 8.0 W at the meter (was 5.9 W).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts   | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 1467b3ace..27fa32d82 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -61,7 +61,12 @@ ext_osc32k: ext-osc32k-clk {
+ 	battery: battery {
+ 		compatible = "simple-battery";
+ 		charge-full-design-microamp-hours = <5000000>;
+-		constant-charge-current-max-microamp = <1000000>;
++		/*
++		 * Stock charges at 1.95 A when suspended or off (1 A while
++		 * running); 1.92 A is the nearest AXP717 step. Used all the
++		 * time: the PMIC's own thermal regulation backs off under load.
++		 */
++		constant-charge-current-max-microamp = <1920000>;
+ 		voltage-max-design-microvolt = <4200000>;
+ 	};
+ 
+@@ -519,6 +524,8 @@ battery_power: battery-power {
+ 
+ 		usb_power: usb-power {
+ 			compatible = "x-powers,axp717-usb-power-supply";
++			/* Stock: 2.5 A from a charger, 500 mA from a PC. */
++			input-current-limit-microamp = <2500000>;
+ 		};
+ 
+ 		/*
+-- 
+2.56.0
+
