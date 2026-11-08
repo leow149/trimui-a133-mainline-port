@@ -338,7 +338,8 @@ int main(int argc, char **argv)
 
 	si.pCommandBuffers = &cmds[1];
 	double *t = malloc(sizeof(double) * reps);
-	for (int i = -3; i < reps; i++) {		/* 3 warm-up submits */
+	int warm = atoi(arg(argc, argv, "warm", "3"));
+	for (int i = -warm; i < reps; i++) {		/* warm-up submits */
 		double t0 = now_ms();
 		CHECK(vkQueueSubmit(q, 1, &si, fence));
 		CHECK(vkWaitForFences(dev, 1, &fence, VK_TRUE, 5000000000ull));

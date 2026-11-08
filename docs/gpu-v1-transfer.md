@@ -1,4 +1,27 @@
-# GE8300 transfer path: v1 parameter format (open, 2026-11-08)
+# GE8300 transfer path: v1 parameter format (FIXED 2026-11-08, patches/mesa/0009)
+
+## Resolution
+
+Fixed by `patches/mesa/0009`, format taken from the **vendor driver on stock** (LD_PRELOAD capture of
+its transfer submissions + GPU memory, `tools/gpu/stock_build/capture/`, data and `analyze.py` in
+`vendor_data/stockcap_20261108/`). vkxfer: 125/125 (was 80 pass / 45 crash). Xwayland clients and
+moonlight-qt run.
+
+v1 fast-2D (FAST_2D render, CR_ISP_MTILE_BASE -> control stream):
+- control stream: 64-bit entries `dw0 = (hdr_qwords=2) << 2 | last << 1 | ((prims-1) >> 2) << 5 |
+  coverage_mask << 8`, `dw1 = (block_addr >> 2) | 1`; **no terminate entry**; the last entry has bit 1;
+  `CR_ISP_RGN_SIPF.cs_size_ipf_creq_pf` = number of entries (31 = unknown).
+- primitive block: `(nvtx-1) << 5 | tsp_dw_per_vtx << 12`, dw1 = 0; ISPA; pad; index words (SIPF);
+  ISP vertices (SIPF); PDS state (8 dw); TSP data.
+- vendor ISP_CTL for transfers 0x00023000, ISP_BGOBJVALS 0x100 (clip pass) / 0x200 (bg pass).
+
+TA-written (normal render) v1 data differs slightly: per-tile control streams of 64-bit entries with
+bits 0..1 type (0 = primitive), header size + 1 in bits 2..4, terminate dword 2; 40-bit region headers
+`(cs_addr >> 2) << 8 | stream_qwords << 3 | last << 2`; the format word carries an ISP state presence
+mask in bits 48..50 (1 = ISPA, 5 = ISPA+ISPB) and bit 0 set for clipped primitives.
+
+The history of the investigation follows.
+
 
 ## Problem
 

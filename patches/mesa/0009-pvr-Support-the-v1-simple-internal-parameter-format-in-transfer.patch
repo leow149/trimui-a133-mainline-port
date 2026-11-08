@@ -1,0 +1,171 @@
+From: Claude (TrimUI port) <noreply@anthropic.com>
+Subject: [PATCH] pvr: Support the v1 simple internal parameter format in the transfer queue
+
+Clip blits (custom-mapping multi-pass copies, e.g. buffer->image uploads of
+3x1/159x1/17x13 into twiddled images, depth/stencil aspect copies, some scaled
+blits and clears) build an ISP control stream and primitive blocks in software
+and only knew the non-simple format and SIPF v2. On v1 cores (GE8300) this
+asserted in debug builds and hung the GPU otherwise; Xwayland (glamor) and
+moonlight-qt died on it.
+
+The v1 format was taken from the vendor driver on the same GPU (captures of its
+transfer submissions) and from TA-written parameter memory:
+- primitive block: 64-bit format word (vertex count - 1 in bits 5..9, TSP
+  vertex size in dwords from bit 12), ISPA, pad; then index words, vertices,
+  PDS state and TSP data as for v2.
+- fast 2D control stream: 64-bit entries, block header size in 64-bit words in
+  bits 2..4, last-entry flag in bit 1, index words - 1 in bits 5..7, coverage
+  mask from bit 8, block address >> 2 | 1 in the high word. No terminate
+  entry: CR_ISP_RGN_SIPF.cs_size_ipf_creq_pf holds the entry count.
+- all entries in one array (no link entries needed).
+
+Verified with tools/gpu/vkxfer (125 cases): 80 pass/45 crash before, 125 pass
+after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
+---
+diff --git a/src/imagination/vulkan/pvr_arch_job_transfer.c b/src/imagination/vulkan/pvr_arch_job_transfer.c
+index df05efe..5cb517e 100644
+--- a/src/imagination/vulkan/pvr_arch_job_transfer.c
++++ b/src/imagination/vulkan/pvr_arch_job_transfer.c
+@@ -3422,6 +3422,19 @@ static void pvr_isp_prim_block_pds_state(const struct pvr_device_info *dev_info,
+    *cs_ptr_out = cs_ptr;
+ }
+ 
++/* Version 1 of the simple internal parameter format (GE8300 and other Series
++ * 8XE cores). Its primitive blocks start with a 64-bit format word, and its
++ * control stream for fast 2D renders consists of 64-bit primitive entries
++ * without a terminate entry: CR_ISP_RGN gives the entry count and the last
++ * entry is flagged.
++ */
++static inline bool
++pvr_has_sipf_v1(const struct pvr_device_info *dev_info)
++{
++   return PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++          !PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v2);
++}
++
+ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
+                                          UNUSED uint32_t tsp_comp_format_in_dw,
+                                          uint32_t tsp_data_size_in_bytes,
+@@ -3433,6 +3446,33 @@ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
+       PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v2);
+    uint32_t *cs_ptr = *cs_ptr_out;
+ 
++   if (pvr_has_sipf_v1(dev_info)) {
++      /* Format word: vertex count - 1 in bits 5..9, TSP vertex size in
++       * dwords from bit 12. It is followed by the ISP state (ISPA) and a pad
++       * word to 64 bits; the control stream entry gives the header size.
++       */
++      cs_ptr[0] = ((num_isp_vertices - 1U) << 5) |
++                  ((tsp_data_size_in_bytes / num_isp_vertices /
++                    sizeof(uint32_t))
++                   << 12);
++      cs_ptr[1] = 0U;
++      cs_ptr += 2;
++
++      pvr_csb_pack (cs_ptr, TA_STATE_ISPA, ispa) {
++         ispa.objtype = ROGUE_TA_OBJTYPE_TRIANGLE;
++         ispa.passtype = read_bgnd ? ROGUE_TA_PASSTYPE_TRANSLUCENT
++                                   : ROGUE_TA_PASSTYPE_OPAQUE;
++         ispa.dcmpmode = ROGUE_TA_CMPMODE_ALWAYS;
++         ispa.dwritedisable = true;
++      }
++      cs_ptr += pvr_cmd_length(TA_STATE_ISPA);
++
++      *cs_ptr++ = 0U;
++
++      *cs_ptr_out = cs_ptr;
++      return;
++   }
++
+    if (has_simple_internal_parameter_format_v2) {
+       const uint32_t tsp_data_per_vrx_in_bytes =
+          tsp_data_size_in_bytes / num_isp_vertices;
+@@ -4062,6 +4102,8 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+    uint32_t num_region_arrays;
+    uint32_t total_stream_size;
+    bool was_linked = false;
++   uint32_t *v1_last_entry = NULL;
++   uint32_t v1_num_entries = 0U;
+    uint32_t rem_mappings;
+    uint32_t num_sources;
+    uint32_t *blk_cs_ptr;
+@@ -4124,11 +4166,20 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+       }
+    }
+ 
+-   num_region_arrays =
+-      (num_prim_blks + (pvr_transfer_prim_blocks_per_alloc(dev_info) - 1U)) /
+-      pvr_transfer_prim_blocks_per_alloc(dev_info);
+-   region_arrays_size = ROGUE_IPF_CONTROL_STREAM_SIZE_DWORDS *
+-                        sizeof(uint32_t) * num_region_arrays;
++   if (pvr_has_sipf_v1(dev_info)) {
++      /* All entries in one array, so no link entries are needed. */
++      num_region_arrays = 1U;
++      region_arrays_size =
++         ALIGN_POT(PVR_DW_TO_BYTES(2U * num_prim_blks),
++                   PVR_DW_TO_BYTES(ROGUE_IPF_CONTROL_STREAM_SIZE_DWORDS));
++      free_ctrl_stream_words = region_arrays_size / sizeof(uint32_t);
++   } else {
++      num_region_arrays =
++         (num_prim_blks + (pvr_transfer_prim_blocks_per_alloc(dev_info) - 1U)) /
++         pvr_transfer_prim_blocks_per_alloc(dev_info);
++      region_arrays_size = ROGUE_IPF_CONTROL_STREAM_SIZE_DWORDS *
++                           sizeof(uint32_t) * num_region_arrays;
++   }
+    total_stream_size = region_arrays_size + prim_blk_size;
+ 
+    /* Allocate space for IPF control stream. */
+@@ -4494,6 +4545,25 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+ 
+                cs_ptr = (uint32_t *)cs_byte_ptr;
+ 
++               free_ctrl_stream_words -= 2;
++            } else if (pvr_has_sipf_v1(dev_info)) {
++               const uint32_t num_prims = 2U * num_mappings;
++
++               /* 64-bit primitive entry: block header size in 64-bit words
++                * (format word + ISP state) in bits 2..4, last-entry flag in
++                * bit 1 (set below), index words - 1 in bits 5..7 and one
++                * coverage bit per primitive from bit 8; the high word holds
++                * the block address >> 2 with bit 0 set.
++                */
++               assert(num_prims <= 24U);
++               assert(!(prim_blk_addr.addr & 0x7U));
++               v1_last_entry = cs_ptr;
++               cs_ptr[0] = (2U << 2) | (((num_prims - 1U) >> 2) << 5) |
++                           (BITFIELD_MASK(num_prims) << 8);
++               cs_ptr[1] = (uint32_t)(prim_blk_addr.addr >> 2) | 1U;
++               cs_ptr += 2;
++               v1_num_entries++;
++
+                free_ctrl_stream_words -= 2;
+             } else {
+                pvr_csb_pack (cs_ptr, IPF_PRIMITIVE_FORMAT, word) {
+@@ -4547,6 +4617,12 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+       cs_byte_ptr = pvr_isp_ctrl_stream_sipf_write_aligned(cs_byte_ptr, tmp, 1);
+ 
+       cs_ptr = (uint32_t *)cs_byte_ptr;
++   } else if (pvr_has_sipf_v1(dev_info)) {
++      /* No terminate entry: the last entry is flagged and CR_ISP_RGN holds
++       * the number of entries.
++       */
++      assert(v1_last_entry);
++      v1_last_entry[0] |= 1U << 1;
+    } else {
+       pvr_csb_pack (cs_ptr, IPF_CONTROL_STREAM, word) {
+          word.cs_type = ROGUE_IPF_CS_TYPE_TERM;
+@@ -4572,6 +4648,14 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+           */
+          isp_rgn.cs_size_ipf_creq_pf = was_linked;
+       }
++   } else if (pvr_has_sipf_v1(dev_info)) {
++      pvr_csb_pack (&regs->isp_rgn, CR_ISP_RGN_SIPF, isp_rgn) {
++         /* Number of primitive entries; all ones if unknown/too many, the
++          * last entry is flagged either way.
++          */
++         isp_rgn.cs_size_ipf_creq_pf =
++            MIN2(v1_num_entries, ROGUE_CR_ISP_RGN_SIPF_CS_SIZE_IPF_CREQ_PF_MAX);
++      }
+    } else {
+       /* clang-format off */
+       pvr_csb_pack(&regs->isp_rgn, CR_ISP_RGN, isp_rgn);
