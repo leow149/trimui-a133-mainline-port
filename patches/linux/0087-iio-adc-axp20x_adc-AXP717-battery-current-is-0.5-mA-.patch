@@ -1,0 +1,43 @@
+From 6bc707e770c689bed46ad45570b1c09f339d3437 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:39:05 +0100
+Subject: [PATCH] iio: adc: axp20x_adc: AXP717 battery current is 0.5 mA per
+ count
+
+The AXP717 battery charge current ADC (0xCA/0xCB) was reported at 1 mA
+per count, about twice the real current. The vendor AXP2202 (= AXP717)
+driver halves the same 14-bit value, and that matches an energy balance
+on the TrimUI Smart Pro measured with an inline USB meter:
+
+  960 mA set, 5.9 W in:  raw ~1990 -> 995 mA (estimate ~1.0 A)
+  1.92 A set, 8.0 W in:  raw  2853 -> 1427 mA (estimate ~1.45-1.5 A)
+
+The register only reflects charge current; while the battery supplies
+the system (charging paused) it reads near zero.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/iio/adc/axp20x_adc.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/iio/adc/axp20x_adc.c b/drivers/iio/adc/axp20x_adc.c
+index d9016fe1a..6cbaaabbb 100644
+--- a/drivers/iio/adc/axp20x_adc.c
++++ b/drivers/iio/adc/axp20x_adc.c
+@@ -658,8 +658,10 @@ static int axp717_adc_scale(struct iio_chan_spec const *chan, int *val,
+ 		return IIO_VAL_INT;
+ 
+ 	case IIO_CURRENT:
++		/* Battery charge current: 0.5 mA per count */
+ 		*val = 1;
+-		return IIO_VAL_INT;
++		*val2 = 2;
++		return IIO_VAL_FRACTIONAL;
+ 
+ 	case IIO_TEMP:
+ 		*val = 100;
+-- 
+2.56.0
+
