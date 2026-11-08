@@ -12,4 +12,6 @@ if ! pidof udevd >/dev/null; then
 	chroot $R /bin/udevadm trigger --action=add
 	chroot $R /bin/udevadm settle -t 10 || true
 fi
-exec /root/wayland-session.sh /usr/bin/env HOME=/root retroarch "$@"
+# Device overrides go last (see rootfs/edge/retroarch-trimui.cfg).
+exec /root/wayland-session.sh /usr/bin/env HOME=/root retroarch \
+	--appendconfig=/root/.config/retroarch/trimui.cfg "$@"

@@ -1,0 +1,11 @@
+#version 450
+// diagnostic: like cs_pt32 but through imageAtomicExchange (software address path in pco_nir_tex.c)
+layout(local_size_x = 16, local_size_y = 8) in;
+layout(set = 0, binding = 3, r32ui) uniform uimage2D uImage;
+layout(set = 0, binding = 4, std430) readonly buffer SSBO { uint packed_pixels[]; };
+layout(set = 0, binding = 0, std140) uniform UBO { uvec2 resolution; uint word_stride; };
+void main()
+{
+	uvec2 p = gl_GlobalInvocationID.xy;
+	if (all(lessThan(p, resolution))) imageAtomicExchange(uImage, ivec2(p), p.y * 256u + p.x + 1u);
+}

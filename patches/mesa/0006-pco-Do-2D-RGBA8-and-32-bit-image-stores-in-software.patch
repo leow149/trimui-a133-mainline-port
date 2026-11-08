@@ -1,0 +1,143 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 14:30:00 +0100
+Subject: [PATCH] pco: Do 2D RGBA8 and 32-bit-per-channel image stores in software
+
+On the GE8300 the TPU write path (smp.wrt) only lands texel (0, 0): every
+imageStore() at another coordinate is silently dropped. RetroArch converts
+RGB565 frames to RGBA8 with a compute shader that does exactly that, so the
+game picture stayed black. Do what the image atomics already do: twiddle
+the coordinates in software and write the texel with a bounds-checked
+global store. Covered: 2D, non-MSAA, identity-swizzle RGBA8 and
+32-bit-per-channel formats; anything else still uses the TPU.
+
+Limitations: the address is the view's base address, so stores into a mip
+level other than the view's base may land wrongly; BGRA8 storage images
+still take the TPU path.
+
+Tested: tools/gpu/vklinear (compute mode) at 240x160, 256x224, 320x240,
+241x161; RetroArch (Vulkan) with mGBA shows the game; vkmark unchanged.
+Details: docs/pvr-linear-texture.md.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+---
+--- a/src/imagination/pco/pco_nir_tex.c
++++ b/src/imagination/pco/pco_nir_tex.c
+@@ -1380,6 +1380,116 @@
+       return true;
+    }
+ 
++   /* Software image stores.
++    *
++    * The TPU write path (smp.wrt) only lands texel (0, 0) on GE8300: every
++    * store at a non-zero coordinate is silently dropped. Do the same thing the
++    * atomics above do instead: twiddle the coordinates in software and write
++    * the texel with a plain global store. Storage images are always twiddled
++    * (optimal tiling), and the format is known at compile time. write_data
++    * holds one dword per channel (the TPU does the final interleave), so for
++    * 8-bit channels the bytes are merged here. Only formats that are covered
++    * this way (RGBA8 and 32-bit-per-channel ones) take this path, anything
++    * else keeps using the TPU.
++    */
++   unsigned sw_texel_dwords = 0;
++   bool sw_merge_bytes = false;
++   if (write_data && !ia && format != PIPE_FORMAT_NONE && !msaa &&
++       image_dim == GLSL_SAMPLER_DIM_2D && util_format_is_plain(format)) {
++      const struct util_format_description *fdesc = util_format_description(format);
++      bool identity_swizzle = true;
++      for (unsigned c = 0; c < fdesc->nr_channels; c++)
++         identity_swizzle &= fdesc->swizzle[c] == PIPE_SWIZZLE_X + c;
++
++      if (identity_swizzle && fdesc->block.width == 1 &&
++          fdesc->block.height == 1 && fdesc->is_array) {
++         unsigned chan_bits = fdesc->channel[0].size;
++         if (chan_bits == 32) {
++            sw_texel_dwords = fdesc->nr_channels;
++         } else if (chan_bits == 8 && fdesc->nr_channels == 4) {
++            sw_texel_dwords = 1;
++            sw_merge_bytes = true;
++         }
++      }
++   }
++
++   if (sw_texel_dwords) {
++      nir_def *num_comps = nir_imm_int(b, 2);
++      nir_def *dim = nir_imm_int(b, image_dim);
++      nir_def *_is_array = nir_imm_bool(b, is_array);
++      nir_def *is_image = nir_imm_bool(b, true);
++      nir_def *size_comps = usclib_tex_state_size(b,
++                                                  tex_state,
++                                                  num_comps,
++                                                  dim,
++                                                  _is_array,
++                                                  is_image,
++                                                  lod);
++
++      nir_def *xy = nir_channels(b, coords, 0b11);
++      nir_def *in_bounds = nir_iand(b,
++                                    nir_ult(b, nir_channel(b, xy, 0), nir_channel(b, size_comps, 0)),
++                                    nir_ult(b, nir_channel(b, xy, 1), nir_channel(b, size_comps, 1)));
++
++      nir_def *twiddled_offset =
++         usclib_twiddle2d(b, xy, nir_channels(b, size_comps, 0b11));
++      twiddled_offset =
++         nir_imul_imm(b, twiddled_offset, util_format_get_blocksize(format));
++
++      if (is_array) {
++         nir_def *array_index = nir_channel(b, coords, 2);
++         nir_def *array_max = usclib_tex_state_array_max(b, tex_state);
++         array_index = nir_iclamp(b, array_index, nir_imm_int(b, 0), array_max);
++
++         nir_def *tex_meta = nir_load_tex_meta_pco(b,
++                                                   PCO_IMAGE_META_COUNT,
++                                                   elem,
++                                                   .desc_set = desc_set,
++                                                   .binding = binding);
++
++         nir_def *array_stride =
++            nir_channel(b, tex_meta, PCO_IMAGE_META_LAYER_SIZE);
++
++         twiddled_offset =
++            nir_iadd(b, twiddled_offset, nir_imul(b, array_index, array_stride));
++      }
++
++      nir_def *base_addr = usclib_tex_state_address(b, tex_state);
++      nir_def *addr = nir_uadd64_32(b,
++                                    nir_channel(b, base_addr, 0),
++                                    nir_channel(b, base_addr, 1),
++                                    twiddled_offset);
++      nir_def *addr_vec = nir_vec2(b, nir_channel(b, addr, 0), nir_channel(b, addr, 1));
++
++      nir_def *texel;
++      if (sw_merge_bytes) {
++         texel = nir_imm_int(b, 0);
++         for (unsigned c = 0; c < 4; c++) {
++            nir_def *byte = nir_iand_imm(b, nir_channel(b, write_data, c), 0xff);
++            texel = nir_ior(b, texel, nir_ishl_imm(b, byte, c * 8));
++         }
++      } else {
++         texel = nir_trim_vector(b, write_data, sw_texel_dwords);
++      }
++
++      nir_push_if(b, in_bounds);
++      {
++         nir_store_global_2x32(b,
++                               texel,
++                               addr_vec,
++                               .write_mask = BITFIELD_MASK(sw_texel_dwords),
++                               .access = nir_intrinsic_access(intr),
++                               .align_mul = 4,
++                               .align_offset = 0);
++      }
++      nir_pop_if(b, NULL);
++
++      data->common.uses.usclib = true;
++
++      nir_instr_remove(&intr->instr);
++      return true;
++   }
++
+    unsigned smp_desc = ia ? PCO_IA_SAMPLER : PCO_POINT_SAMPLER;
+    nir_def *smp_state = nir_load_smp_state_pco(b,
+                                                ROGUE_NUM_TEXSTATE_DWORDS,

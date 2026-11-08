@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 14:30:00 +0100
+Subject: [PATCH] pvr: Advertise linear filtering for linear (strided) 2D images
+
+Linear images are always 2D, single layer and single level, and the TPU
+filters strided textures in 2D (the driver already sets the IMG-specific
+FILTER_LINEAR_2D bit). Without the core bit, dma-buf textures (only
+DRM_FORMAT_MOD_LINEAR is supported) can't be filtered: the wlroots Vulkan
+renderer found no usable texture format and aborted (dmabuf feedback
+table empty).
+
+Tested: cage starts with WLR_RENDERER=vulkan; RetroArch (now using its
+linear streamed-texture path) shows the game correctly.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+---
+--- a/src/imagination/vulkan/pvr_formats.c
++++ b/src/imagination/vulkan/pvr_formats.c
+@@ -290,7 +290,15 @@
+          if (!vk_format_is_int(vk_format) &&
+              !vk_format_is_depth_or_stencil(vk_format) &&
+              first_component_size < 32) {
+-            flags |= VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_2D_BIT_IMG;
++            /* Linear images are always 2D, single layer and single level
++             * here (see pvr_get_image_format_properties), and the TPU filters
++             * strided textures in 2D, so the core bit is valid too. Without
++             * it, dma-buf textures (only DRM_FORMAT_MOD_LINEAR is supported)
++             * can't be filtered: the wlroots Vulkan renderer finds no usable
++             * format at all, and GL-on-Vulkan copies them first.
++             */
++            flags |= VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_2D_BIT_IMG |
++                     VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+          }
+ 
+          if (ycbcr_info) {

@@ -1,0 +1,10 @@
+#version 450
+// diagnostic: every invocation stores to the same fixed coordinate (5,3); with a per-lane value
+layout(local_size_x = 16, local_size_y = 8) in;
+layout(set = 0, binding = 3, rgba8) writeonly uniform image2D uImage;
+layout(set = 0, binding = 4, std430) readonly buffer SSBO { uint packed_pixels[]; };
+layout(set = 0, binding = 0, std140) uniform UBO { uvec2 resolution; uint word_stride; };
+void main()
+{
+	if (gl_GlobalInvocationID.xy == uvec2(0, 0)) imageStore(uImage, ivec2(5, 3), vec4(1.0, 0.0, 0.0, 1.0));
+}

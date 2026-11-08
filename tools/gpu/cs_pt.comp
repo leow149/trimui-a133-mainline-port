@@ -1,0 +1,14 @@
+#version 450
+// diagnostic: only a handful of invocations store, each with a distinct colour
+layout(local_size_x = 16, local_size_y = 8) in;
+layout(set = 0, binding = 3, rgba8) writeonly uniform image2D uImage;
+layout(set = 0, binding = 4, std430) readonly buffer SSBO { uint packed_pixels[]; };
+layout(set = 0, binding = 0, std140) uniform UBO { uvec2 resolution; uint word_stride; };
+void main()
+{
+	uvec2 p = gl_GlobalInvocationID.xy;
+	if (p == uvec2(5, 3)) imageStore(uImage, ivec2(p), vec4(1.0, 0.0, 0.0, 1.0));
+	if (p == uvec2(1, 0)) imageStore(uImage, ivec2(p), vec4(0.0, 1.0, 0.0, 1.0));
+	if (p == uvec2(0, 1)) imageStore(uImage, ivec2(p), vec4(0.0, 0.0, 1.0, 1.0));
+	if (p == uvec2(17, 9)) imageStore(uImage, ivec2(p), vec4(1.0, 1.0, 0.0, 1.0));
+}

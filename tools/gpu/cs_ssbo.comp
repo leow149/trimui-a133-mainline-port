@@ -1,0 +1,14 @@
+#version 450
+// diagnostic: copy 32-bit words from the SSBO to the image, one pixel per invocation (no 565 unpack)
+layout(local_size_x = 16, local_size_y = 8) in;
+layout(set = 0, binding = 3, rgba8) writeonly uniform image2D uImage;
+layout(set = 0, binding = 4, std430) readonly buffer SSBO { uint packed_pixels[]; };
+layout(set = 0, binding = 0, std140) uniform UBO { uvec2 resolution; uint word_stride; };
+void main()
+{
+	uvec2 p = gl_GlobalInvocationID.xy;
+	if (all(lessThan(p, resolution))) {
+		uint w = packed_pixels[p.y * word_stride + (p.x >> 1)];
+		imageStore(uImage, ivec2(p), vec4(float(w & 255u) / 255.0, float((w >> 8) & 255u) / 255.0, 0.0, 1.0));
+	}
+}
