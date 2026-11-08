@@ -35,7 +35,7 @@ Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active
 
 ```
 patches/
-  linux/         Kernel series (87 patches) and defconfig
+  linux/         Kernel series (94 patches) and defconfig
   u-boot/        Board support, DRAM arbiter priorities, Wi-Fi MAC alias (3 patches)
   tf-a/          Watchdog fix for system reset (1 patch)
   mesa/          PowerVR Vulkan driver fixes (5 patches) and build_mesa.sh
