@@ -39,6 +39,7 @@
 !tools/gpu/*.vert
 !tools/gpu/*.frag
 !tools/gpu/*.comp
+!tools/gpu/*.py
 !tools/gpu/*.txt
 !tools/devmem.c
 !tools/drmtest.c
