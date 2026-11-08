@@ -1,0 +1,46 @@
+From f0d5c11523424144edea79240064f15d079fd5ae Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 01:00:46 +0100
+Subject: [PATCH] drm/imagination: Add system sleep PM ops
+
+pvr_pm_ops only has runtime PM callbacks. On system suspend the GPU stays
+runtime-active with its firmware running while the power domain goes down,
+and the first runtime PM get after resume fails with -EINVAL
+("pvr_power_get returned error -22, attempting recovery"). The recovery
+can end in "GPU device lost" with the client stuck.
+
+Route system sleep through the runtime PM callbacks with
+pm_runtime_force_suspend()/pm_runtime_force_resume(), so the firmware is
+stopped and the GPU powered down before sleep and brought back after.
+
+Tested on the TrimUI Smart Pro (A133, GE8300): vkcube (60 frames) works
+before suspend and after each of three s2idle cycles, with no pvr errors.
+Before, the first render after one suspend cycle lost the device.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/gpu/drm/imagination/pvr_drv.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/imagination/pvr_drv.c b/drivers/gpu/drm/imagination/pvr_drv.c
+index 5c965ef02..12978f70d 100644
+--- a/drivers/gpu/drm/imagination/pvr_drv.c
++++ b/drivers/gpu/drm/imagination/pvr_drv.c
+@@ -1516,6 +1516,12 @@ static const struct of_device_id dt_match[] = {
+ MODULE_DEVICE_TABLE(of, dt_match);
+ 
+ static const struct dev_pm_ops pvr_pm_ops = {
++	/*
++	 * System sleep goes through the runtime PM callbacks, so that the
++	 * firmware is stopped and the GPU powered down properly before the
++	 * power domain goes off, and brought back up on resume.
++	 */
++	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+ 	RUNTIME_PM_OPS(pvr_power_device_suspend, pvr_power_device_resume, pvr_power_device_idle)
+ };
+ 
+-- 
+2.56.0
+
