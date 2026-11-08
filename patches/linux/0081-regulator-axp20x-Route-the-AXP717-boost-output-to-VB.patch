@@ -1,0 +1,154 @@
+From 68aed71a6ace458ad2f441c6b1f4ded527db57cc Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 02:15:22 +0100
+Subject: [PATCH 81/82] regulator: axp20x: Route the AXP717 boost output to
+ VBUS
+
+Setting only the AXP717 boost enable (MODULE_EN_CONTROL_2 bit 4) runs the
+converter, but its output does not reach the VBUS pin: a bus-powered
+device on an OTG port stays dead. The vendor AXP2202 (AXP717-compatible)
+driver's drivevbus regulator also sets bit 0 of register 0x13, before the
+boost enable, clears it first on disable, and reports enabled only when
+both bits are set.
+
+Give the boost regulator ops that do the same, and make register 0x13
+writeable in the AXP717 regmap.
+
+Tested on the TrimUI Smart Pro (A133 + AXP717) with the boost as USB0
+VBUS: a bus-powered USB hub with a USB stick and an Ethernet adapter stays
+enumerated with only the TrimUI powering it (stick read 32.7 MB/s). With
+only bit 4 set, the hub dropped off.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/mfd/axp20x.c                 |  1 +
+ drivers/regulator/axp20x-regulator.c | 79 ++++++++++++++++++++++++++--
+ include/linux/mfd/axp20x.h           |  1 +
+ 3 files changed, 78 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/mfd/axp20x.c b/drivers/mfd/axp20x.c
+index 679364189..418e88711 100644
+--- a/drivers/mfd/axp20x.c
++++ b/drivers/mfd/axp20x.c
+@@ -220,6 +220,7 @@ static const struct regmap_access_table axp313a_volatile_table = {
+ 
+ static const struct regmap_range axp717_writeable_ranges[] = {
+ 	regmap_reg_range(AXP717_PMU_FAULT, AXP717_MODULE_EN_CONTROL_1),
++	regmap_reg_range(AXP717_VBUS_OTG_CONTROL, AXP717_VBUS_OTG_CONTROL),
+ 	regmap_reg_range(AXP717_MIN_SYS_V_CONTROL, AXP717_BOOST_CONTROL),
+ 	regmap_reg_range(AXP717_VSYS_V_POWEROFF, AXP717_VSYS_V_POWEROFF),
+ 	regmap_reg_range(AXP717_IRQ0_EN, AXP717_IRQ4_EN),
+diff --git a/drivers/regulator/axp20x-regulator.c b/drivers/regulator/axp20x-regulator.c
+index da891415e..b13be42e4 100644
+--- a/drivers/regulator/axp20x-regulator.c
++++ b/drivers/regulator/axp20x-regulator.c
+@@ -590,6 +590,65 @@ static const struct regulator_ops axp20x_ops = {
+ 	.set_ramp_delay		= axp20x_set_ramp_delay,
+ };
+ 
++/*
++ * AXP717 boost as USB OTG VBUS: besides the boost enable (MODULE_EN_CONTROL_2
++ * bit 4), the output only reaches the VBUS pin with bit 0 of register 0x13
++ * set. The vendor (AXP2202) driver's drivevbus regulator writes both, 0x13
++ * first, and treats the regulator as on only when both are set.
++ */
++#define AXP717_VBUS_OTG_EN	BIT(0)
++
++static int axp717_boost_enable(struct regulator_dev *rdev)
++{
++	int ret;
++
++	ret = regmap_set_bits(rdev->regmap, AXP717_VBUS_OTG_CONTROL,
++			      AXP717_VBUS_OTG_EN);
++	if (ret)
++		return ret;
++
++	ret = regulator_enable_regmap(rdev);
++	if (ret)
++		regmap_clear_bits(rdev->regmap, AXP717_VBUS_OTG_CONTROL,
++				  AXP717_VBUS_OTG_EN);
++	return ret;
++}
++
++static int axp717_boost_disable(struct regulator_dev *rdev)
++{
++	int ret;
++
++	ret = regmap_clear_bits(rdev->regmap, AXP717_VBUS_OTG_CONTROL,
++				AXP717_VBUS_OTG_EN);
++	if (ret)
++		return ret;
++
++	return regulator_disable_regmap(rdev);
++}
++
++static int axp717_boost_is_enabled(struct regulator_dev *rdev)
++{
++	unsigned int val;
++	int ret;
++
++	ret = regmap_read(rdev->regmap, AXP717_VBUS_OTG_CONTROL, &val);
++	if (ret)
++		return ret;
++	if (!(val & AXP717_VBUS_OTG_EN))
++		return 0;
++
++	return regulator_is_enabled_regmap(rdev);
++}
++
++static const struct regulator_ops axp717_boost_ops = {
++	.set_voltage_sel	= regulator_set_voltage_sel_regmap,
++	.get_voltage_sel	= regulator_get_voltage_sel_regmap,
++	.list_voltage		= regulator_list_voltage_linear,
++	.enable			= axp717_boost_enable,
++	.disable		= axp717_boost_disable,
++	.is_enabled		= axp717_boost_is_enabled,
++};
++
+ static const struct regulator_ops axp20x_ops_sw = {
+ 	.enable			= regulator_enable_regmap,
+ 	.disable		= regulator_disable_regmap,
+@@ -841,9 +900,23 @@ static const struct regulator_desc axp717_regulators[] = {
+ 	AXP_DESC(AXP717, CPUSLDO, "cpusldo", "vin1", 500, 1400, 50,
+ 		 AXP717_CPUSLDO_CONTROL, AXP717_LDO_V_OUT_MASK,
+ 		 AXP717_LDO1_OUTPUT_CONTROL, BIT(4)),
+-	AXP_DESC(AXP717, BOOST, "boost", "vin1", 4550, 5510, 64,
+-		 AXP717_BOOST_CONTROL, AXP717_BOOST_V_OUT_MASK,
+-		 AXP717_MODULE_EN_CONTROL_2, BIT(4)),
++	[AXP717_BOOST] = {
++		.name		= "boost",
++		.supply_name	= "vin1",
++		.of_match	= of_match_ptr("boost"),
++		.regulators_node = of_match_ptr("regulators"),
++		.type		= REGULATOR_VOLTAGE,
++		.id		= AXP717_BOOST,
++		.n_voltages	= (5510 - 4550) / 64 + 1,
++		.owner		= THIS_MODULE,
++		.min_uV		= 4550 * 1000,
++		.uV_step	= 64 * 1000,
++		.vsel_reg	= AXP717_BOOST_CONTROL,
++		.vsel_mask	= AXP717_BOOST_V_OUT_MASK,
++		.enable_reg	= AXP717_MODULE_EN_CONTROL_2,
++		.enable_mask	= BIT(4),
++		.ops		= &axp717_boost_ops,
++	},
+ };
+ 
+ /* DCDC ranges shared with AXP813 */
+diff --git a/include/linux/mfd/axp20x.h b/include/linux/mfd/axp20x.h
+index b352661d9..13b3d7dbe 100644
+--- a/include/linux/mfd/axp20x.h
++++ b/include/linux/mfd/axp20x.h
+@@ -121,6 +121,7 @@ enum axp20x_variants {
+ #define AXP717_BC_DETECT		0x05
+ #define AXP717_PMU_FAULT		0x08
+ #define AXP717_MODULE_EN_CONTROL_1	0x0b
++#define AXP717_VBUS_OTG_CONTROL		0x13
+ #define AXP717_MIN_SYS_V_CONTROL	0x15
+ #define AXP717_INPUT_VOL_LIMIT_CTRL	0x16
+ #define AXP717_INPUT_CUR_LIMIT_CTRL	0x17
+-- 
+2.56.0
+

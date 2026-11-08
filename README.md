@@ -23,7 +23,7 @@ Not submitted upstream yet.
 | Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Works alongside Wi-Fi at normal scan duty cycles (see docs/wifi-bt-coexistence.md) |
 | Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
 | Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
-| USB | ✅ Device mode with DMA (NCM network: 309 Mbit/s to the host, 154 Mbit/s from it), host mode on the second port |
+| USB | ✅ Data port: OTG by ID pin. Device mode with DMA (NCM network: ~310 Mbit/s to the host, ~155 from it, survives suspend); host mode with 5 V VBUS from the AXP717 (bus-powered hubs, sticks ~33 MB/s, Ethernet adapters). Second port: host only |
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
 | Not working yet | ❌ video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
 

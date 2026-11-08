@@ -1,0 +1,125 @@
+From d6b69c734df9322825079fda1e144ce9de25bd9d Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 02:15:10 +0100
+Subject: [PATCH 80/82] phy: sun4i-usb: Only drive phy0 VBUS while the ID pin
+ says host
+
+On dual-route SoCs the EHCI/OHCI that phy0 is routed to in host mode call
+phy_power_on() at probe, whatever the current role. With a usb0_vbus
+regulator that turned VBUS on as soon as no external VBUS was seen, for
+example when booting with nothing attached. It then stayed on after a PC
+was plugged in, driving VBUS against the host.
+
+With an ID GPIO, track the power request in power_on()/power_off() but
+only enable VBUS while the ID says host and no external VBUS is known to be
+present (unknown states, before the first scan, count as no). The detect
+work turns VBUS off first thing when the ID leaves host, and on again when
+it enters host with power requested.
+
+Also set poll_vbusen for the A100/A133: like the A31/A23/A33 pmics, the
+AXP717 raises no VBUS event while it drives VBUS itself. This keeps the
+detect work polling while VBUS is on, so an unplug is noticed even if the
+ID edge is missed.
+
+Tested on the TrimUI Smart Pro (A133, AXP717 boost as usb0_vbus, ID on
+PH8). PC attached: gadget, boost off. Powered hub: host, boost on. Hub
+unplugged: boost off within the next scan. PC re-attached: gadget, boost
+off.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 41 +++++++++++++++++++++++++--
+ 1 file changed, 39 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index 17fde0d85..e3da2985d 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -129,6 +129,7 @@ struct sun4i_usb_phy_data {
+ 		struct clk *clk;
+ 		struct clk *clk2;
+ 		bool regulator_on;
++		bool power_wanted;	/* phy0: VBUS requested via power_on */
+ 		int index;
+ 	} phys[MAX_PHYS];
+ 	/* phy0 / otg related variables */
+@@ -490,7 +491,25 @@ static int sun4i_usb_phy_power_on(struct phy *_phy)
+ 	struct sun4i_usb_phy_data *data = to_sun4i_usb_phy_data(phy);
+ 	int ret;
+ 
+-	if (!phy->vbus || phy->regulator_on)
++	if (!phy->vbus)
++		return 0;
++
++	if (phy->index == 0)
++		phy->power_wanted = true;
++
++	if (phy->regulator_on)
++		return 0;
++
++	/*
++	 * With an ID pin, phy0 may only drive VBUS while the ID says host and
++	 * no external VBUS is known to be present. On dual-route SoCs the
++	 * EHCI/OHCI that phy0 is routed to in host mode power the phy on at
++	 * probe whatever the role, so power_on alone is no reason to drive
++	 * VBUS; the detect work switches it on and off as the ID changes.
++	 * Unknown states (-1, before the first scan) count as "no".
++	 */
++	if (phy->index == 0 && data->id_det_gpio &&
++	    (data->id_det != 0 || data->vbus_det != 0))
+ 		return 0;
+ 
+ 	/* For phy0 only turn on Vbus if we don't have an ext. Vbus */
+@@ -518,7 +537,13 @@ static int sun4i_usb_phy_power_off(struct phy *_phy)
+ 	struct sun4i_usb_phy *phy = phy_get_drvdata(_phy);
+ 	struct sun4i_usb_phy_data *data = to_sun4i_usb_phy_data(phy);
+ 
+-	if (!phy->vbus || !phy->regulator_on)
++	if (!phy->vbus)
++		return 0;
++
++	if (phy->index == 0)
++		phy->power_wanted = false;
++
++	if (!phy->regulator_on)
+ 		return 0;
+ 
+ 	regulator_disable(phy->vbus);
+@@ -659,6 +684,12 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		sun4i_usb_phy0_set_id_detect(phy0, id_det);
+ 		data->id_det = id_det;
+ 		id_notify = true;
++
++		/* Leaving host role: stop driving VBUS before anything else. */
++		if (id_det != 0 && phy->regulator_on) {
++			regulator_disable(phy->vbus);
++			phy->regulator_on = false;
++		}
+ 	}
+ 
+ 	if (vbus_det != data->vbus_det) {
+@@ -687,6 +718,10 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		/* Re-route PHY0 if necessary */
+ 		if (data->cfg->phy0_dual_route)
+ 			sun4i_usb_phy0_reroute(data, id_det);
++
++		/* Entering host role: drive VBUS if the HCI asked for it. */
++		if (id_det == 0 && phy->power_wanted && !phy->regulator_on)
++			sun4i_usb_phy_power_on(phy0);
+ 	}
+ 
+ 	if (vbus_notify)
+@@ -1032,6 +1067,8 @@ static const struct sun4i_usb_phy_cfg sun50i_a100_cfg = {
+ 	.dedicated_clocks = true,
+ 	.hci_phy_ctl_clear = PHY_CTL_SIDDQ,
+ 	.phy0_dual_route = true,
++	/* The AXP717 raises no VBUS event while it drives VBUS itself. */
++	.poll_vbusen = true,
+ 	.siddq_in_base = true,
+ 	.siddq_helper = 1,
+ 	.tune_siddq_in_base = true,
+-- 
+2.56.0
+

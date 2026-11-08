@@ -1,0 +1,56 @@
+From 23774c0741c91ff7eadb92472a9b1b82be86dcfe Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 02:15:10 +0100
+Subject: [PATCH 79/82] phy: sun4i-usb: Don't let host controllers force phy0
+ into host mode
+
+usb_add_hcd() sets PHY_MODE_USB_HOST_SS on the PHYs of every host
+controller and falls back to PHY_MODE_USB_HOST when that fails.
+sun4i_usb_phy_set_mode() rejected HOST_SS, so on SoCs with a dual-route
+phy0 the EHCI/OHCI it is routed to in host mode switched phy0's dr_mode
+from OTG to host at probe. From then on the ID pin was ignored: the port
+stayed in host mode with a PC connected and the gadget never attached.
+
+Accept PHY_MODE_USB_HOST_SS as a no-op for phy0. This USB 2.0 PHY has no
+use for it, and it keeps the HCD from falling back to the host mode that
+overrides the OTG role. Explicit role changes (musb's "mode" attribute)
+are unaffected.
+
+Tested on the TrimUI Smart Pro (A133, OTG with ID on PH8 and EHCI0/OHCI0
+enabled): booting with a PC attached now comes up as a gadget, where before
+it came up stuck in host mode.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index a09373893..17fde0d85 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -547,6 +547,19 @@ static int sun4i_usb_phy_set_mode(struct phy *_phy,
+ 		return -EINVAL;
+ 	}
+ 
++	/*
++	 * usb_add_hcd() sets PHY_MODE_USB_HOST_SS (falling back to
++	 * PHY_MODE_USB_HOST) on the PHYs of every host controller, including
++	 * the EHCI/OHCI that phy0 is routed to in host mode on dual-route
++	 * SoCs. That must not override an OTG role: with dr_mode forced to
++	 * host, the ID pin is ignored and phy0 stays in host mode (and keeps
++	 * any VBUS on) after the cable is swapped. Accept the SuperSpeed host
++	 * mode, which this USB 2.0 PHY has no use for, as a no-op so the
++	 * fallback never happens.
++	 */
++	if (mode == PHY_MODE_USB_HOST_SS)
++		return 0;
++
+ 	switch (mode) {
+ 	case PHY_MODE_USB_HOST:
+ 		new_mode = USB_DR_MODE_HOST;
+-- 
+2.56.0
+

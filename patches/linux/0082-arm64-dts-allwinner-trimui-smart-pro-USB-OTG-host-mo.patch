@@ -1,0 +1,74 @@
+From 1d0f5f24d81d49fccb45094ad90edd9b10b71691 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 02:15:22 +0100
+Subject: [PATCH 82/82] arm64: dts: allwinner: trimui-smart-pro: USB OTG host
+ mode
+
+In host mode the dual-route USB0 PHY hands the USB-C data port to
+EHCI0/OHCI0, so enable them. Describe the AXP717 boost and use it as USB0
+VBUS; phy-sun4i-usb only drives it while the ID pin (PH8) reads host and no
+external VBUS is present.
+
+Tested: PC cable gives a gadget (NCM, 304 Mbit/s, survives suspend) with
+the boost off. An OTG hub, self-powered or bus-powered from the TrimUI,
+works in host mode: hub, USB stick (~33 MB/s) and AX88179A enumerate.
+Unplugging switches VBUS off, and re-attaching the PC gives the gadget again.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 73152670a..1467b3ace 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -527,6 +527,19 @@ usb_power: usb-power {
+ 		 * here yet, and switching any of them off has hung the board.
+ 		 */
+ 		regulators {
++			/*
++			 * 5 V boost, switched to the VBUS pin (AXP717 reg 0x13
++			 * bit 0, see axp717_boost_ops): VBUS for the USB-C data
++			 * port in host (OTG) mode. phy-sun4i-usb only enables it
++			 * while the ID pin (PH8) says host and no external VBUS
++			 * is present.
++			 */
++			reg_boost: boost {
++				regulator-min-microvolt = <5000000>;
++				regulator-max-microvolt = <5200000>;
++				regulator-name = "boost";
++			};
++
+ 			reg_dcdc1: dcdc1 {
+ 				regulator-always-on;
+ 				regulator-min-microvolt = <810000>;
+@@ -698,10 +711,23 @@ &usb_otg {
+ &usbphy {
+ 	usb0_id_det-gpios = <&pio 7 8 GPIO_ACTIVE_HIGH>; /* PH8 */
+ 	usb0_vbus_power-supply = <&usb_power>;
++	usb0_vbus-supply = <&reg_boost>;
+ 	usb1_vbus-supply = <&reg_usb1_vbus>;
+ 	status = "okay";
+ };
+ 
++/*
++ * USB-C data port in host (OTG) mode: the dual-route PHY hands the port to
++ * EHCI0/OHCI0 when PH8 (ID) is low; VBUS comes from the AXP717 boost.
++ */
++&ehci0 {
++	status = "okay";
++};
++
++&ohci0 {
++	status = "okay";
++};
++
+ /* Second USB-C port: host only */
+ &ehci1 {
+ 	status = "okay";
+-- 
+2.56.0
+
