@@ -51,3 +51,5 @@
 !tools/uart_session.py
 !tools/uart_push.py
 !tools/uboot_test_boot.py
+!tools/fnb58_read.py
+!tools/install_fnb58_udev_rule.sh
