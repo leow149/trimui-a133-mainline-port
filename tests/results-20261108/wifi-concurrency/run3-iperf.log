@@ -1,0 +1,15 @@
+	channel 1 (2412 MHz), width: 40 MHz, center1: 2422 MHz
+	channel 1 (2412 MHz), width: 20 MHz, center1: 2412 MHz
+[  5]   0.00-10.00  sec  38.2 MBytes  32.1 Mbits/sec    0            sender
+[  5]   0.00-10.02  sec  37.1 MBytes  31.1 Mbits/sec                  receiver
+
+iperf Done.
+[  5]   0.00-10.04  sec  42.9 MBytes  35.8 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  39.8 MBytes  33.3 Mbits/sec                  receiver
+
+iperf Done.
+round-trip min/avg/max = 1.913/5.034/16.644 ms
+[  107.735510] ieee80211 phy0: vif 1, configuring tx
+[  107.736068] ieee80211 phy0: vif 1, configuring tx
+[  107.736589] ieee80211 phy0: vif 1, configuring tx
+[  137.043799] sunxi-mmc 4021000.mmc: data error, sending stop command

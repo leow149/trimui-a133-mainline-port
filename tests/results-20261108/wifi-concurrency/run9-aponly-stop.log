@@ -1,0 +1,19 @@
+	Interface wlan0
+---APONLY
+ap0: interface state UNINITIALIZED->HT_SCAN
+state=ENABLED
+freq=2412
+	channel 1 (2412 MHz), width: 20 MHz, center1: 2412 MHz
+[   57.081433] ieee80211 phy0: vif 1, configuring tx
+[   57.082171] ieee80211 phy0: vif 1, configuring tx
+[   57.082929] ieee80211 phy0: vif 1, configuring tx
+---STOP
+Connected to xx:xx:xx:xx:xx:01 (on wlan0)
+	SSID: home-ssid
+round-trip min/avg/max = 1.996/4.395/7.240 ms
+---KEEP-AGAIN
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+ap0: interface state UNINITIALIZED->HT_SCAN
+state=ENABLED
+freq=2412
+round-trip min/avg/max = 2.352/3.100/3.971 ms

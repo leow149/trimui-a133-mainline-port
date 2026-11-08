@@ -1,0 +1,36 @@
+From 1cb185325055aae7435c6f5984fe13cd400e28b6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 01:20:21 +0100
+Subject: [PATCH] wifi: xradio: start AP with the current channel width
+
+wsm_start() always sent the 20 MHz PHY mode word. With a station joined at
+HT40 on the same channel, starting the AP on the second vif retuned the
+firmware to 20 MHz; the station stayed associated but stopped passing
+traffic until the AP was removed and the station reassociated.
+
+Use wsm_phy_mode_cur(), the same chandef-derived word the join uses, so both
+vifs run on the shared channel and width.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/wsm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
+index b7e313a14..6ab5815c3 100644
+--- a/drivers/net/wireless/xradio/wsm.c
++++ b/drivers/net/wireless/xradio/wsm.c
+@@ -1011,7 +1011,7 @@ int wsm_start(struct xradio_common *hw_priv, const struct wsm_start *arg,
+ 	wsm_cmd_lock(hw_priv);
+ 
+ 	if (xradio_ht40_api(hw_priv)) {
+-		WSM_PUT16(buf, wsm_phy_mode_20mhz(arg->band));
++		WSM_PUT16(buf, wsm_phy_mode_cur(hw_priv, arg->band));
+ 		WSM_PUT16(buf, arg->channelNumber);
+ 		WSM_PUT32(buf, arg->CTWindow);
+ 		WSM_PUT32(buf, arg->beaconInterval);
+-- 
+2.56.0
+

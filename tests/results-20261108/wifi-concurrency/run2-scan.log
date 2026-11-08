@@ -1,0 +1,20 @@
+  326 root      0:00 hostapd -dd -B -P /run/hostapd-ap0.pid -f /tmp/hostapd-dd.log /etc/hostapd/ap0.conf
+[   26.455334] ieee80211 phy0: vif 1, configuring tx
+[   26.455862] ieee80211 phy0: vif 1, configuring tx
+[   26.456583] ieee80211 phy0: vif 1, configuring tx
+[   54.749974] xradio_wlan mmc0:0001:1: missed interrupt
+[   60.898010] ieee80211 phy0: !!! vif_id=1
+[   61.885199] ieee80211 phy0: Interface ID:1 of type:3 added
+[   61.886164] ieee80211 phy0: vif 1, configuring tx
+[   61.886363] ieee80211 phy0: vif 1, configuring tx
+[   61.886552] ieee80211 phy0: vif 1, configuring tx
+[   61.886742] ieee80211 phy0: vif 1, configuring tx
+[   62.426839] ieee80211 phy0: vif 1, configuring tx
+[   62.427439] ieee80211 phy0: vif 1, configuring tx
+[   62.428207] ieee80211 phy0: vif 1, configuring tx
+[   62.429000] ieee80211 phy0: vif 1, configuring tx
+[   87.005995] xradio_wlan mmc0:0001:1: missed interrupt
+	type AP
+	channel 1 (2412 MHz), width: 40 MHz, center1: 2422 MHz
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 2.036/3.609/5.299 ms

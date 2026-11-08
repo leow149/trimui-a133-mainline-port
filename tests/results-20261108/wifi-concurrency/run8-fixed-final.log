@@ -1,0 +1,15 @@
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+ap0: interface state UNINITIALIZED->HT_SCAN
+grep: /tmp/hostapd-ap0.log: No such file or directory
+state=ENABLED
+freq=2412
+8 packets transmitted, 8 packets received, 0% packet loss
+round-trip min/avg/max = 1.935/10.261/58.377 ms
+[  5]   0.00-10.00  sec  38.1 MBytes  32.0 Mbits/sec    0            sender
+[  5]   0.00-10.01  sec  36.6 MBytes  30.7 Mbits/sec                  receiver
+[  5]   0.00-10.04  sec  41.9 MBytes  35.0 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  38.5 MBytes  32.3 Mbits/sec                  receiver
+[    1.690152] sun4i-codec 5096000.codec: DTS/ACPI name 'rx' not found, legacy failed (-19)
+[    2.437213] faux_driver regulatory: Direct firmware load for regulatory.db failed with error -2
+[    2.445973] cfg80211: failed to load regulatory.db
+[    2.518885] EXT4-fs (mmcblk2p2): warning: mounting unchecked fs, running e2fsck is recommended

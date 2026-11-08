@@ -1,0 +1,25 @@
+51:nl80211: 2402-2472 @ 40 MHz 20 mBm
+52:nl80211: 2457-2482 @ 20 MHz 20 mBm (no IR)
+53:nl80211: 2474-2494 @ 20 MHz 20 mBm (no OFDM) (no IR)
+84:ap0: interface state UNINITIALIZED->HT_SCAN
+85:Scan for neighboring BSSes prior to enabling 40 MHz channel
+86:40 MHz affected channel range: [2382,2462] MHz
+111:ap0: nl80211: New scan results available
+114:nl80211: Received scan results (2 BSSes)
+115:40 MHz affected channel range: [2397,2447] MHz
+117:Found overlapping 20 MHz HT BSS: xx:xx:xx:xx:xx:03 freq=2437
+118:Overlapping 20 MHz BSS is found
+119:20/40 MHz operation not permitted on channel pri=1 sec=5 based on overlapping BSSes
+120:Fallback to 20 MHz
+124:nl80211: Set freq 2412 (ht_enabled=1, vht_enabled=0, he_enabled=0, eht_enabled=0, bandwidth=20 MHz, cf1=2412 MHz, cf2=0 MHz)
+126:  * eht_enabled=0
+127:  * he_enabled=0
+128:  * vht_enabled=0
+129:  * ht_enabled=1
+180:  * eht_enabled=0
+181:  * he_enabled=0
+182:  * vht_enabled=0
+183:  * ht_enabled=1
+211:ap0: interface state HT_SCAN->ENABLED
+212:ap0: AP-ENABLED 
+231:ap0: interface state ENABLED->DISABLED

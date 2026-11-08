@@ -1,0 +1,19 @@
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+Line 10: unknown configuration item 'noscan'
+1 errors found in configuration file '/etc/hostapd/ap0.conf'
+Failed to set up interface with /etc/hostapd/ap0.conf
+Failed to initialize interface
+grep: /tmp/hostapd-ap0.log: No such file or directory
+Failed to connect to hostapd - wpa_ctrl_open: No such file or directory
+	channel 1 (2412 MHz), width: 40 MHz, center1: 2422 MHz
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 10.163/25.338/50.266 ms
+[  5]   0.00-10.00  sec  7.00 MBytes  5.87 Mbits/sec   19            sender
+[  5]   0.00-10.00  sec  6.00 MBytes  5.03 Mbits/sec                  receiver
+[  5]   0.00-10.02  sec  43.5 MBytes  36.4 Mbits/sec    0            sender
+[  5]   0.00-10.00  sec  40.9 MBytes  34.3 Mbits/sec                  receiver
+[  206.450817] ieee80211 phy0: vif 1, configuring tx
+[  206.451375] ieee80211 phy0: vif 1, configuring tx
+[  206.452093] ieee80211 phy0: vif 1, configuring tx
+[  206.452845] ieee80211 phy0: vif 1, configuring tx
+[  228.417993] ieee80211 phy0: !!! vif_id=1

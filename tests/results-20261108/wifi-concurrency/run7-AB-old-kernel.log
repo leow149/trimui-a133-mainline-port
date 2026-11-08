@@ -1,0 +1,16 @@
+Connected to xx:xx:xx:xx:xx:01 (on wlan0)
+	SSID: home-ssid
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+ap0: interface state UNINITIALIZED->HT_SCAN
+grep: /tmp/hostapd-ap0.log: No such file or directory
+state=ENABLED
+freq=2412
+
+--- 192.168.1.1 ping statistics ---
+8 packets transmitted, 0 packets received, 100% packet loss
+[   13.661970] ieee80211 phy0: vif 1, configuring tx
+[   14.247122] ieee80211 phy0: vif 1, configuring tx
+[   14.247786] ieee80211 phy0: vif 1, configuring tx
+[   14.248550] ieee80211 phy0: vif 1, configuring tx
+[   14.249297] ieee80211 phy0: vif 1, configuring tx
+[   18.379684] Bluetooth: MGMT ver 1.23

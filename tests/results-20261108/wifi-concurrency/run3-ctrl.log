@@ -1,0 +1,40 @@
+udhcpc: started, v1.37.0
+udhcpc: broadcasting discover
+udhcpc: broadcasting select for 192.168.1.185, server 192.168.1.1
+udhcpc: lease of 192.168.1.185 obtained from 192.168.1.1, lease time 43200
+	Interface wlan0
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+ap0: interface state UNINITIALIZED->HT_SCAN
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+grep: /tmp/hostapd-ap0.log: No such file or directory
+state=ENABLED
+phy=phy0
+freq=2412
+num_sta_non_erp=0
+num_sta_no_short_slot_time=0
+num_sta_no_short_preamble=0
+olbc=0
+num_sta_ht_no_gf=0
+num_sta_no_ht=0
+num_sta_ht_20_mhz=0
+num_sta_ht40_intolerant=0
+olbc_ht=0
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 2.006/15.763/52.943 ms
+	channel 1 (2412 MHz), width: 20 MHz, center1: 2412 MHz
+[  107.081343] ieee80211 phy0: vif 1, configuring tx
+[  107.734920] ieee80211 phy0: vif 1, configuring tx
+[  107.735510] ieee80211 phy0: vif 1, configuring tx
+[  107.736068] ieee80211 phy0: vif 1, configuring tx
+[  107.736589] ieee80211 phy0: vif 1, configuring tx
+  372 root      0:00 sh -c timeout 30 /root/ap-up.sh stop; timeout 5 iw dev | grep Interface; timeout 60 /root/ap-up.sh start --keep-sta; sleep 3; timeout 5 hostapd_cli -i ap0 status | head -12; timeout 10 ping -c5 -W2 192.168.1.1|tail -2; timeout 5 iw dev ap0 info|grep -i chan; timeout 5 dmesg | tail -5; ps | grep "[h]ostapd"
+  451 root      0:00 hostapd -B -P /run/hostapd-ap0.pid -f /tmp/hostapd-ap0.log /etc/hostapd/ap0.conf

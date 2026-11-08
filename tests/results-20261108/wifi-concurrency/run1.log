@@ -1,0 +1,66 @@
+keeping station on ch 1 (2412 MHz) [HT40+][SHORT-GI-20][SHORT-GI-40]
+ap0: interface state UNINITIALIZED->HT_SCAN
+nl80211: Could not configure driver mode
+ap0: AP-DISABLED 
+rc=0
+
+
+
+
+
+
+
+
+
+
+
+ap0: interface state ENABLED->DISABLED
+ap0: AP-DISABLED 
+ap0: CTRL-EVENT-TERMINATING 
+nl80211: deinit ifname=ap0 disabled_11b_rates=0
+phy#0
+	Interface ap0
+		ifindex 4
+		wdev 0x2
+		addr 02:00:34:9a:30:3b
+		ssid trimui-ap
+		type AP
+		channel 1 (2412 MHz), width: 20 MHz, center1: 2412 MHz
+		txpower 20.00 dBm
+		multicast TXQ:
+			qsz-byt	qsz-pkt	flows	drops	marks	overlmt	hashcol	tx-bytes	tx-packets
+			0	0	0	0	0	0	0	0		0
+	Interface wlan0
+		ifindex 2
+		wdev 0x1
+		addr 02:00:34:9a:30:3a
+		ssid home-ssid
+		type managed
+		channel 1 (2412 MHz), width: 40 MHz, center1: 2422 MHz
+		txpower 20.00 dBm
+		multicast TXQ:
+			qsz-byt	qsz-pkt	flows	drops	marks	overlmt	hashcol	tx-bytes	tx-packets
+			0	0	0	0	0	0	0	0		0
+--- 192.168.1.1 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 1.997/11.644/43.451 ms
+[   15.445961] wlan0: associate with xx:xx:xx:xx:xx:01 (try 1/3)
+[   15.459008] wlan0: RX AssocResp from xx:xx:xx:xx:xx:01 (capab=0x1031 status=0 aid=13)
+[   15.466975] ieee80211 phy0: vif 0, configuring tx
+[   15.467649] ieee80211 phy0: vif 0, configuring tx
+[   15.468260] ieee80211 phy0: vif 0, configuring tx
+[   15.468868] ieee80211 phy0: vif 0, configuring tx
+[   15.473136] wlan0: associated
+[   15.509997] ieee80211 phy0: CCMP_PAIRWISE keylen=16!
+[   15.524128] xradio_wlan mmc0:0001:1: received frame has no key status
+[   15.538379] wlan0: Limiting TX power to 20 (20 - 0) dBm as advertised by xx:xx:xx:xx:xx:01
+[   18.364235] Bluetooth: MGMT ver 1.23
+[   25.901162] ieee80211 phy0: Interface ID:1 of type:3 added
+[   25.902690] ieee80211 phy0: vif 1, configuring tx
+[   25.903012] ieee80211 phy0: vif 1, configuring tx
+[   25.903315] ieee80211 phy0: vif 1, configuring tx
+[   25.903616] ieee80211 phy0: vif 1, configuring tx
+[   26.454773] ieee80211 phy0: vif 1, configuring tx
+[   26.455334] ieee80211 phy0: vif 1, configuring tx
+[   26.455862] ieee80211 phy0: vif 1, configuring tx
+[   26.456583] ieee80211 phy0: vif 1, configuring tx

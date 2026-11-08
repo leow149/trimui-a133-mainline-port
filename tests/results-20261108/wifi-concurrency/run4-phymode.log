@@ -1,0 +1,2 @@
+ls: /sys/kernel/debug/dynamic_debug: No such file or directory
+sh: can't create /sys/kernel/debug/dynamic_debug/control: nonexistent directory

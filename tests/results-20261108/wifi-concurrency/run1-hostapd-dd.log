@@ -1,0 +1,42 @@
+random: Trying to read entropy from /dev/random
+Configuration file: /etc/hostapd/ap0.conf
+nl80211: Kernel version: Linux 7.2.0 (#46 SMP PREEMPT Sun Nov  8 00:10:25 UTC 2026; aarch64)
+nl80211: Maximum supported attribute ID: 367
+nl80211: Initialize interface ap0 (driver: xradio_wlan)
+nl80211: Supported cipher 00-0f-ac:1
+nl80211: Supported cipher 00-0f-ac:5
+nl80211: Supported cipher 00-0f-ac:2
+nl80211: Supported cipher 00-0f-ac:4
+nl80211: Supported cipher 00-0f-ac:10
+nl80211: Supported cipher 00-0f-ac:8
+nl80211: Supported cipher 00-0f-ac:9
+nl80211: Supported cipher 00-0f-ac:6
+nl80211: Supported cipher 00-0f-ac:13
+nl80211: Supported cipher 00-0f-ac:11
+nl80211: Supported cipher 00-0f-ac:12
+nl80211: Supports Probe Response offload in AP mode
+nl80211: Using driver-based off-channel TX
+nl80211: Driver-advertised extended capabilities (default) - hexdump(len=8): 04 00 00 00 00 00 00 40
+nl80211: Driver-advertised extended capabilities mask (default) - hexdump(len=8): 04 00 00 00 00 00 00 40
+nl80211: Use separate P2P group interface (driver advertised support)
+nl80211: key_mgmt=0x1ff0f enc=0xfef auth=0x7 flags=0x40005105b63fae0 flags2=0x103 rrm_flags=0x10 probe_resp_offloads=0x0 max_stations=0 max_remain_on_chan=500 max_scan_ssids=2
+nl80211: interface ap0 in phy phy0
+nl80211: Set mode ifindex 4 iftype 3 (AP)
+nl80211: Setup AP(ap0) - device_ap_sme=0 use_monitor=0
+nl80211: Subscribe to mgmt frames with AP handle 0xffff9a6c4040
+nl80211: Register frame type=0xb0 (WLAN_FC_STYPE_AUTH) nl_handle=0xffff9a6c4040 match= multicast=0
+nl80211: kernel reports: Match already configured
+nl80211: Register frame command failed (type=176): ret=-114 (Operation already in progress)
+nl80211: Register frame match - hexdump(len=0): [NULL]
+nl80211: Could not configure driver mode
+nl80211: deinit ifname=ap0 disabled_11b_rates=0
+nl80211: Remove monitor interface: refcount=0
+Segmentation fault
+[   25.902690] ieee80211 phy0: vif 1, configuring tx
+[   25.903012] ieee80211 phy0: vif 1, configuring tx
+[   25.903315] ieee80211 phy0: vif 1, configuring tx
+[   25.903616] ieee80211 phy0: vif 1, configuring tx
+[   26.454773] ieee80211 phy0: vif 1, configuring tx
+[   26.455334] ieee80211 phy0: vif 1, configuring tx
+[   26.455862] ieee80211 phy0: vif 1, configuring tx
+[   26.456583] ieee80211 phy0: vif 1, configuring tx
