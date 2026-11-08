@@ -1,0 +1,125 @@
+From f9b5ac9106671183bc17315cabb4839d0c277271 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:27:25 +0100
+Subject: [PATCH 85/86] power: supply: axp20x_usb_power: Set the AXP717 input
+ limit from BC1.2
+
+The AXP717 runs BC1.2 detection, but nothing acts on the result: the
+input current limit stays at whatever the boot loader or the PMIC reset
+default left (1.5 A here), whether the supply is a PC port or a charger.
+
+When the board gives an input-current-limit-microamp, apply a limit two
+seconds after VBUS appears (detection has finished by then): 500 mA for a
+standard downstream port, 1.5 A for a charging downstream port, and the
+board limit for a dedicated charger or anything not detected as a PC
+port, since USB-C chargers often show no BC1.2 signature. Also run the
+VBUS work once at probe, so a supply that is present at boot is handled.
+
+Tested on the TrimUI Smart Pro (limit 2.5 A) with a 140 W USB-C charger:
+DCP detected at boot, limit 2.5 A. At 2.5 A input and 1.92 A charge
+current the input power at the meter rises from 5.9 W to 8.0 W.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/power/supply/axp20x_usb_power.c | 59 ++++++++++++++++++++++++-
+ 1 file changed, 57 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/power/supply/axp20x_usb_power.c b/drivers/power/supply/axp20x_usb_power.c
+index 29f105f92..e7c0c7b91 100644
+--- a/drivers/power/supply/axp20x_usb_power.c
++++ b/drivers/power/supply/axp20x_usb_power.c
+@@ -93,6 +93,8 @@ struct axp20x_usb_power {
+ 	struct delayed_work vbus_detect;
+ 	int max_input_cur;
+ 	unsigned int old_status;
++	unsigned long bc_due;
++	bool bc_pending;
+ 	unsigned int online;
+ 	unsigned int num_irqs;
+ 	unsigned int irqs[] __counted_by(num_irqs);
+@@ -154,6 +156,43 @@ static void axp20x_usb_power_poll_vbus(struct work_struct *work)
+ 		mod_delayed_work(system_power_efficient_wq, &power->vbus_detect, DEBOUNCE_TIME);
+ }
+ 
++static int axp717_usb_power_set_input_current_limit(struct axp20x_usb_power *power,
++						    int intval);
++
++/*
++ * Pick the input current limit from the BC1.2 result once detection has had
++ * time to finish: 500 mA for a standard (SDP) port, 1.5 A for a charging
++ * downstream port (CDP), and the board limit (input-current-limit-microamp)
++ * for a dedicated charger or anything not detected as a PC port (USB-C
++ * chargers usually show no BC1.2 signature at all).
++ */
++#define AXP717_BC_SETTLE_TIME	msecs_to_jiffies(2000)
++
++static void axp717_usb_power_apply_bc_limit(struct axp20x_usb_power *power)
++{
++	unsigned int bc;
++	int limit;
++
++	if (regmap_field_read(power->usb_bc_det_fld, &bc))
++		return;
++
++	switch (bc) {
++	case 1:
++		limit = 500000;
++		break;
++	case 2:
++		limit = 1500000;
++		break;
++	default:
++		limit = power->max_input_cur;
++		break;
++	}
++
++	if (!axp717_usb_power_set_input_current_limit(power, limit))
++		dev_info(power->dev, "BC1.2 result %u: input current limit %d uA\n",
++			 bc, limit);
++}
++
+ static void axp717_usb_power_poll_vbus(struct work_struct *work)
+ {
+ 	struct axp20x_usb_power *power =
+@@ -166,10 +205,25 @@ static void axp717_usb_power_poll_vbus(struct work_struct *work)
+ 		return;
+ 
+ 	val &= AXP717_PWR_STATUS_VBUS_GOOD;
+-	if (val != power->old_status)
++	if (val != power->old_status) {
+ 		power_supply_changed(power->supply);
++		power->bc_pending = val && power->max_input_cur &&
++				    power->usb_bc_det_fld;
++		power->bc_due = jiffies + AXP717_BC_SETTLE_TIME;
++	}
+ 
+ 	power->old_status = val;
++
++	if (power->bc_pending) {
++		if (time_before(jiffies, power->bc_due)) {
++			mod_delayed_work(system_power_efficient_wq,
++					 &power->vbus_detect,
++					 power->bc_due - jiffies + 1);
++		} else {
++			power->bc_pending = false;
++			axp717_usb_power_apply_bc_limit(power);
++		}
++	}
+ }
+ 
+ static int axp20x_get_usb_type(struct axp20x_usb_power *power,
+@@ -1034,7 +1088,8 @@ static int axp20x_usb_power_probe(struct platform_device *pdev)
+ 			return ret;
+ 	}
+ 
+-	if (axp20x_usb_vbus_needs_polling(power))
++	/* Also run once at probe to pick up a supply that is already present. */
++	if (axp20x_usb_vbus_needs_polling(power) || power->max_input_cur)
+ 		queue_delayed_work(system_power_efficient_wq, &power->vbus_detect, 0);
+ 
+ 	return 0;
+-- 
+2.56.0
+
