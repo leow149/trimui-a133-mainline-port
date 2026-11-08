@@ -1,0 +1,84 @@
+From 4ae0e348ed7c117d3c5902b2533cd2c9c77f2e88 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 11:30:55 +0100
+Subject: [PATCH] power: supply: axp20x_battery: Read the AXP717 charge current
+ from its own register
+
+At the end of probe, max_ccc is refreshed from the hardware with
+axp20x_get_constant_charge_current(), which reads AXP20X_CHRG_CTRL1
+(0x33) for every variant. On the AXP717 the charge current lives in
+ICC_CHG_SET (0x62) and 0x33 reads 0, so max_ccc ends up 0. Lowering the
+charge current through constant_charge_current_max then still works, but
+any later attempt to raise it again fails with -EINVAL: writing 0 to
+pause charging leaves the battery unable to charge until reboot.
+
+Add a per-variant get_ccc callback and use it in probe.
+
+Tested on the TrimUI Smart Pro (DT limit 1 A, register 960 mA): 0,
+960000 and 512000 are accepted and land in 0x62 (0x00/0x0f/0x08),
+1024000 is rejected as above the limit, and an inline USB meter shows the
+input current go from ~60 mA back to ~1.1 A when charging is resumed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/power/supply/axp20x_battery.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/power/supply/axp20x_battery.c b/drivers/power/supply/axp20x_battery.c
+index 50ca8e110..d662e8f93 100644
+--- a/drivers/power/supply/axp20x_battery.c
++++ b/drivers/power/supply/axp20x_battery.c
+@@ -100,6 +100,7 @@ struct axp_data {
+ 	unsigned int	ccc_mask;
+ 	bool		has_fg_valid;
+ 	const struct	power_supply_desc *bat_ps_desc;
++	int	(*get_ccc)(struct axp20x_batt_ps *batt, int *val);
+ 	int	(*get_max_voltage)(struct axp20x_batt_ps *batt, int *val);
+ 	int	(*set_max_voltage)(struct axp20x_batt_ps *batt, int val);
+ 	int	(*cfg_iio_chan)(struct platform_device *pdev,
+@@ -1032,6 +1033,7 @@ static const struct axp_data axp209_data = {
+ 	.set_max_voltage = axp20x_battery_set_max_voltage,
+ 	.cfg_iio_chan = axp209_bat_cfg_iio_channels,
+ 	.set_bat_info = axp209_set_battery_info,
++	.get_ccc = axp20x_get_constant_charge_current,
+ };
+ 
+ static const struct axp_data axp221_data = {
+@@ -1045,6 +1047,7 @@ static const struct axp_data axp221_data = {
+ 	.set_max_voltage = axp22x_battery_set_max_voltage,
+ 	.cfg_iio_chan = axp209_bat_cfg_iio_channels,
+ 	.set_bat_info = axp209_set_battery_info,
++	.get_ccc = axp20x_get_constant_charge_current,
+ };
+ 
+ static const struct axp_data axp717_data = {
+@@ -1057,6 +1060,7 @@ static const struct axp_data axp717_data = {
+ 	.set_max_voltage = axp717_battery_set_max_voltage,
+ 	.cfg_iio_chan = axp717_bat_cfg_iio_channels,
+ 	.set_bat_info = axp717_set_battery_info,
++	.get_ccc = axp717_get_constant_charge_current,
+ };
+ 
+ static const struct axp_data axp813_data = {
+@@ -1070,6 +1074,7 @@ static const struct axp_data axp813_data = {
+ 	.set_max_voltage = axp20x_battery_set_max_voltage,
+ 	.cfg_iio_chan = axp209_bat_cfg_iio_channels,
+ 	.set_bat_info = axp209_set_battery_info,
++	.get_ccc = axp20x_get_constant_charge_current,
+ };
+ 
+ static const struct of_device_id axp20x_battery_ps_id[] = {
+@@ -1137,7 +1142,7 @@ static int axp20x_power_probe(struct platform_device *pdev)
+ 	 * Update max CCC to a valid value if battery info is present or set it
+ 	 * to current register value by default.
+ 	 */
+-	axp20x_get_constant_charge_current(axp20x_batt, &axp20x_batt->max_ccc);
++	axp20x_batt->data->get_ccc(axp20x_batt, &axp20x_batt->max_ccc);
+ 
+ 	return 0;
+ }
+-- 
+2.56.0
+
