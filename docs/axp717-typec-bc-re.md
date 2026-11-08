@@ -124,3 +124,13 @@ With Type-C mode off (0xE3 bit1 = 0) 0xE7 reads 0, so it says nothing about the 
 - PMIC VBUS ADC: 4.972 V at ~60 mA vs meter 5.019 V; 4.10 V at 1.12 A vs meter 4.855 V
   => ~0.67 ohm between meter output and PMIC (cable + connectors). VINDPM (0x16 = 0x01) = 3.96 V; stock 4.0 V.
   Higher input current would push VBUS into VINDPM and throttle itself; a better cable matters more than Rp.
+
+## Plug-flip test (2026-11-08 ~11:57, A-to-C cable from the meter's USB-A out, UGREEN hub USB-A port; tests/cc_watch.sh)
+- With detection armed (e3=13, e1=0d), 0xE7 alternates 0x41 <-> 0x44 every ~5 s, attached or not:
+  while UNPLUGGED (VBUS 8 mV, on=0x18, bc=0x00) it still read 0x41, and after re-plugging in the flipped
+  orientation it continued the same 41/44 alternation. IRQ4 never latched. Plug/unplug/orientation do not show up.
+- Conclusion: the AXP717 CC logic runs, but its CC pins evidently do not see the receptacle's CC lines on this board
+  (consistent with TrimUI's own pmu_usb_typec_used = 0, and with PH8 being driven by a separate CC/ID circuit,
+  docs/usb-otg-vbus-research.md). Reading the charger's Rp level through the PMIC is not possible here.
+- Unplug sequence otherwise normal: on 0x39 -> 0x18 (VBUS gone) -> 0x38/bc 0x10 -> 0x39/bc 0x70 (DCP) within ~5 s.
+- The FNB-58 survived the unplug/replug with fnb58_logger.py holding it (supports the re-open theory of the crashes).
