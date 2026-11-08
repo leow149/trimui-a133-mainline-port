@@ -1,0 +1,97 @@
+From 98a9f8e0e5e0803a6a5cc3c77ae7cc3ba3e4cd0f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:11:57 +0100
+Subject: [PATCH] phy: sun4i-usb: Give a USB-C source time to switch VBUS on
+ before driving it
+
+On the TrimUI Smart Pro the board's CC/ID circuit pulls the ID pin low
+(host) for any USB-C partner, a charger included. A USB-C source only
+switches VBUS on after tCCDebounce plus tVBUSON (up to ~475 ms), so phy0
+saw "host, no external VBUS" and enabled the AXP717 boost at once. The
+TrimUI then back-fed 5.1 V into the charger's port, and the charger,
+which must not switch on while VBUS is already present, never did: the
+battery discharged while plugged in.
+
+Only drive VBUS once the ID has said host for one second and no
+external VBUS has shown up by then.
+
+Tested: on a 140 W USB-C charger (C-to-C) the boost stays off at boot
+and across an unplug/replug, VBUS comes from the charger and the battery
+charges.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 27 ++++++++++++++++++++++++---
+ 1 file changed, 24 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index e3da2985d..3dd7c8c28 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -95,6 +95,14 @@
+  * otherwise we get Vbus errors
+  */
+ #define DEBOUNCE_TIME			msecs_to_jiffies(50)
++/*
++ * A USB-C source (charger) only switches VBUS on after tCCDebounce (up to
++ * 200 ms) plus tVBUSON (up to 275 ms), and a board ID circuit may report
++ * host as soon as anything is attached to CC. Wait this long after the ID
++ * goes to host before driving VBUS ourselves, else we back-feed the
++ * charger, which then never switches its own VBUS on.
++ */
++#define HOST_VBUS_DELAY			msecs_to_jiffies(1000)
+ #define POLL_TIME			msecs_to_jiffies(250)
+ 
+ struct sun4i_usb_phy_cfg {
+@@ -144,6 +152,7 @@ struct sun4i_usb_phy_data {
+ 	int id_det_irq;
+ 	int vbus_det_irq;
+ 	int id_det;
++	unsigned long host_vbus_after;
+ 	int vbus_det;
+ 	struct delayed_work detect;
+ };
+@@ -509,7 +518,8 @@ static int sun4i_usb_phy_power_on(struct phy *_phy)
+ 	 * Unknown states (-1, before the first scan) count as "no".
+ 	 */
+ 	if (phy->index == 0 && data->id_det_gpio &&
+-	    (data->id_det != 0 || data->vbus_det != 0))
++	    (data->id_det != 0 || data->vbus_det != 0 ||
++	     time_before(jiffies, data->host_vbus_after)))
+ 		return 0;
+ 
+ 	/* For phy0 only turn on Vbus if we don't have an ext. Vbus */
+@@ -684,6 +694,8 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		sun4i_usb_phy0_set_id_detect(phy0, id_det);
+ 		data->id_det = id_det;
+ 		id_notify = true;
++		if (id_det == 0)
++			data->host_vbus_after = jiffies + HOST_VBUS_DELAY;
+ 
+ 		/* Leaving host role: stop driving VBUS before anything else. */
+ 		if (id_det != 0 && phy->regulator_on) {
+@@ -719,8 +731,17 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		if (data->cfg->phy0_dual_route)
+ 			sun4i_usb_phy0_reroute(data, id_det);
+ 
+-		/* Entering host role: drive VBUS if the HCI asked for it. */
+-		if (id_det == 0 && phy->power_wanted && !phy->regulator_on)
++	}
++
++	/*
++	 * Host role: drive VBUS if the HCI asked for it, once the partner had
++	 * HOST_VBUS_DELAY to switch on its own VBUS (power_on checks both).
++	 */
++	if (data->id_det == 0 && phy->power_wanted && !phy->regulator_on) {
++		if (time_before(jiffies, data->host_vbus_after))
++			mod_delayed_work(system_percpu_wq, &data->detect,
++					 data->host_vbus_after - jiffies + 1);
++		else
+ 			sun4i_usb_phy_power_on(phy0);
+ 	}
+ 
+-- 
+2.56.0
+
