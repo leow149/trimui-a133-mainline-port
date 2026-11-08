@@ -1,0 +1,6 @@
+/sys/kernel/debug/usb/musb-hdrc.2.auto
+[    2.191909] usb_phy_generic usb_phy_generic.1.auto: dummy supplies not allowed for exclusive requests (id=vbus)
+[    2.193332] musb-hdrc musb-hdrc.2.auto: MUSB HDRC host driver
+[    2.202377] musb-hdrc musb-hdrc.2.auto: new USB bus registered, assigned bus number 3
+configured
+1

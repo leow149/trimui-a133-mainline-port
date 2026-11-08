@@ -1,0 +1,8 @@
+ 00:05:31 up 0 min,  0 users,  load average: 0.00, 0.00, 0.00
+5: gpio-232 (                    |usb0_id_det         ) in  hi IRQ 
+configured
+1
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    0.000000] arch_timer: cp15 timer running at 24.00MHz (phys).
+[    2.199331] usb_phy_generic usb_phy_generic.1.auto: dummy supplies not allowed for exclusive requests (id=vbus)
+[    2.216320] ieee80211 phy0: Selected rate control algorithm 'minstrel_ht'

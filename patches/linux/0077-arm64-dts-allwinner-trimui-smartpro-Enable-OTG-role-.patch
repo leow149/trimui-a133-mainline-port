@@ -1,0 +1,52 @@
+From 0fe4a06c66ce5b0b4bd47aa8fa299e6e575b8289 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 01:07:59 +0100
+Subject: [PATCH] arm64: dts: allwinner: trimui-smartpro: Enable OTG role
+ switching on the USB-C port
+
+Describe the ID pin (PH8, pulled up on the board: high = peripheral) and
+take VBUS presence from the AXP717 USB power supply, then switch the port
+to dr_mode "otg". No usb0_vbus-supply is described, so the board does not
+drive VBUS in host mode; only self-powered devices work through an OTG
+adapter for now.
+
+Tested with the PC cable: PH8 reads high, the role stays peripheral, the
+NCM gadget stays configured (299 Mbit/s) and survives suspend.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index dca900ed0..73152670a 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -685,15 +685,19 @@ gamepad {
+ };
+ 
+ /*
+- * USB-C port in peripheral mode. Stock runs it as OTG with ID on PH8 and VBUS
+- * sensed by the AXP717; neither is described yet.
++ * Charging/data USB-C port, OTG: the ID pin is PH8 (pulled up on the board,
++ * low when an OTG adapter is plugged in) and VBUS presence comes from the
++ * AXP717. No usb0_vbus-supply is described yet, so in host mode the board
++ * does not drive VBUS: only self-powered devices work through an adapter.
+  */
+ &usb_otg {
+-	dr_mode = "peripheral";
++	dr_mode = "otg";
+ 	status = "okay";
+ };
+ 
+ &usbphy {
++	usb0_id_det-gpios = <&pio 7 8 GPIO_ACTIVE_HIGH>; /* PH8 */
++	usb0_vbus_power-supply = <&usb_power>;
+ 	usb1_vbus-supply = <&reg_usb1_vbus>;
+ 	status = "okay";
+ };
+-- 
+2.56.0
+

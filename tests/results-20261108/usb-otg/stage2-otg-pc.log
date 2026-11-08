@@ -1,0 +1,24 @@
+ 00:06:18 up 0 min,  0 users,  load average: 0.00, 0.00, 0.00
+ gpio-232 (                    |usb0_id_det         ) in  hi IRQ 
+configured
+1
+[    1.490361] sun4i-drm display-engine: bound 6100000.mixer (ops sun8i_mixer_ops)
+[    1.497713] sun4i-drm display-engine: bound 6510000.dpss-top (ops sun8i_tcon_top_ops)
+[    1.505632] sun4i-tcon 6511000.lcd-controller: Missing LVDS properties, Please upgrade your DT
+[    1.514253] sun4i-tcon 6511000.lcd-controller: LVDS output disabled
+[    1.520949] sun4i-drm display-engine: No panel or bridge found... RGB output disabled
+[    1.528790] sun4i-drm display-engine: bound 6511000.lcd-controller (ops sun4i_tcon_ops)
+[    1.536835] sun4i-drm display-engine: bound 6504000.dsi (ops sun6i_dsi_ops)
+[    1.544593] [drm] Initialized sun4i-drm 1.0.0 for display-engine on minor 1
+[    1.551692] sun4i-drm display-engine: [drm] Cannot find any crtc or sizes
+[    1.710940] sun4i-codec 5096000.codec: DTS/ACPI name 'rx' not found, legacy failed (-19)
+[    2.169086] sun4i-drm display-engine: [drm] fb0: sun4i-drmdrmfb frame buffer device
+[    2.191909] usb_phy_generic usb_phy_generic.1.auto: dummy supplies not allowed for exclusive requests (id=vbus)
+[    2.193332] musb-hdrc musb-hdrc.2.auto: MUSB HDRC host driver
+[    2.202377] musb-hdrc musb-hdrc.2.auto: new USB bus registered, assigned bus number 3
+1-0:1.0
+2-0:1.0
+3-0:1.0
+usb1
+usb2
+usb3

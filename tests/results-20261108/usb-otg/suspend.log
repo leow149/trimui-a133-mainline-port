@@ -1,0 +1,5 @@
+--- cycle 1 00:06:44 state=configured
+cycle 1: configured within 0 s
+done
+configured
+ gpio-232 (                    |usb0_id_det         ) in  hi IRQ 
