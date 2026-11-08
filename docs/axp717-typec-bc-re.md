@@ -151,3 +151,13 @@ Meter values read off its display (its PC link times out in this setup, see belo
 - FNB-58 PC link: with its measuring side on the charger and its data cable directly on the laptop, the first HID
   write times out every time (3/3), usbhid then resets it and it drops off. It worked for 45 min while both sides
   hung off the same charger-powered hub (shared ground). Don't open it in this setup.
+
+## BC1.2 on PC ports (2026-11-08, kernel #56)
+- Laptop USB port (USB-net working) and the UGREEN hub port both read BC1.2 result 3 (DCP), so patch 0085 picks 2.5 A
+  there, like stock (which always went to 2.5 A). Likely cause: the TrimUI's own PHY/gadget is on D+/D- while the PMIC
+  runs detection. Real DCPs short D+/D-, which can't coexist with a working data link.
+- Effect on the laptop: VBUS at the PMIC 4.07 V (VINDPM 3.96 V limits the draw), no overcurrent on the laptop,
+  gadget fine. So no harm, but "500 mA on a PC" does not happen.
+- A reliable PC signal is the gadget being configured by a host (UDC state "configured"; musb calls
+  usb_phy_set_power() with the configured bMaxPower).
+- OTG host check after patch 0084: a USB stick on an OTG adapter got VBUS (0x13 = 0x01) and enumerated (EHCI, high speed).
