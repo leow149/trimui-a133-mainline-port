@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read voltage/current from a FNIRSI FNB-58 USB power meter over /dev/hidrawN.
 
+# Do not call this in a loop: re-opening the meter quickly has wedged it. Use tools/fnb58_logger.py.
 Usage: fnb58_read.py [seconds] [/dev/hidrawN]
 Prints one line per second (mean of the samples in that second) and a summary.
 Needs read/write access to the hidraw node (tools/install_fnb58_udev_rule.sh).
