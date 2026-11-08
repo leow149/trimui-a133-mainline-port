@@ -109,3 +109,18 @@ Wall charger through the FNB-58, battery 27 %, charging:
 `05: 70` (BC1.2 result = 3, DCP), `0b: 1d` (bit3 CC logic on, bit4 BC1.2 on; stock 0x0d), `16: 01`,
 `17: 1c` (input limit (28*50+100) = 1500 mA = sysfs input_current_limit), `e0: 21 e1: 09 e2: 07 e3: 10 e7: 00`.
 With Type-C mode off (0xE3 bit1 = 0) 0xE7 reads 0, so it says nothing about the charger's Rp yet.
+
+## CC experiments (2026-11-08, charger through FNB-58, no replug; scripts tests/cc_probe*.sh, all restore e1/e3)
+- No public AXP717 datasheet; upstream commit 7a4c13c59222 only names 0xE1 TYPEC_CC_AA_EN, 0xE3 TYPEC_CC_MODE_CONTROL,
+  0xE7 TYPEC_CC_STATUS (volatile), plus IRQs TYPEC_PLUGIN/REMOVE.
+- 0xE3 low bits 01/10/11 alone: 0xE7 stays 00, no IRQ, VBUS and input current unchanged.
+- 0xE1: with bit2 (0x0c/0x0d) or after such a step, 0xE7 becomes 0x40/0x41/0x44 and IRQ4 (0x4c) bit2 latches;
+  bit1 alone/bit0+bit3 alone usually 00. Results depend on history (same e1/e3 gave 00 at first, 40 later; the low
+  nibble alternated 44 -> 41 at fixed settings) => a state machine that updates on attach/toggle events.
+  After restoring e1=09/e3=10, 0xE7 stayed 0x40 (was 00 before the experiments). Never disturbed VBUS.
+- Next: decode with controlled outside changes (cable flip = orientation; PC port vs 5V/3A charger = Rp level).
+
+## VBUS drop (more relevant for charge speed than negotiation)
+- PMIC VBUS ADC: 4.972 V at ~60 mA vs meter 5.019 V; 4.10 V at 1.12 A vs meter 4.855 V
+  => ~0.67 ohm between meter output and PMIC (cable + connectors). VINDPM (0x16 = 0x01) = 3.96 V; stock 4.0 V.
+  Higher input current would push VBUS into VINDPM and throttle itself; a better cable matters more than Rp.
