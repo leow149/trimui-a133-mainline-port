@@ -59,4 +59,9 @@ Hardware test (kernel #53):
 Notes:
 - `/root/i2creg` reads (i2c-dev with a forced address, racing the kernel) occasionally return a stale byte (0xb4 on random registers). Re-read before trusting one value.
 - The sunxi musb DEVCTL is at 0x41, not 0x60.
-- Open: the AXP717 integrated Type-C CC block (0xe1 = 0x09, 0xe3 = 0x10) is left at its defaults; it was not needed. Not tested: a bare USB-A OTG adapter, and a suspend with a host-mode device attached.
+- Open: the AXP717 integrated Type-C CC block (0xe1 = 0x09, 0xe3 = 0x10) is left at its defaults; it was not needed.
+- Verified 2026-11-08 (second hands-on round):
+  - s2idle with a bus-powered hub attached: the hub, stick and AX88179A are reset (not disconnected) on resume, boost stays on, and the stick reads 32.4 MB/s afterwards.
+  - Boot with the hub attached: host role, boost on, and devices enumerated by ~2.7 s.
+  - Plain USB-A to USB-C OTG adapter with the stick, powered by the TrimUI: high-speed, 33.5 MB/s.
+  - Each unplug: boost off, 0x13 = 0x00, device role. The PC re-attach gives the gadget.
