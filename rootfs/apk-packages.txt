@@ -5,3 +5,4 @@ dbus
 bluez
 hostapd
 dnsmasq
+eudev retroarch retroarch-assets retroarch-joypad-autoconfig libretro-core-info libretro-gambatte libretro-mgba libretro-fceumm libretro-beetle-psx-hw libretro-mrboom ppsspp moonlight-qt  (edge chroot, 2026-11-08)
