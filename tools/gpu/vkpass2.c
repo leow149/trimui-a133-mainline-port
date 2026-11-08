@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <vulkan/vulkan.h>
 #include "lin_vert.h"
 #include "lin_frag.h"
@@ -349,5 +350,7 @@ int main(int argc, char **argv)
 	printf("depth=%d dcmp=%s dwrite=%d shader=%s | ", depth, dc, dwrite, shn);
 	printf("%ux%u %s rt=%s src=%s(%ux%u) load=%s draws=%d rot=%d blend=%d under=%d batch=%d: per pass min %.2f med %.2f max %.2f ms\n", W, H, flat ? "flat" : "tex",
 	       rt_lin ? "linear" : "optimal", srcm, SW, SH, ld, draws, rot, blend, under, batch, t[0], t[reps / 2], t[reps - 1]);
+	int hold = atoi(arg(argc, argv, "hold", "0"));   /* keep the device (and parameter memory) alive */
+	if (hold) { fflush(stdout); sleep(hold); }
 	return 0;
 }
