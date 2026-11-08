@@ -19,15 +19,15 @@ Not submitted upstream yet.
 | GPU | ✅ PowerVR GE8300 at 696 MHz: Vulkan (Mesa, patched), OpenGL 3.2 / OpenGL ES 3.1 through Zink |
 | Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
 | Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
-| Wi-Fi | ✅ XR829, 2.4 GHz, WPA2 and WPA3 (SAE + management frame protection), HT40 + short GI: ~35-39 Mbit/s receive, ~30-32 Mbit/s send (iperf3, 40 MHz AP); stable MAC address |
+| Wi-Fi | ✅ XR829, 2.4 GHz, HT40 + short GI: ~35-39 Mbit/s receive, ~30-32 Mbit/s send (iperf3, 40 MHz AP); stable MAC address. Station, access point (hotspot, `rootfs/root/ap-up.sh`) and station + AP at the same time. WPA2 recommended: WPA3 (SAE) works but is slow (management frame protection in the firmware), see docs/wifi-throughput.md |
 | Bluetooth | ✅ XR829 (H4 on UART1): firmware loaded at boot by a userspace uploader, classic and LE scanning work; stable BD address. Works alongside Wi-Fi at normal scan duty cycles (see docs/wifi-bt-coexistence.md) |
 | Audio | ✅ Stereo speakers and headphones, jack detection mutes the speakers |
-| Power | ✅ Battery level and charging (AXP717), CPU frequency scaling 408-1464 MHz, thermal throttling, suspend (s2idle) |
-| USB | ✅ Data port: OTG by ID pin. Device mode with DMA (NCM network: ~310 Mbit/s to the host, ~155 from it, survives suspend); host mode with 5 V VBUS from the AXP717 (bus-powered hubs, sticks ~33 MB/s, Ethernet adapters). Second port: host only |
+| Power | ✅ Battery level and charging (AXP717): 2.5 A input limit, 1.92 A charge current, battery current reading. No USB-PD or Type-C negotiation: the board has no PD chip and the PMIC's CC pins aren't connected (docs/axp717-typec-bc-re.md). CPU frequency scaling 408-1464 MHz, thermal throttling (CPU trips at 80, 88 and 95 °C; GPU at 88 °C, critical at 110 °C), suspend (s2idle) |
+| USB | ✅ Data port: OTG by ID pin. Device mode with DMA (NCM network: ~310 Mbit/s to the host, ~155 from it, survives suspend); host mode with 5 V VBUS from the AXP717 (bus-powered hubs, sticks ~33 MB/s, Ethernet adapters), switched by the ID pin; no back-feed into a USB-C charger (docs/usb-otg.md). Second port: host only |
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
-| Not working yet | ❌ video encoding, GPU frequency scaling. VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
+| Not working yet | ❌ video encoding. GPU frequency scaling isn't implemented (the GPU runs at a fixed 696 MHz). VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
 
-Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm is tested; wake by the power and volume keys is not.
+Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm and by the power, volume up and volume down keys is verified. The USB gadget re-enumerates after resume (patch 0073) and the GPU survives suspend (patch 0076).
 
 [`docs/gpu-video.md`](docs/gpu-video.md) describes the GPU and video bring-up in detail.
 
@@ -35,7 +35,7 @@ Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active
 
 ```
 patches/
-  linux/         Kernel series (60 patches) and defconfig
+  linux/         Kernel series (87 patches) and defconfig
   u-boot/        Board support, DRAM arbiter priorities, Wi-Fi MAC alias (3 patches)
   tf-a/          Watchdog fix for system reset (1 patch)
   mesa/          PowerVR Vulkan driver fixes (5 patches) and build_mesa.sh
@@ -50,7 +50,7 @@ rootfs/          Files installed on the device
 image/           SD card image: assemble_image.sh, update_sd_kernel.sh, extlinux.conf
 tools/           Development tools (see below), tools/gpu/ for GPU and display tests
 tests/video/     Decoder test: ve_test.sh compares hardware and software decoding
-docs/            gpu-video.md; history/ for older write-ups
+docs/            gpu-video.md, USB OTG, Wi-Fi, Bluetooth, charging and VP9 notes; history/ for older write-ups
 vendor-notes/    Register dumps and notes from the stock firmware, for comparison
 ```
 
