@@ -134,3 +134,20 @@ With Type-C mode off (0xE3 bit1 = 0) 0xE7 reads 0, so it says nothing about the 
   docs/usb-otg-vbus-research.md). Reading the charger's Rp level through the PMIC is not possible here.
 - Unplug sequence otherwise normal: on 0x39 -> 0x18 (VBUS gone) -> 0x38/bc 0x10 -> 0x39/bc 0x70 (DCP) within ~5 s.
 - The FNB-58 survived the unplug/replug with fnb58_logger.py holding it (supports the re-open theory of the crashes).
+
+## Charge-rate test on a USB-C charger (2026-11-08 ~12:30, 140 W charger -> FNB-58 -> C-to-C -> TrimUI, kernel #55)
+Meter values read off its display (its PC link times out in this setup, see below). Battery ~39 %, idle, back cover off.
+| setting | meter | PMIC VBUS | est. into battery |
+|---|---|---|---|
+| ilim 1.5 A, ICC 0x0f (960 mA) | 5.17 V 1.14 A = 5.9 W | 4.92 V | ~1.0-1.1 A |
+| ilim 2.5 A, ICC 0x1e (1920 mA) | 5.13 V 1.56 A = 8.0 W | 4.79 V | ~1.45-1.5 A |
+- Path resistance meter->PMIC ~0.22 ohm (vs ~0.67 ohm with the A-to-C cable).
+- At 1.92 A the battery current briefly read ~2x higher, then settled after ~20 s: probably PMIC die-temperature
+  regulation (die ADC raw 650 = ~65 C). No PMU fault (0x08 = 0), 0x01 = 0xb2 (charging).
+- BC1.2 result on this charger port: Unknown (no DCP signature). So "500 mA unless DCP" would cripple USB-C chargers;
+  stock never used the BC result anyway (always pmu_usbad_cur 2.5 A ~5 s after plug-in).
+- current_now is unreliable: raw in_current5 alternates 2853 / 4276 (ratio 1.5) between samples and reads ~2x the
+  power-balance estimate. Driver item to investigate.
+- FNB-58 PC link: with its measuring side on the charger and its data cable directly on the laptop, the first HID
+  write times out every time (3/3), usbhid then resets it and it drops off. It worked for 45 min while both sides
+  hung off the same charger-powered hub (shared ground). Don't open it in this setup.
