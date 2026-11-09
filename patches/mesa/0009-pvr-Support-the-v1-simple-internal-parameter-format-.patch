@@ -26,7 +26,6 @@ Verified with tools/gpu/vkxfer (125 cases): 80 pass/45 crash before, 125 pass
 after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../vulkan/pvr_arch_job_transfer.c            | 94 ++++++++++++++++++-

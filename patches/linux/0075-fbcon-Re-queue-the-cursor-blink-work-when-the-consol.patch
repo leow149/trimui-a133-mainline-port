@@ -19,7 +19,6 @@ Tested on the TrimUI Smart Pro (A133): /sys/class/graphics/fbcon/cursor_blink
 after each of two boots. Before, the blink stopped intermittently at boot.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/video/fbdev/core/fbcon.c | 12 +++++++++++-

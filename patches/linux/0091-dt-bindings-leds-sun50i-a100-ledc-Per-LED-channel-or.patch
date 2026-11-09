@@ -7,7 +7,6 @@ Subject: [PATCH 91/94] dt-bindings: leds: sun50i-a100-ledc: Per-LED channel
 A chain can mix LEDs with different channel orders (the TrimUI Smart Pro has an RGB logo LED in front of GRB stick rings): allow led@0..2 subnodes giving the colour of each channel. Also allow vled-supply, the regulator powering the LEDs.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../leds/allwinner,sun50i-a100-ledc.yaml      | 27 +++++++++++++++++++

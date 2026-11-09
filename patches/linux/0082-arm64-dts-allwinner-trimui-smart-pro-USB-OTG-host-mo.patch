@@ -15,7 +15,6 @@ works in host mode: hub, USB stick (~33 MB/s) and AX88179A enumerate.
 Unplugging switches VBUS off, and re-attaching the PC gives the gadget again.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 26 +++++++++++++++++++

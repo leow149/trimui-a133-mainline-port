@@ -20,7 +20,6 @@ enumerated with only the TrimUI powering it (stick read 32.7 MB/s). With
 only bit 4 set, the hub dropped off.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/mfd/axp20x.c                 |  1 +

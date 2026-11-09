@@ -21,7 +21,6 @@ enabled): booting with a PC attached now comes up as a gadget, where before
 it came up stuck in host mode.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 13 +++++++++++++

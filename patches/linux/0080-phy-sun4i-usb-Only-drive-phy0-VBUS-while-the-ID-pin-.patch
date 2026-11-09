@@ -27,7 +27,6 @@ unplugged: boost off within the next scan. PC re-attached: gadget, boost
 off.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 41 +++++++++++++++++++++++++--

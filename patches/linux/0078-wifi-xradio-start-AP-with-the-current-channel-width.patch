@@ -12,7 +12,6 @@ Use wsm_phy_mode_cur(), the same chandef-derived word the join uses, so both
 vifs run on the shared channel and width.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/wsm.c | 2 +-

@@ -18,7 +18,6 @@ before suspend and after each of three s2idle cycles, with no pvr errors.
 Before, the first render after one suspend cycle lost the device.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/gpu/drm/imagination/pvr_drv.c | 6 ++++++

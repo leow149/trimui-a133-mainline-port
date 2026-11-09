@@ -26,7 +26,6 @@ still slowly rising at 1.2-1.32 GHz. Stock-condition behaviour is
 not measured yet.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 78 +++++++++++++++++++

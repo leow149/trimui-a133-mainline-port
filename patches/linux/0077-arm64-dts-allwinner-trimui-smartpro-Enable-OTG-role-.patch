@@ -14,7 +14,6 @@ Tested with the PC cable: PH8 reads high, the role stays peripheral, the
 NCM gadget stays configured (299 Mbit/s) and survives suspend.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts | 10 +++++++---

@@ -31,7 +31,6 @@ cage composite 18.7 -> 7.3 ms; RetroArch mGBA under rotated cage 29 -> 58.5 fps
 (Vulkan) / 29 -> 56.5 fps (glcore via Zink).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/pco/pco_data.h                |  9 +++-

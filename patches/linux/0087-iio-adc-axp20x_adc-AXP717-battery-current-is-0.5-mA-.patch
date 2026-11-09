@@ -16,7 +16,6 @@ The register only reflects charge current; while the battery supplies
 the system (charging paused) it reads near zero.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/iio/adc/axp20x_adc.c | 4 +++-

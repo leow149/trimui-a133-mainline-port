@@ -9,7 +9,6 @@ Take an optional vled-supply. Turn it off in system sleep and on again on resume
 Tested on the TrimUI Smart Pro: the 23 LEDs go dark in s2idle and come back with their colours.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/leds/leds-sun50i-a100.c | 80 ++++++++++++++++++++++++++++++++-

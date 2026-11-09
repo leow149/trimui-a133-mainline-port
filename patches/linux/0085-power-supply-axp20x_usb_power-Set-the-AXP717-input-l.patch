@@ -20,7 +20,6 @@ DCP detected at boot, limit 2.5 A. At 2.5 A input and 1.92 A charge
 current the input power at the meter rises from 5.9 W to 8.0 W.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/power/supply/axp20x_usb_power.c | 59 ++++++++++++++++++++++++-

@@ -20,7 +20,6 @@ Tested: tools/gpu/vklinear (compute mode) at 240x160, 256x224, 320x240,
 Details: docs/pvr-linear-texture.md.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 ---
 --- a/src/imagination/pco/pco_nir_tex.c
 +++ b/src/imagination/pco/pco_nir_tex.c

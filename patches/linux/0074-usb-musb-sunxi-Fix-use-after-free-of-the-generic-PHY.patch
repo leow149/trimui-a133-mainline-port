@@ -21,7 +21,6 @@ Tested on the TrimUI Smart Pro (A133): three unbind/bind cycles of
 throughput unchanged (310 Mbit/s).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/usb/musb/sunxi.c | 26 ++++++++++++++++++--------

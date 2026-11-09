@@ -13,7 +13,6 @@ Tested on the TrimUI Smart Pro (A133): a 20 s s2idle suspend no longer
 resets the board.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/watchdog/sunxi_wdt.c | 30 ++++++++++++++++++++++++++++++

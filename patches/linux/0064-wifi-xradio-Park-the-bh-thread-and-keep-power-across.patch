@@ -23,7 +23,6 @@ Tested on the TrimUI Smart Pro (A133, XR829): three consecutive 5 s s2idle
 cycles with WiFi associated. The link pings after each resume.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/bh.c   |  7 -------

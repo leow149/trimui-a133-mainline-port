@@ -23,7 +23,6 @@ TX is unchanged here because TX status still folds the rate entries
 into 20 MHz rate indices (next patch).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/main.c   |  3 ++

@@ -19,7 +19,6 @@ during the disconnect now pass without a hang. The late-confirm path did
 not trigger in those rounds, so the fix is verified by code inspection.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/tx.c | 8 ++++++++

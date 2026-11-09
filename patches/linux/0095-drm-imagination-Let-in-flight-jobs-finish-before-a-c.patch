@@ -21,7 +21,6 @@ vkcube on the GE8300; none in 10 runs and in 15 SIGKILLs of a busy Vulkan
 application after the change.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/gpu/drm/imagination/pvr_queue.c | 25 +++++++++++++++++++++++++

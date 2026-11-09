@@ -7,7 +7,6 @@ Subject: [PATCH 89/94] dt-bindings: serial: snps-dw-apb-uart: Add Allwinner
 The A100/A133 UARTs are DesignWare 8250s; the driver already matches allwinner,sun50i-a100-uart.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml | 1 +

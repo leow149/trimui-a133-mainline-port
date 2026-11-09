@@ -7,7 +7,6 @@ Subject: [PATCH 94/94] arm64: dts: allwinner: trimui-smart-pro: vcc-pad off in
 Give the LED controller vcc-pad as its vled-supply, so the consumers (both pad MCUs and the LEDs) switch it off in system sleep; regulator-off-in-suspend has no effect in s2idle, drop it. Name the pad MCU nodes mcu, as serial.yaml expects, and fix a stale comment on USB host VBUS.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../dts/allwinner/sun50i-a133-trimui-smartpro.dts     | 11 +++++------

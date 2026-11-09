@@ -15,7 +15,6 @@ Tested with a 140 W USB-C charger: 0x62 = 0x1e after boot, input
 limit 2.5 A, input power 8.0 W at the meter (was 5.9 W).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts   | 9 ++++++++-

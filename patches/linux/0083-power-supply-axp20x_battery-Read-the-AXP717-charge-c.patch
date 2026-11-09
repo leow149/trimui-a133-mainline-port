@@ -20,7 +20,6 @@ Tested on the TrimUI Smart Pro (DT limit 1 A, register 960 mA): 0,
 input current go from ~60 mA back to ~1.1 A when charging is resumed.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/power/supply/axp20x_battery.c | 7 ++++++-

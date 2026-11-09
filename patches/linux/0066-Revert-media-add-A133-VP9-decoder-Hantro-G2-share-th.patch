@@ -24,7 +24,6 @@ Tested on the TrimUI Smart Pro: no hantro probe, cedrus is /dev/video0,
 and H.264/H.265 decode is still 150/150 frames identical to software.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi         | 10 ----------

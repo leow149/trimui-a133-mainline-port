@@ -18,7 +18,6 @@ home-ssid (40 MHz), iperf3 vs host laptop, 10 s runs:
 Total vs. 20 MHz before HT40: TX +10%, RX +25-30%.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/tx.c  | 62 ++++++++++++++++++++++++++++++-

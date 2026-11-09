@@ -15,7 +15,6 @@ This is what exposed the zero TX block-ack mask and the lack of TX
 aggregation.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/Makefile  |   3 +-
