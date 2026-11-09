@@ -1,0 +1,138 @@
+--- a/drivers/gpu/drm/imagination/pvr_debugfs.c
++++ b/drivers/gpu/drm/imagination/pvr_debugfs.c
+@@ -5,6 +5,13 @@
+ 
+ #include "pvr_device.h"
+ #include "pvr_fw_trace.h"
++#include "pvr_free_list.h" /* DEBUG-PMDUMP */
++#include "pvr_gem.h"
++
++#include <linux/fs.h>
++#include <linux/slab.h>
++#include <linux/vmalloc.h>
++#include <linux/xarray.h>
+ 
+ #include <linux/dcache.h>
+ #include <linux/debugfs.h>
+@@ -16,8 +23,121 @@
+ #include <drm/drm_file.h>
+ #include <drm/drm_print.h>
+ 
++/* DEBUG-PMDUMP: snapshot of all free-list (parameter memory) pages with the
++ * DMA address of every page, for reverse-engineering the parameter format.
++ * Layout: per node a 64-byte header ("PMND", fl id, node idx, pages, size),
++ * the page contents, then one u64 DMA address per page.
++ */
++struct pvr_pmdump {
++	size_t size;
++	u8 *buf;
++};
++
++struct pvr_pmdump_hdr {
++	u32 magic;
++	u32 fl_id;
++	u32 node_idx;
++	u32 num_pages;
++	u64 size;
++	u8 pad[40];
++};
++
++static int pvr_pmdump_open(struct inode *inode, struct file *file)
++{
++	struct pvr_device *pvr_dev = inode->i_private;
++	struct pvr_free_list_node *node;
++	struct pvr_free_list *fl;
++	struct pvr_pmdump *d;
++	unsigned long id;
++	size_t total = 0, off = 0;
++
++	d = kzalloc(sizeof(*d), GFP_KERNEL);
++	if (!d)
++		return -ENOMEM;
++
++	xa_for_each(&pvr_dev->free_list_ids, id, fl) {
++		mutex_lock(&fl->lock);
++		list_for_each_entry(node, &fl->mem_block_list, node)
++			total += sizeof(struct pvr_pmdump_hdr) + pvr_gem_object_size(node->mem_obj) +
++				 (pvr_gem_object_size(node->mem_obj) >> PAGE_SHIFT) * sizeof(u64);
++		mutex_unlock(&fl->lock);
++	}
++
++	d->buf = vzalloc(total ? total : 1);
++	if (!d->buf) {
++		kfree(d);
++		return -ENOMEM;
++	}
++
++	xa_for_each(&pvr_dev->free_list_ids, id, fl) {
++		u32 idx = 0;
++
++		mutex_lock(&fl->lock);
++		list_for_each_entry(node, &fl->mem_block_list, node) {
++			size_t sz = pvr_gem_object_size(node->mem_obj);
++			struct pvr_pmdump_hdr h = { .magic = 0x444e4d50, .fl_id = id,
++						    .node_idx = idx++, .num_pages = node->num_pages,
++						    .size = sz };
++			void *map;
++
++			if (off + sizeof(h) + sz + (sz >> PAGE_SHIFT) * sizeof(u64) > total)
++				break;
++			memcpy(d->buf + off, &h, sizeof(h));
++			off += sizeof(h);
++			map = pvr_gem_object_vmap(node->mem_obj);
++			if (!IS_ERR_OR_NULL(map)) {
++				memcpy(d->buf + off, map, sz);
++				pvr_gem_object_vunmap(node->mem_obj);
++			}
++			off += sz;
++			for (size_t pg = 0; pg < (sz >> PAGE_SHIFT); pg++) {
++				dma_addr_t a = 0;
++
++				pvr_gem_get_dma_addr(node->mem_obj, pg << PAGE_SHIFT, &a);
++				*(u64 *)(d->buf + off) = a;
++				off += sizeof(u64);
++			}
++		}
++		mutex_unlock(&fl->lock);
++	}
++
++	d->size = off;
++	file->private_data = d;
++	return 0;
++}
++
++static ssize_t pvr_pmdump_read(struct file *file, char __user *ubuf, size_t count, loff_t *ppos)
++{
++	struct pvr_pmdump *d = file->private_data;
++
++	return simple_read_from_buffer(ubuf, count, ppos, d->buf, d->size);
++}
++
++static int pvr_pmdump_release(struct inode *inode, struct file *file)
++{
++	struct pvr_pmdump *d = file->private_data;
++
++	vfree(d->buf);
++	kfree(d);
++	return 0;
++}
++
++static const struct file_operations pvr_pmdump_fops = {
++	.owner = THIS_MODULE,
++	.open = pvr_pmdump_open,
++	.read = pvr_pmdump_read,
++	.release = pvr_pmdump_release,
++	.llseek = default_llseek,
++};
++
++static void pvr_pmdump_debugfs_init(struct pvr_device *pvr_dev, struct dentry *dir)
++{
++	debugfs_create_file("dump", 0400, dir, pvr_dev, &pvr_pmdump_fops);
++}
++
+ static const struct pvr_debugfs_entry pvr_debugfs_entries[] = {
+ 	{"pvr_fw", pvr_fw_trace_debugfs_init},
++	{"pvr_pm", pvr_pmdump_debugfs_init},
+ };
+ 
+ void

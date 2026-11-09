@@ -1,5 +1,8 @@
-From: Claude (TrimUI port) <noreply@anthropic.com>
-Subject: [PATCH] pvr: Support the v1 simple internal parameter format in the transfer queue
+From 679268ba28c78b9a04c784594b7206135813903f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 9 Nov 2026 07:24:39 +0100
+Subject: [PATCH 9/9] pvr: Support the v1 simple internal parameter format in
+ the transfer queue
 
 Clip blits (custom-mapping multi-pass copies, e.g. buffer->image uploads of
 3x1/159x1/17x13 into twiddled images, depth/stencil aspect copies, some scaled
@@ -21,7 +24,14 @@ transfer submissions) and from TA-written parameter memory:
 
 Verified with tools/gpu/vkxfer (125 cases): 80 pass/45 crash before, 125 pass
 after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
+ .../vulkan/pvr_arch_job_transfer.c            | 94 ++++++++++++++++++-
+ 1 file changed, 89 insertions(+), 5 deletions(-)
+
 diff --git a/src/imagination/vulkan/pvr_arch_job_transfer.c b/src/imagination/vulkan/pvr_arch_job_transfer.c
 index df05efe..5cb517e 100644
 --- a/src/imagination/vulkan/pvr_arch_job_transfer.c
@@ -169,3 +179,6 @@ index df05efe..5cb517e 100644
     } else {
        /* clang-format off */
        pvr_csb_pack(&regs->isp_rgn, CR_ISP_RGN, isp_rgn);
+-- 
+2.53.0
+

@@ -16,7 +16,7 @@ Not submitted upstream yet.
 |---|---|
 | Boot | ✅ Mainline U-Boot + TF-A, blob-free boot chain, DRAM at the stock timings |
 | Display | ✅ MIPI DSI panel (ER68576, detected by its panel ID; other IDs get the OTM1289A init), backlight, console rotated to landscape |
-| GPU | ✅ PowerVR GE8300 at 696 MHz: Vulkan (Mesa, patched), OpenGL 3.2 / OpenGL ES 3.1 through Zink |
+| GPU | ✅ PowerVR GE8300 at 696 MHz: Vulkan (Mesa, patched), OpenGL 3.2 / OpenGL ES 3.1 through Zink. vkmark 265; RetroArch (mgba, gambatte, fceumm) at full rate under the cage compositor in Vulkan and OpenGL mode. PPSSPP's Qt frontend doesn't start (it requires desktop OpenGL 4.6) |
 | Video decoding | ✅ H.264 and H.265 (bit-exact, up to 4K), MPEG-2; behind the IOMMU, zero-copy to the display |
 | Input | ✅ Buttons and both sticks (two UART microcontrollers) as one gamepad, power and volume keys, slider switch |
 | Wi-Fi | ✅ XR829, 2.4 GHz, HT40 + short GI: ~35-39 Mbit/s receive, ~30-32 Mbit/s send (iperf3, 40 MHz AP); stable MAC address. Station, access point (hotspot, `rootfs/root/ap-up.sh`) and station + AP at the same time. WPA2 recommended: WPA3 (SAE) works but is slow (management frame protection in the firmware), see docs/wifi-throughput.md |
@@ -38,7 +38,7 @@ patches/
   linux/         Kernel series (94 patches) and defconfig
   u-boot/        Board support, DRAM arbiter priorities, Wi-Fi MAC alias (3 patches)
   tf-a/          Watchdog fix for system reset (1 patch)
-  mesa/          PowerVR Vulkan driver fixes (5 patches) and build_mesa.sh
+  mesa/          PowerVR Vulkan driver fixes (9 patches) and build_mesa.sh
 rootfs/          Files installed on the device
   etc/inittab           busybox init: mounts, watchdog, the scripts below, serial shell
   etc/usb-net.sh        USB network gadget (10.55.0.2) and SSH server at boot
@@ -50,7 +50,10 @@ rootfs/          Files installed on the device
 image/           SD card image: assemble_image.sh, update_sd_kernel.sh, extlinux.conf
 tools/           Development tools (see below), tools/gpu/ for GPU and display tests
 tests/video/     Decoder test: ve_test.sh compares hardware and software decoding
-docs/            gpu-video.md, USB OTG, Wi-Fi, Bluetooth, charging and VP9 notes; history/ for older write-ups
+tests/gpu-matrix/ GPU/display test matrix: RetroArch cores, Wayland/X11 clients, frame rates, underflows
+docs/            gpu-video.md, gpu-perf-vs-stock.md (fragment throughput), gpu-v1-transfer.md (transfer
+                 path on the v1 parameter format), USB OTG, Wi-Fi, Bluetooth, charging and VP9 notes;
+                 history/ for older write-ups
 vendor-notes/    Register dumps and notes from the stock firmware, for comparison
 ```
 

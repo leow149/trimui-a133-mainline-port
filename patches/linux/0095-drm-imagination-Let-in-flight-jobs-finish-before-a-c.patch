@@ -1,0 +1,71 @@
+From f1aad64eaef6013e84c2f9532c0cc80d0baa4e16 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 9 Nov 2026 07:23:29 +0100
+Subject: [PATCH 95/95] drm/imagination: Let in-flight jobs finish before a
+ closed file's VM is unmapped
+
+pvr_drm_driver_postclose() kills the contexts of the file and, for contexts
+still referenced by in-flight jobs, immediately unmaps the whole VM context
+(pvr_vm_unmap_all()). pvr_context_kill_queues() is documented to let the
+submitted jobs finish, but nothing waited for them: a fragment job still
+running when an application exits (e.g. on SIGTERM mid-frame) then
+page-faults on its region headers, the firmware reports a guilty lockup and
+the GPU is reset for all contexts.
+
+Wait for the last queued job of the queue in pvr_queue_kill(); jobs on a
+queue complete in order. The wait is bounded by the scheduler timeout, a
+hung job is handled by the timeout handler.
+
+Reproduced in about half of the runs by stopping a cage session running
+vkcube on the GE8300; none in 10 runs and in 15 SIGKILLs of a busy Vulkan
+application after the change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JJfik1hpStPgtN7deJRwXG
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/gpu/drm/imagination/pvr_queue.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/drivers/gpu/drm/imagination/pvr_queue.c b/drivers/gpu/drm/imagination/pvr_queue.c
+index 24a8645aa..06d36fe21 100644
+--- a/drivers/gpu/drm/imagination/pvr_queue.c
++++ b/drivers/gpu/drm/imagination/pvr_queue.c
+@@ -1435,9 +1435,34 @@ void pvr_queue_device_post_reset(struct pvr_device *pvr_dev)
+  */
+ void pvr_queue_kill(struct pvr_queue *queue)
+ {
++	struct dma_fence *finished = NULL;
++
+ 	drm_sched_entity_destroy(&queue->entity);
++
++	/* Let the jobs already submitted finish before the caller tears down the
++	 * VM context: when a file is closed with jobs still in flight, its VM
++	 * mappings are removed right after the queues are killed, and a job still
++	 * executing then page-faults (reported by the FW as a guilty lockup,
++	 * which resets the GPU for every context). Jobs on a queue complete in
++	 * order, so waiting for the last one is enough. The wait is bounded by the
++	 * scheduler timeout; a hung job is handled by the timeout handler.
++	 */
++	if (queue->last_queued_job_scheduled_fence) {
++		struct drm_sched_fence *s_fence =
++			to_drm_sched_fence(queue->last_queued_job_scheduled_fence);
++
++		if (s_fence)
++			finished = dma_fence_get(&s_fence->finished);
++	}
++
+ 	dma_fence_put(queue->last_queued_job_scheduled_fence);
+ 	queue->last_queued_job_scheduled_fence = NULL;
++
++	if (finished) {
++		dma_fence_wait_timeout(finished, false,
++				       msecs_to_jiffies(SCHED_TIMEOUT_PERIOD));
++		dma_fence_put(finished);
++	}
+ }
+ 
+ /**
+-- 
+2.56.0
+

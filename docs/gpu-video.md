@@ -11,7 +11,7 @@ on the way, and how it was verified. Patch numbers refer to `patches/linux/` (ke
 | GPU | PowerVR GE8300 (BVNC 22.102.54.38) on the mainline `powervr` driver, at 696 MHz |
 | Vulkan | Mesa's PowerVR driver with 5 patches; Vulkan 1.2 as reported by `vulkaninfo` |
 | OpenGL | OpenGL 3.2 core/compat and OpenGL ES 3.1 through Zink (Alpine's Mesa 26.2) |
-| Benchmark | vkmark 2025.01, headless, 1280x720: score 208 |
+| Benchmark | vkmark 2025.01, headless, 1280x720: score 265 (208 before patch 0008) |
 | Video decode | Cedrus: H.264 and H.265 bit-exact to FFmpeg's software decoders, MPEG-2 within IDCT rounding |
 | 4K | 3840x2160 H.264 decodes bit-exact, 26-33 fps depending on the scene; IOMMU, no large CMA needed |
 
@@ -43,6 +43,9 @@ on the way, and how it was verified. Patch numbers refer to `patches/linux/` (ke
 - **GPU clock** (`0050`, `0051`): mainline left the GPU at the 432 MHz boot rate of its PLL. The
   stock firmware runs it at 700 MHz; the closest PLL rate is 696 MHz. The stock firmware does so
   with vdd-gpu-sys at 0.9 V; mainline keeps the rail at 1.0 V.
+- **App exit with jobs in flight** (`0095`): closing the DRM file unmapped the VM while a job
+  still ran, so an app exiting mid-frame page-faulted its fragment job and the firmware reset the GPU
+  for every context. The queue kill now waits for the last submitted job.
 - **Firmware**: `powervr/rogue_22.102.54.38_v1.fw` from Imagination's
   [linux-firmware fork](https://gitlab.freedesktop.org/imagination/linux-firmware/-/tree/powervr)
   (branch `powervr`), built into the kernel with `CONFIG_EXTRA_FIRMWARE`.
@@ -59,6 +62,10 @@ Mesa's PowerVR Vulkan driver knows the GE8300 but only implemented the v2 parame
 | `0003` | Nothing passed the depth test with D16/D24 depth buffers | On v1 cores the ISP compares the background depth as F32 whatever the format |
 | `0004` | The display flipped buffers before the GPU had finished them (all PowerVR cores) | Signals of a submission without command buffers now wait for its waits |
 | `0005` | High CPU use with dynamic rendering (Zink): every render recompiled and re-created its setup | Device caches for load-op and end-of-tile programs and for render targets |
+| `0006` | 2D RGBA8 and 32-bit image stores | Done in software in the shader |
+| `0007` | No linear filtering advertised for linear (strided) 2D images | Advertise it |
+| `0008` | Low fill rate: no hidden surface removal for any app shader, null-descriptor branches, shader-emulated color write enable, zero-padded sample data | See [gpu-perf-vs-stock.md](gpu-perf-vs-stock.md); RetroArch under cage 29 -> 59 fps |
+| `0009` | Transfer clip blits (odd-size uploads, depth/stencil copies, some blits/clears) crashed or hung on v1 cores; Xwayland and Qt Quick apps died | v1 fast-2D control stream and primitive block format, see [gpu-v1-transfer.md](gpu-v1-transfer.md) |
 
 The quarter-coverage bug (`0002`) was found by dumping the region headers: the tiling engine
 marked exactly ceil(w/32) x ceil(h/32) headers valid, independent of every other render setting.
@@ -94,6 +101,7 @@ the output rotated to landscape. Vulkan apps use the driver's Wayland WSI direct
 
 ### Measurements
 
+- vkmark with patch 0008: score 265 (desktop 214, texture 370 fps). Before:
 - vkmark 2025.01, `--winsys headless -s 1280x720`: score 208 (vertex 262, texture 242, shading
   108-187, blur 37, desktop 81, cube 357, clear 609 fps). No GPU errors; GPU 49 to 60 °C.
 - `weston-simple-egl -f -b` (Zink, no vsync, in cage): about 240 fps at 65 % of a CPU core.
