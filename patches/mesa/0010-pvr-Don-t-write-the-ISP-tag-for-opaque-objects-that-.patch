@@ -1,0 +1,123 @@
+From 36b37a91a86bbd69f62e32275ed50f806bbc2608 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 14:24:13 +0100
+Subject: [PATCH] pvr: Don't write the ISP tag for opaque objects that write no
+ colour
+
+A pipeline whose colour writes are all masked off (colorWriteMask 0) gets
+its colour stores removed by nir_lower_blend, so its fragment shader
+writes nothing. It was still an opaque object that writes the ISP tag:
+with hidden surface removal it won every pixel it covered, the shaders of
+the objects behind it never ran and the pixels kept the background (or
+whatever the output registers held). Only in tiles where a translucent
+object forced the earlier tags to be shaded first did the colour survive.
+
+PPSSPP's Vulkan backend draws PSP depth-only clears this way (it can't
+turn a clear with different colour/depth masks into a real clear), so in
+Need for Speed Most Wanted 5-1-0 only the 16x16 tiles around the player's
+blended car showed the 3D scene and the rest stayed black. The same game
+through PPSSPP's GL backend (Zink) was fine because there the depth-only
+clear is a real clear.
+
+Record in the fragment shader data whether the shader stores any output,
+and set tagwritedisable for opaque objects whose shader writes none, as
+is already done for pipelines without a fragment shader. Punch-through
+and depth feedback objects keep the tag write, their shader has to run
+for the ISP feedback; shaders with memory writes are depth feedback.
+
+Tested with tools/gpu/vkhsr.c (green draw, optional blended rect, then a
+colour-mask-0 draw with depth, depth LEQUAL, stencil-only and discard
+variants): 6 of 8 cases failed before, all pass now; vkrtt, vkscissor and
+vkrenderarea still pass.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ src/imagination/pco/pco_data.h               |  4 ++++
+ src/imagination/pco/pco_nir_pvfio.c          | 19 +++++++++++++++++++
+ src/imagination/vulkan/pvr_arch_cmd_buffer.c | 15 ++++++++++++++-
+ 3 files changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/src/imagination/pco/pco_data.h b/src/imagination/pco/pco_data.h
+index 661dc80e0a1..74a54f81a70 100644
+--- a/src/imagination/pco/pco_data.h
++++ b/src/imagination/pco/pco_data.h
+@@ -129,6 +129,10 @@ typedef struct _pco_fs_data {
+       bool sample_check_skip;
+       /** Whether alpha-to-one is statically disabled. */
+       bool alpha_to_one_skip;
++      /** Whether the shader writes no colour output (e.g. all colour writes
++       * masked off): such an object must not write the ISP tag.
++       */
++      bool no_output;
+    } uses;
+ 
+    struct {
+diff --git a/src/imagination/pco/pco_nir_pvfio.c b/src/imagination/pco/pco_nir_pvfio.c
+index 540e4cd099c..d334d000c38 100644
+--- a/src/imagination/pco/pco_nir_pvfio.c
++++ b/src/imagination/pco/pco_nir_pvfio.c
+@@ -40,6 +40,23 @@ struct pfo_state {
+    bool may_discard; /** Whether the shader contains a demote/terminate. */
+ };
+ 
++static bool shader_has_output_stores(nir_shader *shader)
++{
++   nir_foreach_function_impl (impl, shader) {
++      nir_foreach_block (block, impl) {
++         nir_foreach_instr (instr, block) {
++            if (instr->type == nir_instr_type_intrinsic &&
++                nir_instr_as_intrinsic(instr)->intrinsic ==
++                   nir_intrinsic_store_output) {
++               return true;
++            }
++         }
++      }
++   }
++
++   return false;
++}
++
+ static bool shader_may_discard(nir_shader *shader)
+ {
+    nir_foreach_function_impl (impl, shader) {
+@@ -880,6 +897,8 @@ bool pco_nir_pfo(nir_shader *shader, pco_fs_data *fs)
+    if (!shader->info.internal)
+       progress |= z_replicate(shader, &state);
+ 
++   fs->uses.no_output = !shader_has_output_stores(shader);
++
+    util_dynarray_fini(&state.stores);
+    util_dynarray_fini(&state.loads);
+ 
+diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+index 87b70ddf6a5..55be8d3f699 100644
+--- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
++++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+@@ -7179,9 +7179,22 @@ pvr_setup_isp_faces_and_control(struct pvr_cmd_buffer *const cmd_buffer,
+    pvr_csb_pack (&isp_control, TA_STATE_ISPCTL, ispctl) {
+       ispctl.upass = pass_info->isp_userpass;
+ 
++      /* An opaque object whose fragment shader writes no colour (all colour
++       * writes masked off, or no colour attachment) only updates depth and
++       * stencil. If it wrote the tag it would win hidden surface removal and
++       * hide the colour of the objects behind it: their fragment shaders
++       * would never run, and the pixel would keep the background instead.
++       * Punch-through and depth feedback objects still need their shader to
++       * run for the ISP feedback.
++       */
++      const bool fs_writes_nothing =
++         cmd_buffer->state.gfx_pipeline->fs_data.fs.uses.no_output &&
++         fragment_shader_state->pass_type == ROGUE_TA_PASSTYPE_OPAQUE;
++
+       /* TODO: is shader_bo ever NULL? Figure out what to do. */
+       ispctl.tagwritedisable = rasterizer_discard ||
+-                               !fragment_shader_state->shader_bo || skip_fs;
++                               !fragment_shader_state->shader_bo || skip_fs ||
++                               fs_writes_nothing;
+ 
+       ispctl.two_sided = is_two_sided;
+       ispctl.bpres = header->pres_ispctl_fb || header->pres_ispctl_bb;
+-- 
+2.53.0
+
