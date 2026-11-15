@@ -1,7 +1,7 @@
-From 644bfdd96071c00c9206d48af24d3b8e1885373a Mon Sep 17 00:00:00 2001
+From 13e9f00be3ff2350e4d3876cff54a0881feae51b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:23 +0100
-Subject: [PATCH 01/60] dt-bindings: pwm: Add Allwinner A133 PWM controller
+Subject: [PATCH 001/106] dt-bindings: pwm: Add Allwinner A133 PWM controller
 
 The A133 (sun50iw10) PWM block differs from the sun4i-style PWM handled by
 pwm-sun4i: per-pair clock configuration and a separate gate/bypass register.
@@ -10,35 +10,34 @@ Document it for the new pwm-sun50i-a133 driver.
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- .../pwm/allwinner,sun50i-a133-pwm.yaml        | 67 +++++++++++++++++++
- 1 file changed, 67 insertions(+)
+ .../pwm/allwinner,sun50i-a133-pwm.yaml        | 63 +++++++++++++++++++
+ 1 file changed, 63 insertions(+)
  create mode 100644 Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
 
 diff --git a/Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml b/Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
 new file mode 100644
-index 000000000..59e4fba3b
+index 000000000..33b259afc
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
-@@ -0,0 +1,67 @@
-+# SPDX-License-Identifier: GPL-2.0
+@@ -0,0 +1,63 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 +%YAML 1.2
 +---
 +$id: http://devicetree.org/schemas/pwm/allwinner,sun50i-a133-pwm.yaml#
 +$schema: http://devicetree.org/meta-schemas/core.yaml#
 +
-+title: Allwinner A133 PWM Controller
++title: Allwinner A100/A133 PWM controller
 +
 +description: |
-+  No public register documentation for this IP has ever been reused
-+  upstream: it's a newer, richer generation than the existing
-+  allwinner,sun4i-a10-pwm family (16 channels grouped in pairs, per-pair
-+  dead-zone/group-sync control) with no existing mainline driver, and no
-+  A100/A133-specific binding either. Confirmed real from the public A133
-+  User Manual (chapter 10.11, base 0x0300a000), which documents this
-+  block down to bit level.
++  PWM controller of the Allwinner A100/A133 (sun50iw10): 4 channels in 2
++  pairs, with a per-pair clock source (OSC24M or APB1) inside the block.
++  Not compatible with the allwinner,sun4i-a10-pwm family.
 +
 +maintainers:
-+  - out-of-tree hobbyist port, not yet upstream
++  - leow149 <leow149@lucidmail.xyz>
++
++allOf:
++  - $ref: pwm.yaml#
 +
 +properties:
 +  compatible:
@@ -49,10 +48,7 @@ index 000000000..59e4fba3b
 +
 +  clocks:
 +    items:
-+      - description: Bus Clock (register access only — the PWM output
-+          clock source itself is internal to this IP, selected between
-+          OSC24M/APB1 per-pair in its own PCCR01/PCCR23 registers, not
-+          exposed as a separate CCU clock)
++      - description: Bus clock
 +
 +  clock-names:
 +    items:
@@ -72,7 +68,7 @@ index 000000000..59e4fba3b
 +  - resets
 +  - "#pwm-cells"
 +
-+additionalProperties: false
++unevaluatedProperties: false
 +
 +examples:
 +  - |
@@ -87,6 +83,3 @@ index 000000000..59e4fba3b
 +        resets = <&ccu RST_BUS_PWM>;
 +        #pwm-cells = <3>;
 +    };
--- 
-2.56.0
-

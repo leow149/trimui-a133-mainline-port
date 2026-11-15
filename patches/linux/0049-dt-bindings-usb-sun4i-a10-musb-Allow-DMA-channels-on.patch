@@ -1,0 +1,80 @@
+From 455688e4b84d3c0f363b4464ec032686de6fb951 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:39:31 +0100
+Subject: [PATCH 049/106] dt-bindings: usb: sun4i-a10-musb: Allow DMA channels
+ on the A100
+
+The A100/A133 MUSB can use the general purpose DMA controller, with one
+request line per endpoint and direction.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../usb/allwinner,sun4i-a10-musb.yaml         | 48 ++++++++++++++-----
+ 1 file changed, 36 insertions(+), 12 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/usb/allwinner,sun4i-a10-musb.yaml b/Documentation/devicetree/bindings/usb/allwinner,sun4i-a10-musb.yaml
+index 7ffcd236d..a95d7c28d 100644
+--- a/Documentation/devicetree/bindings/usb/allwinner,sun4i-a10-musb.yaml
++++ b/Documentation/devicetree/bindings/usb/allwinner,sun4i-a10-musb.yaml
+@@ -65,6 +65,17 @@ properties:
+     description: Phandle to the device SRAM
+     $ref: /schemas/types.yaml#/definitions/phandle-array
+ 
++  dmas:
++    description: One DMA channel per endpoint and direction
++    minItems: 1
++    maxItems: 10
++
++  dma-names:
++    minItems: 1
++    maxItems: 10
++    items:
++      pattern: '^ep[1-5](rx|tx)$'
++
+ required:
+   - compatible
+   - reg
+@@ -76,18 +87,31 @@ required:
+   - dr_mode
+   - extcon
+ 
+-if:
+-  properties:
+-    compatible:
+-      contains:
+-        enum:
+-          - allwinner,sun6i-a31-musb
+-          - allwinner,sun8i-a33-musb
+-          - allwinner,sun8i-h3-musb
+-
+-then:
+-  required:
+-    - resets
++allOf:
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - allwinner,sun6i-a31-musb
++              - allwinner,sun8i-a33-musb
++              - allwinner,sun8i-h3-musb
++
++    then:
++      required:
++        - resets
++
++  - if:
++      properties:
++        compatible:
++          not:
++            contains:
++              const: allwinner,sun50i-a100-musb
++
++    then:
++      properties:
++        dmas: false
++        dma-names: false
+ 
+ additionalProperties: false
+ 

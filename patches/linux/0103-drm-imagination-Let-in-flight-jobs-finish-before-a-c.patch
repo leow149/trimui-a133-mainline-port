@@ -1,0 +1,163 @@
+From 33d1942186384039bc60fa027f86db1639cb52f4 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 9 Nov 2026 07:23:29 +0100
+Subject: [PATCH 103/106] drm/imagination: Let in-flight jobs finish before a
+ closed file's VM is unmapped
+
+pvr_drm_driver_postclose() kills the contexts of the file and, for contexts
+still referenced by in-flight jobs, immediately unmaps the whole VM context
+(pvr_vm_unmap_all()). pvr_context_kill_queues() is documented to let the
+submitted jobs finish, but nothing waited for them: a fragment job still
+running when an application exits (e.g. on SIGTERM mid-frame) then
+page-faults on its region headers, the firmware reports a guilty lockup and
+the GPU is reset for all contexts.
+
+Track the jobs in the VM: add each job's finished fence to the GPUVM
+reservation object with DMA_RESV_USAGE_BOOKKEEP (which no implicit
+synchronisation looks at), and have pvr_vm_unmap_all() wait for those
+fences before it removes the mappings. The wait is bounded by the job
+timeout; a hung job is dealt with by the scheduler's timeout handler.
+Unlike waiting in pvr_queue_kill(), this does not block the
+DESTROY_CONTEXT ioctl, and only the teardown that actually unmaps waits.
+
+Reproduced in about half of the runs by stopping a cage session running
+vkcube on the GE8300.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/gpu/drm/imagination/pvr_job.c |  8 +++++
+ drivers/gpu/drm/imagination/pvr_vm.c  | 52 +++++++++++++++++++++++++++
+ drivers/gpu/drm/imagination/pvr_vm.h  |  6 ++++
+ 3 files changed, 66 insertions(+)
+
+diff --git a/drivers/gpu/drm/imagination/pvr_job.c b/drivers/gpu/drm/imagination/pvr_job.c
+index b8a58d817..ff6b368ac 100644
+--- a/drivers/gpu/drm/imagination/pvr_job.c
++++ b/drivers/gpu/drm/imagination/pvr_job.c
+@@ -15,6 +15,7 @@
+ #include "pvr_stream_defs.h"
+ #include "pvr_sync.h"
+ #include "pvr_trace.h"
++#include "pvr_vm.h"
+ 
+ #include <drm/drm_exec.h>
+ #include <drm/drm_gem.h>
+@@ -552,6 +553,11 @@ jobs_lock_all_objs(struct drm_exec *exec, struct pvr_job_data *job_data,
+ 		if (err)
+ 			return err;
+ 
++		/* The VM tracks its jobs, see pvr_vm_add_job_fence(). */
++		err = pvr_vm_prepare_job_resv(job->ctx->vm_ctx, exec);
++		if (err)
++			return err;
++
+ 		if (job->hwrt) {
+ 			err = prepare_fw_obj_resv(exec,
+ 						  job->hwrt->fw_obj);
+@@ -581,6 +587,8 @@ prepare_job_resvs_for_each(struct drm_exec *exec, struct pvr_job_data *job_data,
+ static void
+ update_job_resvs(struct pvr_job *job)
+ {
++	pvr_vm_add_job_fence(job->ctx->vm_ctx, &job->base.s_fence->finished);
++
+ 	if (job->hwrt) {
+ 		enum dma_resv_usage usage = job->type == DRM_PVR_JOB_TYPE_GEOMETRY ?
+ 					    DMA_RESV_USAGE_WRITE : DMA_RESV_USAGE_READ;
+diff --git a/drivers/gpu/drm/imagination/pvr_vm.c b/drivers/gpu/drm/imagination/pvr_vm.c
+index ceb78694c..9d172a135 100644
+--- a/drivers/gpu/drm/imagination/pvr_vm.c
++++ b/drivers/gpu/drm/imagination/pvr_vm.c
+@@ -877,16 +877,68 @@ pvr_vm_unmap(struct pvr_vm_context *vm_ctx, u64 device_addr, u64 size)
+ 	return err;
+ }
+ 
++/*
++ * Upper bound for pvr_vm_unmap_all() to wait for jobs still using the VM: the
++ * job timeout of the queues (2 * MAX_DEADLINE_MS in pvr_queue.c), after which
++ * the scheduler's timeout handler has dealt with a hung job.
++ */
++#define PVR_VM_JOB_WAIT_TIMEOUT_MS	60000
++
++/**
++ * pvr_vm_prepare_job_resv() - Lock the VM reservation object for a job
++ * submission and reserve a slot for its fence.
++ * @vm_ctx: VM context the job runs in.
++ * @exec: drm_exec context of the submission.
++ *
++ * Returns: 0 on success, or a negative error code from drm_exec.
++ */
++int
++pvr_vm_prepare_job_resv(struct pvr_vm_context *vm_ctx, struct drm_exec *exec)
++{
++	return drm_gpuvm_prepare_vm(&vm_ctx->gpuvm_mgr, exec, 1);
++}
++
++/**
++ * pvr_vm_add_job_fence() - Track a job's finished fence in the VM.
++ * @vm_ctx: VM context the job runs in.
++ * @fence: The job's finished fence.
++ *
++ * The fence goes into the VM reservation object with BOOKKEEP usage, which
++ * no implicit synchronisation looks at; pvr_vm_unmap_all() waits on it so
++ * that mappings are not removed under a job that is still running.
++ * pvr_vm_prepare_job_resv() must have been called in the same submission.
++ */
++void
++pvr_vm_add_job_fence(struct pvr_vm_context *vm_ctx, struct dma_fence *fence)
++{
++	dma_resv_add_fence(drm_gpuvm_resv(&vm_ctx->gpuvm_mgr), fence,
++			   DMA_RESV_USAGE_BOOKKEEP);
++}
++
+ /**
+  * pvr_vm_unmap_all() - Unmap all mappings associated with a VM context.
+  * @vm_ctx: Target VM context.
+  *
+  * This function ensures that no mappings are left dangling by unmapping them
+  * all in order of ascending device-virtual address.
++ *
++ * Jobs submitted on the VM may still be running, e.g. when a file is closed
++ * mid-frame (pvr_destroy_contexts_for_file()): wait for them first, otherwise
++ * they page-fault, which the firmware reports as a guilty lockup and the GPU
++ * is reset for every context. The wait is bounded by the job timeout.
+  */
+ void
+ pvr_vm_unmap_all(struct pvr_vm_context *vm_ctx)
+ {
++	long ret;
++
++	ret = dma_resv_wait_timeout(drm_gpuvm_resv(&vm_ctx->gpuvm_mgr),
++				    DMA_RESV_USAGE_BOOKKEEP, false,
++				    msecs_to_jiffies(PVR_VM_JOB_WAIT_TIMEOUT_MS));
++	if (!ret)
++		drm_warn(from_pvr_device(vm_ctx->pvr_dev),
++			 "Unmapping a VM with jobs still running\n");
++
+ 	mutex_lock(&vm_ctx->lock);
+ 
+ 	for (;;) {
+diff --git a/drivers/gpu/drm/imagination/pvr_vm.h b/drivers/gpu/drm/imagination/pvr_vm.h
+index b0528dffa..569a0b477 100644
+--- a/drivers/gpu/drm/imagination/pvr_vm.h
++++ b/drivers/gpu/drm/imagination/pvr_vm.h
+@@ -25,6 +25,7 @@ struct drm_pvr_ioctl_get_heap_info_args;
+ 
+ /* Forward declaration from <drm/drm_exec.h> */
+ struct drm_exec;
++struct dma_fence;
+ 
+ /* Functions defined in pvr_vm.c */
+ 
+@@ -44,6 +45,11 @@ int pvr_vm_unmap_obj(struct pvr_vm_context *vm_ctx,
+ int pvr_vm_unmap(struct pvr_vm_context *vm_ctx, u64 device_addr, u64 size);
+ void pvr_vm_unmap_all(struct pvr_vm_context *vm_ctx);
+ 
++int pvr_vm_prepare_job_resv(struct pvr_vm_context *vm_ctx,
++			    struct drm_exec *exec);
++void pvr_vm_add_job_fence(struct pvr_vm_context *vm_ctx,
++			  struct dma_fence *fence);
++
+ dma_addr_t pvr_vm_get_page_table_root_addr(struct pvr_vm_context *vm_ctx);
+ struct dma_resv *pvr_vm_get_dma_resv(struct pvr_vm_context *vm_ctx);
+ 

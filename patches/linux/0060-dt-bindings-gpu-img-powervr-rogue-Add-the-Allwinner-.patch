@@ -1,0 +1,79 @@
+From fb50b0aae106921d0fde8132ef3e1a1e8fca9adb Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:31:29 +0100
+Subject: [PATCH 060/106] dt-bindings: gpu: img,powervr-rogue: Add the
+ Allwinner A100 GE8300
+
+The A100/A133 has a GE8300 GPU with two clocks (core and sys), a reset
+and a single power domain.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../bindings/gpu/img,powervr-rogue.yaml       | 40 ++++++++++++++++---
+ 1 file changed, 35 insertions(+), 5 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/gpu/img,powervr-rogue.yaml b/Documentation/devicetree/bindings/gpu/img,powervr-rogue.yaml
+index e9218e0f3..16f30976c 100644
+--- a/Documentation/devicetree/bindings/gpu/img,powervr-rogue.yaml
++++ b/Documentation/devicetree/bindings/gpu/img,powervr-rogue.yaml
+@@ -21,6 +21,11 @@ properties:
+               - renesas,r8a77961-gpu
+           - const: img,img-gx6250
+           - const: img,img-rogue
++      - items:
++          - enum:
++              - allwinner,sun50i-a100-gpu
++          - const: img,img-ge8300
++          - const: img,img-rogue
+       - items:
+           - enum:
+               - renesas,r8a77965-gpu
+@@ -63,11 +68,15 @@ properties:
+     maxItems: 3
+ 
+   clock-names:
+-    items:
+-      - const: core
+-      - const: mem
+-      - const: sys
+-    minItems: 1
++    oneOf:
++      - items:
++          - const: core
++          - const: mem
++          - const: sys
++        minItems: 1
++      - items:
++          - const: core
++          - const: sys
+ 
+   interrupts:
+     maxItems: 1
+@@ -158,6 +167,27 @@ allOf:
+         - power-domains
+         - power-domain-names
+ 
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: allwinner,sun50i-a100-gpu
++    then:
++      properties:
++        clocks:
++          minItems: 2
++          maxItems: 2
++        clock-names:
++          items:
++            - const: core
++            - const: sys
++        power-domains:
++          maxItems: 1
++        power-domain-names: false
++      required:
++        - power-domains
++        - resets
++
+   - if:
+       properties:
+         compatible:

@@ -1,0 +1,76 @@
+From 7b2123bdce89737c7a295666e4df7154dd819227 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Mon, 2 Nov 2026 09:12:25 +0100
+Subject: [PATCH 072/106] iommu: sun50i: Add A100 support
+
+The A100 IOMMU is programmed like the H6 one but has no reset line. Add
+per-compatible data saying whether there is one, so the reset stays
+required on H6 and H616.
+
+Tested on the A133 TrimUI Smart Pro with the display engine and the video
+engine behind it: 4K H.264 decodes bit-exact with 64 MB of CMA (it needed
+more than 256 MB of CMA without the IOMMU), at the same speed.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/iommu/sun50i-iommu.c | 24 +++++++++++++++++++++---
+ 1 file changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/iommu/sun50i-iommu.c b/drivers/iommu/sun50i-iommu.c
+index be3f1ce69..5bcc4e09b 100644
+--- a/drivers/iommu/sun50i-iommu.c
++++ b/drivers/iommu/sun50i-iommu.c
+@@ -97,6 +97,10 @@
+ 
+ #define SPAGE_SIZE			4096
+ 
++struct sun50i_iommu_variant {
++	bool has_reset;
++};
++
+ struct sun50i_iommu {
+ 	struct iommu_device iommu;
+ 
+@@ -998,6 +1002,7 @@ static irqreturn_t sun50i_iommu_irq(int irq, void *dev_id)
+ 
+ static int sun50i_iommu_probe(struct platform_device *pdev)
+ {
++	const struct sun50i_iommu_variant *variant;
+ 	struct sun50i_iommu *iommu;
+ 	int ret, irq;
+ 
+@@ -1035,7 +1040,11 @@ static int sun50i_iommu_probe(struct platform_device *pdev)
+ 		goto err_free_cache;
+ 	}
+ 
+-	iommu->reset = devm_reset_control_get(&pdev->dev, NULL);
++	variant = of_device_get_match_data(&pdev->dev);
++	if (variant && variant->has_reset)
++		iommu->reset = devm_reset_control_get_exclusive(&pdev->dev, NULL);
++	else
++		iommu->reset = NULL;	/* A100: only a bus clock gate */
+ 	if (IS_ERR(iommu->reset)) {
+ 		dev_err(&pdev->dev, "Couldn't get our reset line.\n");
+ 		ret = PTR_ERR(iommu->reset);
+@@ -1070,9 +1079,18 @@ static int sun50i_iommu_probe(struct platform_device *pdev)
+ 	return ret;
+ }
+ 
++static const struct sun50i_iommu_variant sun50i_a100_iommu = {
++	.has_reset = false,
++};
++
++static const struct sun50i_iommu_variant sun50i_h6_iommu = {
++	.has_reset = true,
++};
++
+ static const struct of_device_id sun50i_iommu_dt[] = {
+-	{ .compatible = "allwinner,sun50i-h6-iommu", },
+-	{ .compatible = "allwinner,sun50i-h616-iommu", },
++	{ .compatible = "allwinner,sun50i-a100-iommu", .data = &sun50i_a100_iommu },
++	{ .compatible = "allwinner,sun50i-h6-iommu", .data = &sun50i_h6_iommu },
++	{ .compatible = "allwinner,sun50i-h616-iommu", .data = &sun50i_h6_iommu },
+ 	{ /* sentinel */ },
+ };
+ MODULE_DEVICE_TABLE(of, sun50i_iommu_dt);

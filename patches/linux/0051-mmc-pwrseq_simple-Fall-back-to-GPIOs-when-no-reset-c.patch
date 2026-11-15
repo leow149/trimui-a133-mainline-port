@@ -1,0 +1,47 @@
+From 05241b76b05782df65a64cf47651cc1c079e7bb6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 14:30:30 +0100
+Subject: [PATCH 051/106] mmc: pwrseq_simple: Fall back to GPIOs when no reset
+ controller can be made
+
+With a single reset GPIO, pwrseq_simple asks the reset core for a reset
+controller wrapping it. The reset-gpio helper only handles #gpio-cells = <2>
+and returns -ENOENT for anything else (e.g. Allwinner, <3>), which made the
+probe fail, although the driver can drive the GPIO itself. Treat -ENOENT as
+"no reset controller" and use the GPIO path.
+
+The scope is narrow: with a single reset GPIO and CONFIG_RESET_GPIO
+enabled, -ENOENT only comes from __reset_add_reset_gpio_device()
+refusing a specifier that is not two cells; a missing property or
+CONFIG_RESET_GPIO=n already give NULL. Without CONFIG_RESET_GPIO the
+driver uses the GPIO directly anyway, so this restores that behaviour
+for 3-cell GPIO controllers instead of failing the probe. Teaching
+reset-gpio to translate other specifiers (through the GPIO chip's
+of_xlate) would be the more general fix; it touches the reset core and
+is left for later.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/mmc/core/pwrseq_simple.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/core/pwrseq_simple.c b/drivers/mmc/core/pwrseq_simple.c
+index 4b47e6c3b..0e25fc957 100644
+--- a/drivers/mmc/core/pwrseq_simple.c
++++ b/drivers/mmc/core/pwrseq_simple.c
+@@ -137,7 +137,13 @@ static int mmc_pwrseq_simple_probe(struct platform_device *pdev)
+ 	ngpio = of_count_phandle_with_args(dev->of_node, "reset-gpios", "#gpio-cells");
+ 	if (ngpio == 1) {
+ 		pwrseq->reset_ctrl = devm_reset_control_get_optional_shared(dev, NULL);
+-		if (IS_ERR(pwrseq->reset_ctrl))
++		/*
++		 * -ENOENT: the GPIO cannot be wrapped as a reset controller
++		 * (e.g. #gpio-cells = <3>), drive it directly below.
++		 */
++		if (PTR_ERR(pwrseq->reset_ctrl) == -ENOENT)
++			pwrseq->reset_ctrl = NULL;
++		else if (IS_ERR(pwrseq->reset_ctrl))
+ 			return dev_err_probe(dev, PTR_ERR(pwrseq->reset_ctrl),
+ 					     "reset control not ready\n");
+ 	}

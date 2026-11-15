@@ -1,0 +1,81 @@
+From 6a2bbf9fbfb1d3b76592eed1e22e9c02227b1e8d Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:44:52 +0100
+Subject: [PATCH 106/106] MAINTAINERS: Add entries for the A133/TrimUI Smart
+ Pro drivers
+
+Add entries for the new drivers of this series: the A100/A133 PWM and GPU
+power domain drivers, the OTM1289A panel, the TrimUI Smart Pro gamepad and
+the xradio WLAN driver, with their bindings.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ MAINTAINERS | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 335d20584..b416ab2fb 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -892,6 +892,20 @@ T:	git git://linuxtv.org/media.git
+ F:	Documentation/devicetree/bindings/media/allwinner,sun6i-a31-mipi-csi2.yaml
+ F:	drivers/media/platform/sunxi/sun6i-mipi-csi2/
+ 
++ALLWINNER A100/A133 PWM DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-pwm@vger.kernel.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/pwm/allwinner,sun50i-a133-pwm.yaml
++F:	drivers/pwm/pwm-sun50i-a133.c
++
++ALLWINNER A100 GPU POWER DOMAIN DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-sunxi@lists.linux.dev
++S:	Maintained
++F:	Documentation/devicetree/bindings/power/allwinner,sun50i-a100-gpu-ppu.yaml
++F:	drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
++
+ ALLWINNER CPUFREQ DRIVER
+ M:	Yangtao Li <tiny.windzz@gmail.com>
+ L:	linux-pm@vger.kernel.org
+@@ -20430,6 +20444,12 @@ S:	Maintained
+ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tiwai/sound.git
+ F:	sound/drivers/opl4/
+ 
++ORISETECH OTM1289A MIPI-DSI PANEL DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++S:	Maintained
++F:	Documentation/devicetree/bindings/display/panel/orisetech,otm1289a.yaml
++F:	drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
++
+ ORACLE CLUSTER FILESYSTEM 2 (OCFS2)
+ M:	Mark Fasheh <mark@fasheh.com>
+ M:	Joel Becker <jlbec@evilplan.org>
+@@ -27624,6 +27644,13 @@ M:	David Lechner <dlechner@baylibre.com>
+ S:	Maintained
+ F:	Documentation/devicetree/bindings/trigger-source/*
+ 
++TRIMUI SMART PRO GAMEPAD DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-input@vger.kernel.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/input/trimui,smart-pro-pad.yaml
++F:	drivers/input/joystick/trimui-smartpro-pad.c
++
+ TRUSTED EXECUTION ENVIRONMENT SECURITY MANAGER (TSM)
+ M:	Dan Williams <djbw@kernel.org>
+ L:	linux-coco@lists.linux.dev
+@@ -29844,6 +29871,13 @@ S:	Supported
+ W:	http://www.marvell.com
+ F:	drivers/i2c/busses/i2c-xlp9xx.c
+ 
++XRADIO XR819/XR829 WIRELESS DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-wireless@vger.kernel.org
++S:	Odd Fixes
++F:	Documentation/devicetree/bindings/net/wireless/xradio,xr819.yaml
++F:	drivers/net/wireless/xradio/
++
+ XTENSA XTFPGA PLATFORM SUPPORT
+ M:	Max Filippov <jcmvbkbc@gmail.com>
+ S:	Maintained

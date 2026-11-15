@@ -1,12 +1,19 @@
-From cc404ebf9bec9d78b501612076be5b5be2e70497 Mon Sep 17 00:00:00 2001
+From d527e09e25eb31343cda93916d40df5ef7bdff9e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
-Subject: [PATCH 09/60] drm/sun4i: ui_layer: Expose a pixel blend mode property
+Subject: [PATCH 009/106] drm/sun4i: ui_layer: Expose a pixel blend mode
+ property
 
 The UI planes advertise formats with alpha but had no pixel blend mode
 property, so DRM assumed premultiplied alpha, which the blender is never set up
 for, and warned about it at every boot (drm_mode_config_validate). The blender
 does coverage blending; expose exactly that.
+
+This is not specific to the A133: the driver never programs
+premultiplied blending on any DE2/DE3 mixer, and
+validate_blend_mode_for_alpha_formats() WARNs at boot on every SoC whose
+UI planes expose alpha formats, so the property is added for all of
+them.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -37,6 +44,3 @@ index 00756ab78..36db63277 100644
  	ret = drm_plane_create_zpos_property(&layer->plane, index,
  					     0, plane_cnt - 1);
  	if (ret) {
--- 
-2.56.0
-

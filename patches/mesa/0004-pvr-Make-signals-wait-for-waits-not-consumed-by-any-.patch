@@ -1,7 +1,8 @@
-From 9cf80e29b7699b569d75e0bed435b8924a490db8 Mon Sep 17 00:00:00 2001
+From a6dd6174fb3e34ec6ba04a6a384decf4ecdffab2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
-Subject: [PATCH 4/4] pvr: Make signals wait for waits not consumed by any job
+Subject: [PATCH 04/10] pvr: Make signals wait for waits not consumed by any
+ job
 
 Waits are parked per stage for the next job, and signals only depended on
 jobs of the same submission. A submission without command buffers, as WSI
@@ -17,7 +18,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 20 insertions(+), 8 deletions(-)
 
 diff --git a/src/imagination/vulkan/pvr_arch_queue.c b/src/imagination/vulkan/pvr_arch_queue.c
-index cb6203e..7475275 100644
+index cb6203eade7..74752751469 100644
 --- a/src/imagination/vulkan/pvr_arch_queue.c
 +++ b/src/imagination/vulkan/pvr_arch_queue.c
 @@ -950,7 +950,7 @@ static VkResult pvr_process_queue_signals(struct pvr_queue *queue,
@@ -63,6 +64,3 @@ index cb6203e..7475275 100644
        }
  
        result = device->ws->ops->null_job_submit(device->ws,
--- 
-2.56.0
-

@@ -1,7 +1,7 @@
-From 4c579ae380f0fd0c5da5d127451c705615d79696 Mon Sep 17 00:00:00 2001
+From 1477f49b828780f70915204943d4cfd81740e12e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
-Subject: [PATCH 2/4] pvr: Use 16 pixel units for the terminate clip on 16x16
+Subject: [PATCH 02/10] pvr: Use 16 pixel units for the terminate clip on 16x16
  tile cores
 
 The TA terminate state clip region is in tile units, which are 16 pixels
@@ -16,7 +16,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 9 insertions(+), 10 deletions(-)
 
 diff --git a/src/imagination/vulkan/pvr_arch_framebuffer.c b/src/imagination/vulkan/pvr_arch_framebuffer.c
-index e0bc337..22fdd71 100644
+index e0bc3378a8d..22fdd71afe2 100644
 --- a/src/imagination/vulkan/pvr_arch_framebuffer.c
 +++ b/src/imagination/vulkan/pvr_arch_framebuffer.c
 @@ -35,6 +35,13 @@ VkResult PVR_PER_ARCH(ppp_state_create)(struct pvr_device *device,
@@ -52,6 +52,3 @@ index e0bc337..22fdd71 100644
     }
  
     pvr_csb_pack (&ppp_state[2], TA_STATE_TERMINATE1, term1) {
--- 
-2.56.0
-

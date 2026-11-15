@@ -1,0 +1,595 @@
+From b71362e00420d9e7c79e421144735d56b96c47fa Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:29:22 +0100
+Subject: [PATCH 105/106] arm64: dts: allwinner: a100: Move the display
+ pipeline and PWM to the SoC dtsi
+
+The display engine, its DE2 bus with the mixer, the DPSS TOP, TCON LCD,
+MIPI DSI and D-PHY, and the PWM controller are SoC blocks, so describe them
+in sun50i-a100.dtsi (DSI, D-PHY and PWM disabled by default) and only
+enable them, attach the panel and pick the PWM pin in the TrimUI Smart Pro
+DT. The DPSS TOP no longer lists a filler "tcon-tv0" clock: this SoC has
+no TCON TV and the binding and driver now say so.
+
+While at it, tidy up the board DT: drop the stale "WiFi/BT/GPU not
+described" note, put misplaced comments back on their nodes, move the
+Bluetooth rfkill node into the root node and explain why the BL31
+reservation lives here (TF-A only adds it to U-Boot's own DT).
+
+No functional change intended.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 177 ++++++++++++
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 260 +++---------------
+ 2 files changed, 222 insertions(+), 215 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 1a08364ec..cd8739e77 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -7,8 +7,11 @@
+ #include <dt-bindings/clock/sun50i-a100-ccu.h>
+ #include <dt-bindings/clock/sun50i-a100-r-ccu.h>
+ #include <dt-bindings/clock/sun6i-rtc.h>
++#include <dt-bindings/clock/sun8i-de2.h>
++#include <dt-bindings/clock/sun8i-tcon-top.h>
+ #include <dt-bindings/reset/sun50i-a100-ccu.h>
+ #include <dt-bindings/reset/sun50i-a100-r-ccu.h>
++#include <dt-bindings/reset/sun8i-de2.h>
+ #include <dt-bindings/thermal/thermal.h>
+ 
+ / {
+@@ -71,6 +74,13 @@ psci {
+ 		method = "smc";
+ 	};
+ 
++	de: display-engine {
++		compatible = "allwinner,sun50i-a133-display-engine",
++			     "allwinner,sun50i-a64-display-engine";
++		allwinner,pipelines = <&mixer0>;
++		status = "disabled";
++	};
++
+ 	dcxo24M: dcxo24M-clk {
+ 		compatible = "fixed-clock";
+ 		clock-frequency = <24000000>;
+@@ -237,6 +247,16 @@ watchdog@30090a0 {
+ 			clocks = <&dcxo24M>;
+ 		};
+ 
++		pwm: pwm@300a000 {
++			compatible = "allwinner,sun50i-a133-pwm";
++			reg = <0x0300a000 0x400>;
++			clocks = <&ccu CLK_BUS_PWM>;
++			clock-names = "bus";
++			resets = <&ccu RST_BUS_PWM>;
++			#pwm-cells = <3>;
++			status = "disabled";
++		};
++
+ 		pio: pinctrl@300b000 {
+ 			compatible = "allwinner,sun50i-a100-pinctrl";
+ 			reg = <0x0300b000 0x400>;
+@@ -315,6 +335,12 @@ uart4_pd_pins: uart4-pd-pins {
+ 				function = "uart4";
+ 			};
+ 
++			/omit-if-no-ref/
++			pwm0_pd_pin: pwm0-pd-pin {
++				pins = "PD23";
++				function = "pwm0";
++			};
++
+ 			/omit-if-no-ref/
+ 			uart1_pg_pins: uart1-pg-pins {
+ 				pins = "PG6", "PG7", "PG8", "PG9";
+@@ -664,6 +690,157 @@ ohci1: usb@5200400 {
+ 			status = "disabled";
+ 		};
+ 
++		/*
++		 * Display engine. As on A64, SRAM C has to be claimed for the
++		 * DE, otherwise this register space is shadowed by the SRAM.
++		 */
++		bus@6000000 {
++			compatible = "allwinner,sun50i-a100-de2",
++				     "allwinner,sun50i-a64-de2";
++			reg = <0x06000000 0x400000>;
++			allwinner,sram = <&de2_sram 1>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0 0x06000000 0x400000>;
++
++			/* DE clock/reset block, same layout as H6. */
++			display_clocks: clock@0 {
++				compatible = "allwinner,sun50i-h6-de3-clk";
++				reg = <0x0 0x10000>;
++				clocks = <&ccu CLK_BUS_DE>, <&ccu CLK_DE>;
++				clock-names = "bus", "mod";
++				resets = <&ccu RST_BUS_DE>;
++				#clock-cells = <1>;
++				#reset-cells = <1>;
++			};
++
++			mixer0: mixer@100000 {
++				compatible = "allwinner,sun50i-a133-de2-mixer-0";
++				reg = <0x100000 0x100000>;
++				clocks = <&display_clocks CLK_BUS_MIXER0>,
++					 <&display_clocks CLK_MIXER0>;
++				clock-names = "bus", "mod";
++				resets = <&display_clocks RST_MIXER0>;
++				iommus = <&iommu 0>;
++
++				ports {
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					mixer0_out: port@1 {
++						reg = <1>;
++
++						mixer0_out_dpss_top0: endpoint {
++							remote-endpoint = <&dpss_top0_in_mixer0>;
++						};
++					};
++				};
++			};
++		};
++
++		dsi0: dsi@6504000 {
++			compatible = "allwinner,sun50i-a100-mipi-dsi";
++			reg = <0x06504000 0x1000>;
++			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
++			/* "mod" goes through the DPSS TOP DSI gate, as on D1. */
++			clocks = <&ccu CLK_BUS_MIPI_DSI>,
++				 <&dpss_top0 CLK_TCON_TOP_DSI>;
++			clock-names = "bus", "mod";
++			resets = <&ccu RST_BUS_MIPI_DSI>;
++			phys = <&dphy0>;
++			phy-names = "dphy";
++			status = "disabled";
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port {
++				dsi0_in_tcon_lcd0: endpoint {
++					remote-endpoint = <&tcon_lcd0_out_dsi0>;
++				};
++			};
++		};
++
++		dphy0: phy@6505000 {
++			compatible = "allwinner,sun50i-a100-mipi-dphy";
++			reg = <0x06505000 0x1000>;
++			interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
++			clock-names = "bus", "mod";
++			resets = <&ccu RST_BUS_MIPI_DSI>;
++			status = "disabled";
++			#phy-cells = <0>;
++		};
++
++		/* DPSS TOP: routes mixer0 to TCON_LCD0 and gates the DSI clock. */
++		dpss_top0: dpss-top@6510000 {
++			compatible = "allwinner,sun50i-a133-tcon-top";
++			reg = <0x06510000 0x1000>;
++			clocks = <&ccu CLK_BUS_DPSS_TOP0>, <&ccu CLK_MIPI_DSI>;
++			clock-names = "bus", "dsi";
++			clock-output-names = "tcon-top-dsi";
++			resets = <&ccu RST_BUS_DPSS_TOP0>;
++			#clock-cells = <1>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				dpss_top0_mixer0_in: port@0 {
++					reg = <0>;
++
++					dpss_top0_in_mixer0: endpoint {
++						remote-endpoint = <&mixer0_out_dpss_top0>;
++					};
++				};
++
++				dpss_top0_mixer0_out: port@1 {
++					reg = <1>;
++
++					dpss_top0_out_tcon_lcd0: endpoint {
++						remote-endpoint = <&tcon_lcd0_in_dpss_top0>;
++					};
++				};
++			};
++		};
++
++		tcon_lcd0: lcd-controller@6511000 {
++			compatible = "allwinner,sun50i-a133-tcon-lcd",
++				     "allwinner,sun8i-a83t-tcon-lcd";
++			reg = <0x06511000 0x1000>;
++			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_TCON_LCD>, <&ccu CLK_TCON_LCD>;
++			clock-names = "ahb", "tcon-ch0";
++			clock-output-names = "tcon-pixel-clock";
++			resets = <&ccu RST_BUS_TCON_LCD>, <&ccu RST_BUS_LVDS>;
++			reset-names = "lcd", "lvds";
++			#clock-cells = <0>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				tcon_lcd0_in: port@0 {
++					reg = <0>;
++
++					tcon_lcd0_in_dpss_top0: endpoint {
++						remote-endpoint = <&dpss_top0_out_tcon_lcd0>;
++					};
++				};
++
++				tcon_lcd0_out: port@1 {
++					reg = <1>;
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					/* endpoint 0 would be taken as a directly attached panel */
++					tcon_lcd0_out_dsi0: endpoint@1 {
++						reg = <1>;
++						remote-endpoint = <&dsi0_in_tcon_lcd0>;
++					};
++				};
++			};
++		};
++
+ 		rtc: rtc@7000000 {
+ 			compatible = "allwinner,sun50i-a100-rtc",
+ 				     "allwinner,sun50i-r329-rtc";
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index c3a40d9fb..d8a83c925 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -5,8 +5,6 @@
+  * Values not documented elsewhere (regulator voltages, panel timings and
+  * GPIOs, PWM setup) come from the stock firmware's device tree and its boot
+  * logs.
+- *
+- * Not described yet: WiFi/BT (XR829 on mmc1), GPU.
+  */
+ 
+ /dts-v1/;
+@@ -14,12 +12,9 @@
+ #include "sun50i-a100.dtsi"
+ #include "sun50i-a100-cpu-opp.dtsi"
+ 
+-#include <dt-bindings/clock/sun8i-de2.h>
+-#include <dt-bindings/clock/sun8i-tcon-top.h>
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/input/linux-event-codes.h>
+ #include <dt-bindings/leds/common.h>
+-#include <dt-bindings/reset/sun8i-de2.h>
+ 
+ / {
+ 	model = "TrimUI Smart Pro";
+@@ -41,9 +36,11 @@ reserved-memory {
+ 		ranges;
+ 
+ 		/*
+-		 * TF-A BL31 runs from the start of DRAM on this board. U-Boot
+-		 * only reserves it in its own copy of the DT; without this,
+-		 * Linux reuses the memory and later PSCI calls hang.
++		 * TF-A BL31 runs from the start of DRAM on this board. This
++		 * belongs to the firmware, but TF-A only adds the reservation
++		 * to U-Boot's own copy of the DT, and U-Boot does not pass it
++		 * on to the kernel's (booti, no EFI). Without this, Linux
++		 * reuses the memory and later PSCI calls hang.
+ 		 */
+ 		bl31@40000000 {
+ 			reg = <0x0 0x40000000 0x0 0x40000>;
+@@ -78,7 +75,6 @@ reg_vcc5v: regulator-vcc5v {
+ 		regulator-always-on;
+ 	};
+ 
+-	/* 5 V for the stick boards: button MCUs and stick LEDs ("led_5v" on stock). */
+ 	gpio-keys {
+ 		compatible = "gpio-keys";
+ 
+@@ -102,6 +98,7 @@ reg_usb1_vbus: regulator-usb1-vbus {
+ 		vin-supply = <&reg_vcc5v>;
+ 	};
+ 
++	/* 5 V for the stick boards: button MCUs and stick LEDs ("led_5v" on stock). */
+ 	reg_vcc_pad: regulator-vcc-pad {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vcc-pad";
+@@ -112,21 +109,21 @@ reg_vcc_pad: regulator-vcc-pad {
+ 		vin-supply = <&reg_vcc5v>;
+ 	};
+ 
+-	de: display-engine {
+-		compatible = "allwinner,sun50i-a133-display-engine",
+-			     "allwinner,sun50i-a64-display-engine";
+-		allwinner,pipelines = <&mixer0>;
+-		status = "okay";
+-	};
+-
+ 	/* PWM channel 0, 50 kHz, normal polarity. */
+ 	backlight: backlight {
+ 		compatible = "pwm-backlight";
+ 		pwms = <&pwm 0 20000 0>;
+-		default-brightness-level = <200>;
+ 		power-supply = <&reg_cldo4>;
+ 	};
+ 
++	/* XR829 Bluetooth power/reset: BT_RST_N on PL2, active low. */
++	rfkill-bt {
++		compatible = "rfkill-gpio";
++		label = "rfkill-xr829-bt";
++		radio-type = "bluetooth";
++		shutdown-gpios = <&r_pio 0 2 GPIO_ACTIVE_HIGH>; /* PL2 */
++	};
++
+ 	/* XR829 WiFi: enable on PL5, 32 kHz from the RTC. */
+ 	wifi_pwrseq: pwrseq {
+ 		compatible = "mmc-pwrseq-simple";
+@@ -230,11 +227,28 @@ &cpu0 {
+ 	cpu-supply = <&reg_dcdc1>;
+ };
+ 
+-/* SD card slot */
+-/*
+- * Volume keys on the LRADC, voltages as measured. Both pressed together
+- * reads about 471 mV and reports Volume Up.
+- */
++&de {
++	status = "okay";
++};
++
++&dphy0 {
++	status = "okay";
++};
++
++&dsi0 {
++	status = "okay";
++
++	panel@0 {
++		compatible = "orisetech,otm1289a";
++		reg = <0>;
++		reset-gpios = <&pio 3 22 GPIO_ACTIVE_LOW>; /* PD22 */
++		/* Portrait panel, top edge at the left of the landscape device. */
++		rotation = <270>;
++		power-supply = <&reg_cldo1>;
++		backlight = <&backlight>;
++	};
++};
++
+ /*
+  * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
+  * right one. The rings are GRB (the stock DT says "RGB", but red shows green
+@@ -431,6 +445,10 @@ multi-led@16 {
+ 	};
+ };
+ 
++/*
++ * Volume keys on the LRADC, voltages as measured. Both pressed together
++ * reads about 471 mV and reports Volume Up.
++ */
+ &lradc {
+ 	vref-supply = <&reg_aldo4>;
+ 	wakeup-source;
+@@ -461,6 +479,7 @@ &gpu {
+ 	status = "okay";
+ };
+ 
++/* SD card slot */
+ &mmc0 {
+ 	bus-width = <4>;
+ 	vmmc-supply = <&reg_cldo3>;
+@@ -664,15 +683,6 @@ &uart1 {
+ 	status = "okay";
+ };
+ 
+-&{/} {
+-	rfkill-bt {
+-		compatible = "rfkill-gpio";
+-		label = "rfkill-xr829-bt";
+-		radio-type = "bluetooth";
+-		shutdown-gpios = <&r_pio 0 2 GPIO_ACTIVE_HIGH>; /* PL2 */
+-	};
+-};
+-
+ /* Buttons and sticks: one microcontroller per side, each on its own UART. */
+ &uart3 {
+ 	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+@@ -738,190 +748,10 @@ &ohci1 {
+ 	status = "okay";
+ };
+ 
+-&{/soc} {
+-	/* DPSS TOP: routes mixer0 to TCON_LCD0 and gates the DSI clock. */
+-	dpss_top0: dpss-top@6510000 {
+-		compatible = "allwinner,sun50i-a133-tcon-top";
+-		reg = <0x06510000 0x1000>;
+-		/* No TCON TV on this SoC; "tcon-tv0" only satisfies the binding. */
+-		clocks = <&ccu CLK_BUS_DPSS_TOP0>,
+-			 <&ccu CLK_TCON_LCD>,
+-			 <&ccu CLK_MIPI_DSI>;
+-		clock-names = "bus", "tcon-tv0", "dsi";
+-		clock-output-names = "tcon-top-tv0", "tcon-top-dsi";
+-		resets = <&ccu RST_BUS_DPSS_TOP0>;
+-		#clock-cells = <1>;
+-
+-		ports {
+-			#address-cells = <1>;
+-			#size-cells = <0>;
+-
+-			dpss_top0_mixer0_in: port@0 {
+-				reg = <0>;
+-
+-				dpss_top0_in_mixer0: endpoint {
+-					remote-endpoint = <&mixer0_out_dpss_top0>;
+-				};
+-			};
+-
+-			dpss_top0_mixer0_out: port@1 {
+-				reg = <1>;
+-
+-				dpss_top0_out_tcon_lcd0: endpoint {
+-					remote-endpoint = <&tcon_lcd0_in_dpss_top0>;
+-				};
+-			};
+-		};
+-	};
+-
+-	/*
+-	 * Display engine. As on A64, SRAM C has to be claimed for the DE,
+-	 * otherwise this register space is shadowed by the SRAM.
+-	 */
+-	bus@6000000 {
+-		compatible = "allwinner,sun50i-a100-de2",
+-			     "allwinner,sun50i-a64-de2";
+-		reg = <0x06000000 0x400000>;
+-		allwinner,sram = <&de2_sram 1>;
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		ranges = <0 0x06000000 0x400000>;
+-
+-		/* DE clock/reset block, same layout as H6. */
+-		display_clocks: clock@0 {
+-			compatible = "allwinner,sun50i-h6-de3-clk";
+-			reg = <0x0 0x10000>;
+-			clocks = <&ccu CLK_BUS_DE>, <&ccu CLK_DE>;
+-			clock-names = "bus", "mod";
+-			resets = <&ccu RST_BUS_DE>;
+-			#clock-cells = <1>;
+-			#reset-cells = <1>;
+-		};
+-
+-		mixer0: mixer@100000 {
+-			compatible = "allwinner,sun50i-a133-de2-mixer-0";
+-			reg = <0x100000 0x100000>;
+-			clocks = <&display_clocks CLK_BUS_MIXER0>,
+-				 <&display_clocks CLK_MIXER0>;
+-			clock-names = "bus", "mod";
+-			resets = <&display_clocks RST_MIXER0>;
+-			iommus = <&iommu 0>;
+-
+-			ports {
+-				#address-cells = <1>;
+-				#size-cells = <0>;
+-
+-				mixer0_out: port@1 {
+-					reg = <1>;
+-
+-					mixer0_out_dpss_top0: endpoint {
+-						remote-endpoint = <&dpss_top0_in_mixer0>;
+-					};
+-				};
+-			};
+-		};
+-	};
+-
+-	tcon_lcd0: lcd-controller@6511000 {
+-		compatible = "allwinner,sun50i-a133-tcon-lcd",
+-			     "allwinner,sun8i-a83t-tcon-lcd";
+-		reg = <0x06511000 0x1000>;
+-		/*
+-		 * The stock disp node lists SPI 69, 70 and 68 for TCON_LCD0,
+-		 * TCON_LCD1 and DSI.
+-		 */
+-		interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+-		clocks = <&ccu CLK_BUS_TCON_LCD>, <&ccu CLK_TCON_LCD>;
+-		clock-names = "ahb", "tcon-ch0";
+-		clock-output-names = "tcon-pixel-clock";
+-		resets = <&ccu RST_BUS_TCON_LCD>;
+-		reset-names = "lcd";
+-		#clock-cells = <0>;
+-
+-		ports {
+-			#address-cells = <1>;
+-			#size-cells = <0>;
+-
+-			tcon_lcd0_in: port@0 {
+-				reg = <0>;
+-
+-				tcon_lcd0_in_dpss_top0: endpoint {
+-					remote-endpoint = <&dpss_top0_out_tcon_lcd0>;
+-				};
+-			};
+-
+-			tcon_lcd0_out: port@1 {
+-				reg = <1>;
+-				#address-cells = <1>;
+-				#size-cells = <0>;
+-
+-				/* endpoint 0 would be taken as a directly attached panel */
+-				tcon_lcd0_out_dsi0: endpoint@1 {
+-					reg = <1>;
+-					remote-endpoint = <&dsi0_in_tcon_lcd0>;
+-				};
+-			};
+-		};
+-	};
+-
+-	dsi0: dsi@6504000 {
+-		compatible = "allwinner,sun50i-a100-mipi-dsi";
+-		reg = <0x06504000 0x1000>;
+-		interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+-		/* "mod" goes through the DPSS TOP DSI gate, as on D1. */
+-		clocks = <&ccu CLK_BUS_MIPI_DSI>, <&dpss_top0 CLK_TCON_TOP_DSI>;
+-		clock-names = "bus", "mod";
+-		resets = <&ccu RST_BUS_MIPI_DSI>;
+-		phys = <&dphy0>;
+-		phy-names = "dphy";
+-		status = "okay";
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-
+-		port {
+-			dsi0_in_tcon_lcd0: endpoint {
+-				remote-endpoint = <&tcon_lcd0_out_dsi0>;
+-			};
+-		};
+-
+-		panel@0 {
+-			compatible = "orisetech,otm1289a";
+-			reg = <0>;
+-			reset-gpios = <&pio 3 22 GPIO_ACTIVE_LOW>; /* PD22 */
+-			/* Portrait panel, top edge at the left of the landscape device. */
+-			rotation = <270>;
+-			power-supply = <&reg_cldo1>;
+-			backlight = <&backlight>;
+-		};
+-	};
+-
+-	dphy0: phy@6505000 {
+-		compatible = "allwinner,sun50i-a100-mipi-dphy";
+-		reg = <0x06505000 0x1000>;
+-		interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+-		clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
+-		clock-names = "bus", "mod";
+-		resets = <&ccu RST_BUS_MIPI_DSI>;
+-		#phy-cells = <0>;
+-	};
+-
+-	pwm: pwm@300a000 {
+-		compatible = "allwinner,sun50i-a133-pwm";
+-		reg = <0x0300a000 0x400>;
+-		clocks = <&ccu CLK_BUS_PWM>;
+-		clock-names = "bus";
+-		resets = <&ccu RST_BUS_PWM>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pwm0_pins>;
+-		#pwm-cells = <3>;
+-	};
+-};
+-
+-&pio {
+-	pwm0_pins: pwm0-pins {
+-		pins = "PD23";
+-		function = "pwm0";
+-	};
++&pwm {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pwm0_pd_pin>;
++	status = "okay";
+ };
+ 
+ &uart3_pd_pins {

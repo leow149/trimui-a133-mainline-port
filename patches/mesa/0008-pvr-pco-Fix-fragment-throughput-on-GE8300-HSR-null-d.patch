@@ -1,7 +1,7 @@
-From fe0e8100aaf82a1f7aa2410ff0bb99817c513830 Mon Sep 17 00:00:00 2001
+From b6bad05f8933f9f20da792c3db1bd41b17930ed6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:38 +0100
-Subject: [PATCH 8/9] pvr/pco: Fix fragment throughput on GE8300 (HSR, null
+Subject: [PATCH 08/10] pvr/pco: Fix fragment throughput on GE8300 (HSR, null
  descriptors, CWE, smp padding)
 
 Measured on the TrimUI Smart Pro (GE8300 @ 696 MHz), see docs/gpu-perf-vs-stock.md.
@@ -30,25 +30,34 @@ Results (old -> new): vkmark 207 -> 246; full-screen textured pass 9.0 -> 2.4 ms
 cage composite 18.7 -> 7.3 ms; RetroArch mGBA under rotated cage 29 -> 58.5 fps
 (Vulkan) / 29 -> 56.5 fps (glcore via Zink).
 
+Follow-up details: the zero texture is only used for null combined image
+samplers that are sampled as non-array 2D; other dimensionalities keep
+the check. A null dynamic UBO ignores its dynamic offset, so the
+unchecked loads stay inside the zero page. The
+pco_nir_lower_null_descriptor_ubo option is gone.
+VK_EXT_color_write_enable is only hidden on the GE8300 (22.102.54.38);
+other cores keep exposing it.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/pco/pco_data.h                |  9 +++-
- src/imagination/pco/pco_internal.h            |  2 +-
+ src/imagination/pco/pco_internal.h            |  4 +-
  src/imagination/pco/pco_nir.c                 |  7 ++-
- .../pco/pco_nir_lower_null_descriptors.c      | 43 ++++++++++++++++--
- src/imagination/pco/pco_nir_pvfio.c           | 44 +++++++++++++++---
- src/imagination/pco/pco_opt.c                 | 35 ++++++++-------
- src/imagination/pco/pco_trans_nir.c           | 31 +++++++++++++
- .../vulkan/pvr_arch_descriptor_set.c          | 45 ++++++++++++++++++-
+ .../pco/pco_nir_lower_null_descriptors.c      | 47 +++++++++++++++++--
+ src/imagination/pco/pco_nir_pvfio.c           | 44 ++++++++++++++---
+ src/imagination/pco/pco_opt.c                 | 35 +++++++-------
+ src/imagination/pco/pco_trans_nir.c           | 31 ++++++++++++
+ src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  7 +++
+ .../vulkan/pvr_arch_descriptor_set.c          | 45 +++++++++++++++++-
  src/imagination/vulkan/pvr_arch_device.c      | 21 +++++++++
  src/imagination/vulkan/pvr_arch_pipeline.c    | 17 +++++++
  src/imagination/vulkan/pvr_device.h           |  4 ++
- src/imagination/vulkan/pvr_physical_device.c  |  9 +++-
- 12 files changed, 233 insertions(+), 34 deletions(-)
+ src/imagination/vulkan/pvr_physical_device.c  | 18 ++++++-
+ 13 files changed, 254 insertions(+), 35 deletions(-)
 
 diff --git a/src/imagination/pco/pco_data.h b/src/imagination/pco/pco_data.h
-index ab4129b..661dc80 100644
+index ab4129b6a9e..661dc80e0a1 100644
 --- a/src/imagination/pco/pco_data.h
 +++ b/src/imagination/pco/pco_data.h
 @@ -123,6 +123,12 @@ typedef struct _pco_fs_data {
@@ -75,7 +84,7 @@ index ab4129b..661dc80 100644
     PCO_SAMPLER_META_RSVD2,
  
 diff --git a/src/imagination/pco/pco_internal.h b/src/imagination/pco/pco_internal.h
-index c9da62d..3e93c98 100644
+index c9da62db5a4..474f162f062 100644
 --- a/src/imagination/pco/pco_internal.h
 +++ b/src/imagination/pco/pco_internal.h
 @@ -1828,7 +1828,7 @@ bool pco_nir_lower_vs_intrinsics(nir_shader *shader);
@@ -87,8 +96,17 @@ index c9da62d..3e93c98 100644
  bool pco_nir_lower_shared_io_to_global(nir_shader *shader, unsigned usc_slots);
  bool pco_nir_lower_subgroups(nir_shader *shader);
  bool pco_nir_lower_tex(nir_shader *shader, pco_data *data, pco_ctx *ctx);
+@@ -1845,7 +1845,7 @@ bool pco_schedule(pco_shader *shader);
+ bool pco_shrink_vecs(pco_shader *shader);
+ 
+ typedef enum {
+-   pco_nir_lower_null_descriptor_ubo = (1 << 0),
++   /* (1 << 0) was ubo: null UBOs read the zero page, no check needed. */
+    pco_nir_lower_null_descriptor_ssbo = (1 << 1),
+    pco_nir_lower_null_descriptor_texture = (1 << 2),
+    pco_nir_lower_null_descriptor_image = (1 << 3),
 diff --git a/src/imagination/pco/pco_nir.c b/src/imagination/pco/pco_nir.c
-index 6115d6b..c4e3de2 100644
+index 6115d6b16fd..c4e3de2d2e6 100644
 --- a/src/imagination/pco/pco_nir.c
 +++ b/src/imagination/pco/pco_nir.c
 @@ -1061,7 +1061,7 @@ void pco_lower_nir(pco_ctx *ctx, nir_shader *nir, pco_data *data)
@@ -113,10 +131,10 @@ index 6115d6b..c4e3de2 100644
        NIR_PASS(_, nir, nir_lower_is_helper_invocation);
        NIR_PASS(_, nir, pco_nir_lower_fs_intrinsics);
 diff --git a/src/imagination/pco/pco_nir_lower_null_descriptors.c b/src/imagination/pco/pco_nir_lower_null_descriptors.c
-index 0b0a3d1..157ce28 100644
+index 0b0a3d1fd98..fe63a084003 100644
 --- a/src/imagination/pco/pco_nir_lower_null_descriptors.c
 +++ b/src/imagination/pco/pco_nir_lower_null_descriptors.c
-@@ -10,6 +10,40 @@
+@@ -10,6 +10,44 @@
  #include "compiler/nir/nir_builder.h"
  #include "pco_internal.h"
  
@@ -140,6 +158,10 @@ index 0b0a3d1..157ce28 100644
 +   if (nir_tex_instr_src_index(tex, nir_tex_src_comparator) >= 0)
 +      return false;
 +
++   /* The zero texture is a 2D 1x1 one: only use it for matching samplers. */
++   if (tex->sampler_dim != GLSL_SAMPLER_DIM_2D || tex->is_array)
++      return false;
++
 +   nir_deref_instr *tex_deref = nir_instr_as_deref(nir_def_instr(tex_deref_def));
 +   nir_def *smp_deref_def = nir_get_tex_src(tex, nir_tex_src_sampler_deref);
 +   if (!smp_deref_def)
@@ -157,7 +179,7 @@ index 0b0a3d1..157ce28 100644
  static nir_def *get_is_null(nir_builder *b,
                              nir_instr *instr,
                              nir_def **def,
-@@ -36,10 +70,8 @@ static nir_def *get_is_null(nir_builder *b,
+@@ -36,10 +74,8 @@ static nir_def *get_is_null(nir_builder *b,
  
        case nir_intrinsic_get_ubo_size:
        case nir_intrinsic_load_ubo:
@@ -170,7 +192,7 @@ index 0b0a3d1..157ce28 100644
  
        case nir_intrinsic_get_ssbo_size:
        case nir_intrinsic_load_ssbo:
-@@ -74,6 +106,9 @@ static nir_def *get_is_null(nir_builder *b,
+@@ -74,6 +110,9 @@ static nir_def *get_is_null(nir_builder *b,
        if (!deref_def)
           return NULL;
  
@@ -181,7 +203,7 @@ index 0b0a3d1..157ce28 100644
        return nir_is_null_descriptor(b, deref_def);
     }
 diff --git a/src/imagination/pco/pco_nir_pvfio.c b/src/imagination/pco/pco_nir_pvfio.c
-index e28d2b0..540e4cd 100644
+index e28d2b0d960..540e4cd099c 100644
 --- a/src/imagination/pco/pco_nir_pvfio.c
 +++ b/src/imagination/pco/pco_nir_pvfio.c
 @@ -36,8 +36,35 @@ struct pfo_state {
@@ -275,7 +297,7 @@ index e28d2b0..540e4cd 100644
                                               lower_alpha_to_one,
                                               nir_metadata_control_flow,
 diff --git a/src/imagination/pco/pco_opt.c b/src/imagination/pco/pco_opt.c
-index b9aedea..deac962 100644
+index b9aedeae197..deac962de3c 100644
 --- a/src/imagination/pco/pco_opt.c
 +++ b/src/imagination/pco/pco_opt.c
 @@ -679,16 +679,6 @@ bool pco_dce(pco_shader *shader)
@@ -339,7 +361,7 @@ index b9aedea..deac962 100644
           progress = true;
        }
 diff --git a/src/imagination/pco/pco_trans_nir.c b/src/imagination/pco/pco_trans_nir.c
-index e78c438..931fc7a 100644
+index e78c438c8f9..931fc7acbf1 100644
 --- a/src/imagination/pco/pco_trans_nir.c
 +++ b/src/imagination/pco/pco_trans_nir.c
 @@ -2474,6 +2474,37 @@ static pco_instr *trans_is_null_desc(trans_ctx *tctx,
@@ -380,8 +402,26 @@ index e78c438..931fc7a 100644
     pco_ref all_dwords_zero;
     for (unsigned u = 0; u < num_dwords; ++u) {
        pco_ref dword_is_zero =
+diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+index 6db8a0689a4..d560d34f44b 100644
+--- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
++++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
+@@ -3267,6 +3267,13 @@ void PVR_PER_ARCH(CmdBindDescriptorSets2KHR)(VkCommandBuffer commandBuffer,
+          set->dynamic_buffers[u].offset =
+             has_dyn_offs ? pBindDescriptorSetsInfo->pDynamicOffsets[dyn_off++]
+                          : 0;
++
++         /* A null dynamic UBO points at the zero page with size 0 (see
++          * write_dynamic_buffer()): ignore its dynamic offset, so that the shader's
++          * unchecked loads stay inside the zero page.
++          */
++         if (!set->dynamic_buffers[u].size)
++            set->dynamic_buffers[u].offset = 0;
+       }
+ 
+       if (pBindDescriptorSetsInfo->stageFlags & VK_SHADER_STAGE_ALL_GRAPHICS) {
 diff --git a/src/imagination/vulkan/pvr_arch_descriptor_set.c b/src/imagination/vulkan/pvr_arch_descriptor_set.c
-index 48c09d9..04704fa 100644
+index 48c09d91092..04704fa6bc3 100644
 --- a/src/imagination/vulkan/pvr_arch_descriptor_set.c
 +++ b/src/imagination/vulkan/pvr_arch_descriptor_set.c
 @@ -30,6 +30,16 @@ write_buffer(const struct pvr_descriptor_set *set,
@@ -458,7 +498,7 @@ index 48c09d9..04704fa 100644
        image_view->image_state[PVR_TEXTURE_STATE_SAMPLE];
  
 diff --git a/src/imagination/vulkan/pvr_arch_device.c b/src/imagination/vulkan/pvr_arch_device.c
-index 319cafb..525db10 100644
+index 319cafb7a1d..525db10742a 100644
 --- a/src/imagination/vulkan/pvr_arch_device.c
 +++ b/src/imagination/vulkan/pvr_arch_device.c
 @@ -720,6 +720,27 @@ static VkResult pvr_init_null_pages(struct pvr_device *device)
@@ -490,7 +530,7 @@ index 319cafb..525db10 100644
  
  err_free_zero_buffer:
 diff --git a/src/imagination/vulkan/pvr_arch_pipeline.c b/src/imagination/vulkan/pvr_arch_pipeline.c
-index 2e5db2f..5a42118 100644
+index 2e5db2f540d..5a421183765 100644
 --- a/src/imagination/vulkan/pvr_arch_pipeline.c
 +++ b/src/imagination/vulkan/pvr_arch_pipeline.c
 @@ -2715,6 +2715,23 @@ pvr_preprocess_shader_data(pco_data *data,
@@ -518,10 +558,10 @@ index 2e5db2f..5a42118 100644
            (state->cb && state->cb->color_write_enables !=
                             BITFIELD_MASK(MESA_VK_MAX_COLOR_ATTACHMENTS))) {
 diff --git a/src/imagination/vulkan/pvr_device.h b/src/imagination/vulkan/pvr_device.h
-index 34f2220..ecb8556 100644
+index f153bbe18d5..800c63a9879 100644
 --- a/src/imagination/vulkan/pvr_device.h
 +++ b/src/imagination/vulkan/pvr_device.h
-@@ -162,6 +162,10 @@ struct pvr_device {
+@@ -163,6 +163,10 @@ struct pvr_device {
     struct {
        struct pvr_bo *zero_bo;
        struct pvr_bo *null_bo;
@@ -533,32 +573,45 @@ index 34f2220..ecb8556 100644
  
     struct pvr_border_color_table *border_color_table;
 diff --git a/src/imagination/vulkan/pvr_physical_device.c b/src/imagination/vulkan/pvr_physical_device.c
-index ad6625a..f576b0f 100644
+index ad6625a07bf..b8c3dba42c5 100644
 --- a/src/imagination/vulkan/pvr_physical_device.c
 +++ b/src/imagination/vulkan/pvr_physical_device.c
-@@ -192,7 +192,12 @@ static void pvr_physical_device_get_supported_extensions(
-       .KHR_vertex_attribute_divisor = true,
-       .KHR_workgroup_memory_explicit_layout = true,
-       .EXT_border_color_swizzle = true,
--      .EXT_color_write_enable = true,
-+      /* Not exposed: the dynamic color write enables are emulated in the
-+       * fragment shader by reading back the tile buffer, which makes every
-+       * draw translucent (no hidden surface removal) and costs ALU per pixel.
-+       * Zink, its main user, works without it.
-+       */
-+      .EXT_color_write_enable = false,
-       .EXT_custom_border_color = true,
-       .EXT_debug_marker = true,
-       .EXT_depth_clamp_zero_one = true,
-@@ -416,7 +421,7 @@ static void pvr_physical_device_get_supported_features(
+@@ -241,6 +241,18 @@ static void pvr_physical_device_get_supported_extensions(
+    };
+ }
+ 
++/*
++ * The dynamic color write enables are emulated in the fragment shader by
++ * reading back the tile buffer, which makes every draw translucent (no hidden
++ * surface removal). On the GE8300 that halves fragment throughput; Zink, the
++ * main user of the extension, works without it, so it is not exposed there.
++ */
++static bool pvr_cwe_is_slow(const struct pvr_device_info *dev_info)
++{
++   return dev_info->ident.b == 22 && dev_info->ident.v == 102 &&
++          dev_info->ident.n == 54 && dev_info->ident.c == 38;
++}
++
+ static void pvr_physical_device_get_supported_features(
+    const struct pvr_device_info *const dev_info,
+    struct vk_features *const features)
+@@ -415,8 +427,8 @@ static void pvr_physical_device_get_supported_features(
+       /* Vulkan 1.2 / VK_KHR_uniform_buffer_standard_layout */
        .uniformBufferStandardLayout = true,
  
-       /* VK_EXT_color_write_enable */
+-      /* VK_EXT_color_write_enable */
 -      .colorWriteEnable = true,
-+      .colorWriteEnable = false,
++      /* VK_EXT_color_write_enable, see pvr_cwe_is_slow() */
++      .colorWriteEnable = !pvr_cwe_is_slow(dev_info),
  
        /* Vulkan 1.3 / VK_EXT_extended_dynamic_state */
        .extendedDynamicState = true,
--- 
-2.53.0
-
+@@ -1263,6 +1275,8 @@ VkResult pvr_physical_device_init(struct pvr_physical_device *pdevice,
+    pdevice->memory.memoryTypes[0].heapIndex = 0;
+ 
+    pvr_physical_device_get_supported_extensions(&supported_extensions, instance);
++   if (pvr_cwe_is_slow(&pdevice->dev_info))
++      supported_extensions.EXT_color_write_enable = false;
+    pvr_physical_device_get_supported_features(&pdevice->dev_info,
+                                               &supported_features);
+    if (!pvr_physical_device_get_properties(pdevice, &supported_properties)) {

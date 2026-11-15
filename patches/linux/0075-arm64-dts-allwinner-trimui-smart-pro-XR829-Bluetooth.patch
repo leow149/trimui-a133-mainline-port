@@ -1,0 +1,70 @@
+From 74c5fbd8d96ecaf362f2f20013d7c22d76794130 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Fri, 6 Nov 2026 08:41:15 +0100
+Subject: [PATCH 075/106] arm64: dts: allwinner: trimui-smart-pro: XR829
+ Bluetooth
+
+Add the UART1 pins (PG6-9) to the A100 dtsi, enable UART1 for the XR829
+Bluetooth HCI and describe BT_RST_N (PL2) as a rfkill-gpio.
+
+The firmware download and the H4 line discipline attach are done in
+userspace, which also keeps BT_WAKE (PL4) high through the GPIO character
+device while the HCI is attached. There is no binding or driver for the
+XR829 low-power (BT_WAKE/BT_HOSTWAKE) signalling, so they are not described.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi |  6 +++++
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 22 +++++++++++++++++++
+ 2 files changed, 28 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 4e343d699..1a08364ec 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -314,6 +314,12 @@ uart4_pd_pins: uart4-pd-pins {
+ 				pins = "PD18", "PD19";
+ 				function = "uart4";
+ 			};
++
++			/omit-if-no-ref/
++			uart1_pg_pins: uart1-pg-pins {
++				pins = "PG6", "PG7", "PG8", "PG9";
++				function = "uart1";
++			};
+ 		};
+ 
+ 		iommu: iommu@30f0000 {
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+index 47ef62729..f3499d633 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -551,6 +551,28 @@ &uart0 {
+ 	status = "okay";
+ };
+ 
++/*
++ * XR829 Bluetooth, HCI over UART1. The firmware is downloaded by userspace,
++ * which then attaches the UART as an H4 line discipline. BT_RST_N (PL2) is
++ * driven through rfkill-gpio. BT_WAKE (PL4) and BT_HOSTWAKE (PL3) are not
++ * described: there is no binding or driver for XR829 low-power mode, the
++ * userspace tool keeps BT_WAKE high while the HCI is attached.
++ */
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart1_pg_pins>;
++	status = "okay";
++};
++
++&{/} {
++	rfkill-bt {
++		compatible = "rfkill-gpio";
++		label = "rfkill-xr829-bt";
++		radio-type = "bluetooth";
++		shutdown-gpios = <&r_pio 0 2 GPIO_ACTIVE_HIGH>; /* PL2 */
++	};
++};
++
+ /* Buttons and sticks: one microcontroller per side, each on its own UART. */
+ &uart3 {
+ 	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";

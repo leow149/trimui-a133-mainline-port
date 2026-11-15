@@ -1,0 +1,38 @@
+From 9b1bbb383b8d641df3b44af2e9657128edb7c8f6 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 14 Nov 2026 18:46:02 +0100
+Subject: [PATCH 104/106] Input: trimui-smartpro-pad: Set input device IDs
+
+Give the gamepad fixed vendor, product and version IDs so userspace
+(SDL game controller mappings, frontends) can match it by GUID instead
+of falling back to a name hash.
+
+The IDs are made up ("TU", "SP" on BUS_HOST): the MCUs have none. They
+are kept fixed because the SDL GUID derived from them is shipped in the
+controller mappings of the distribution using this driver.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/input/joystick/trimui-smartpro-pad.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
+index 97359e084..ab12ad5be 100644
+--- a/drivers/input/joystick/trimui-smartpro-pad.c
++++ b/drivers/input/joystick/trimui-smartpro-pad.c
+@@ -275,7 +275,15 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
+ 
+ 	input->name = "TrimUI Smart Pro Gamepad";
+ 	input->phys = "trimui-smartpro-pad/input0";
++	/*
++	 * Not USB IDs: the MCUs have none. Fixed, made-up IDs ("TU", "SP")
++	 * give userspace a stable SDL GUID to match the controller mapping
++	 * on, instead of a hash of the name.
++	 */
+ 	input->id.bustype = BUS_HOST;
++	input->id.vendor = 0x5455;
++	input->id.product = 0x5350;
++	input->id.version = 0x0100;
+ 	tsp_pad_setup_side(input, half->side);
+ 	tsp_pad_setup_side(input, right->side);
+ 

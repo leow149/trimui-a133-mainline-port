@@ -1,0 +1,83 @@
+From 90655917688335f8cd1839cf883e9f76d819dd7b Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 10:42:38 +0100
+Subject: [PATCH 036/106] leds: sun50i-a100: Allow a per-LED channel order
+
+The pixel format applies to the whole chain, but chains can mix LED types:
+on the TrimUI Smart Pro the stick rings are GRB and the logo LED is RGB. Let a
+multi-led node describe its channel order with led@0..2 subnodes, as the
+multicolor LED binding allows.
+
+The color of a channel must be a single-colour LED_COLOR_ID; anything
+else fails the probe.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/leds/leds-sun50i-a100.c | 39 ++++++++++++++++++++++++++++-----
+ 1 file changed, 34 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/leds/leds-sun50i-a100.c b/drivers/leds/leds-sun50i-a100.c
+index 7cfb4c739..7bd99a444 100644
+--- a/drivers/leds/leds-sun50i-a100.c
++++ b/drivers/leds/leds-sun50i-a100.c
+@@ -509,6 +509,32 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 		led->subled_info[2].color_index = LED_COLOR_ID_BLUE;
+ 		led->subled_info[2].channel = 2;
+ 
++		/*
++		 * A chain can mix LED types with different channel orders. An
++		 * LED can describe its own with led@0..2 subnodes, in the
++		 * channel order of the pixel format.
++		 */
++		fwnode_for_each_child_node_scoped(child, sub) {
++			u32 ch, color;
++
++			if (fwnode_property_read_u32(sub, "reg", &ch) ||
++			    ch >= LEDC_CHANNELS_PER_LED ||
++			    fwnode_property_read_u32(sub, "color", &color))
++				continue;
++
++			/* One channel is one single-colour LED. */
++			if (color >= LED_COLOR_ID_MAX ||
++			    color == LED_COLOR_ID_MULTI ||
++			    color == LED_COLOR_ID_RGB) {
++				ret = dev_err_probe(dev, -EINVAL,
++						    "%pfw: invalid color %u\n",
++						    sub, color);
++				goto err_unregister;
++			}
++
++			led->subled_info[ch].color_index = color;
++		}
++
+ 		led->mc_cdev.num_colors = ARRAY_SIZE(led->subled_info);
+ 		led->mc_cdev.subled_info = led->subled_info;
+ 
+@@ -521,11 +547,7 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 		ret = led_classdev_multicolor_register_ext(dev, &led->mc_cdev, &init_data);
+ 		if (ret) {
+ 			dev_err_probe(dev, ret, "Failed to register multicolor LED %u", led->addr);
+-			while (led-- > priv->leds)
+-				led_classdev_multicolor_unregister(&led->mc_cdev);
+-			sun50i_a100_ledc_suspend(&pdev->dev);
+-
+-			return ret;
++			goto err_unregister;
+ 		}
+ 
+ 		led++;
+@@ -534,6 +556,13 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 	dev_info(dev, "Registered %u LEDs\n", num_leds);
+ 
+ 	return 0;
++
++err_unregister:
++	while (led-- > priv->leds)
++		led_classdev_multicolor_unregister(&led->mc_cdev);
++	sun50i_a100_ledc_suspend(&pdev->dev);
++
++	return ret;
+ }
+ 
+ static void sun50i_a100_ledc_remove(struct platform_device *pdev)

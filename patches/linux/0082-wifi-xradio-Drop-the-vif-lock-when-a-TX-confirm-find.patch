@@ -1,0 +1,76 @@
+From c784edefa5c54a1e072c6984e0dc8ce73cecbf53 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 22:32:30 +0100
+Subject: [PATCH 082/106] wifi: xradio: Drop the vif lock when a TX confirm
+ finds no queued packet
+
+xrwl_hwpriv_to_vifpriv() returns with priv->vif_lock held, and every path
+of xradio_tx_confirm_cb() must release it. When xradio_queue_get_skb()
+fails, neither the requeue branch nor the success branch runs, and the
+function returns with the lock held. That happens when the firmware
+confirms a frame that a deauth already flushed (the WARN at
+xradio_queue_get_skb). The next wsm_get_tx() in the bh thread then spins on
+the lock forever. The resulting RCU stall wedges deauth
+(synchronize_rcu_expedited), rtnl users (iw, ip) and even mount.
+
+Seen on the TrimUI Smart Pro when switching from a WPA3 network back to
+WPA2 during traffic. Two connect/disconnect rounds with a ping flood
+during the disconnect now pass without a hang. The late-confirm path did
+not trigger in those rounds, so the fix is verified by code inspection.
+
+Such a late confirm is a normal path, so it no longer WARNs (neither
+here nor in xradio_queue_get_skb() on a generation mismatch); it is
+logged with a rate-limited debug message.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/queue.c |  2 +-
+ drivers/net/wireless/xradio/tx.c    | 14 ++++++++++++--
+ 2 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/queue.c b/drivers/net/wireless/xradio/queue.c
+index afbe60523..4dfd5c600 100644
+--- a/drivers/net/wireless/xradio/queue.c
++++ b/drivers/net/wireless/xradio/queue.c
+@@ -671,7 +671,7 @@ int xradio_queue_get_skb(struct xradio_queue *queue, u32 packetID,
+ 		WARN_ON(1);
+ 		ret = -EINVAL;
+ 	} else if (unlikely(item->generation != item_generation)) {
+-		WARN_ON(1);
++		/* Already flushed (e.g. on deauth): a late TX confirm. */
+ 		ret = -ENOENT;
+ 	} else {
+ 		*skb = item->skb;
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index a070b6aa9..74927b244 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -1153,8 +1153,7 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
+ 		}
+ 		spin_unlock_bh(&priv->ps_state_lock);
+ 		spin_unlock(&priv->vif_lock);
+-	} else if (!WARN_ON(xradio_queue_get_skb(
+-			queue, arg->packetID, &skb, &txpriv))) {
++	} else if (!xradio_queue_get_skb(queue, arg->packetID, &skb, &txpriv)) {
+ 		struct ieee80211_tx_info *tx = IEEE80211_SKB_CB(skb);
+ 		struct ieee80211_hdr *frame = (struct ieee80211_hdr *)&skb->data[txpriv->offset];
+ 		int tx_count = arg->ackFailures;
+@@ -1286,6 +1285,17 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
+ 		
+ 
+ 		xradio_queue_remove(queue, arg->packetID);
++	} else {
++		/*
++		 * The packet is gone from the queue (flushed on deauth, for
++		 * example) and the firmware confirmed it late. The vif lock
++		 * taken by xrwl_hwpriv_to_vifpriv() must still be dropped,
++		 * otherwise the next wsm_get_tx() spins on it forever.
++		 */
++		dev_dbg_ratelimited(hw_priv->pdev,
++				    "TX confirm for flushed packet 0x%08x\n",
++				    arg->packetID);
++		spin_unlock(&priv->vif_lock);
+ 	}
+ }
+ 

@@ -1,7 +1,7 @@
-From 679268ba28c78b9a04c784594b7206135813903f Mon Sep 17 00:00:00 2001
+From ebb21a75a634f28a8d577117467e5a7458bb33bf Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:39 +0100
-Subject: [PATCH 9/9] pvr: Support the v1 simple internal parameter format in
+Subject: [PATCH 09/10] pvr: Support the v1 simple internal parameter format in
  the transfer queue
 
 Clip blits (custom-mapping multi-pass copies, e.g. buffer->image uploads of
@@ -28,14 +28,14 @@ after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- .../vulkan/pvr_arch_job_transfer.c            | 94 ++++++++++++++++++-
- 1 file changed, 89 insertions(+), 5 deletions(-)
+ .../vulkan/pvr_arch_job_transfer.c            | 87 +++++++++++++++++--
+ 1 file changed, 82 insertions(+), 5 deletions(-)
 
 diff --git a/src/imagination/vulkan/pvr_arch_job_transfer.c b/src/imagination/vulkan/pvr_arch_job_transfer.c
-index df05efe..5cb517e 100644
+index df05efe7e2e..d00b4c0c502 100644
 --- a/src/imagination/vulkan/pvr_arch_job_transfer.c
 +++ b/src/imagination/vulkan/pvr_arch_job_transfer.c
-@@ -3422,6 +3422,19 @@ static void pvr_isp_prim_block_pds_state(const struct pvr_device_info *dev_info,
+@@ -3422,6 +3422,12 @@ static void pvr_isp_prim_block_pds_state(const struct pvr_device_info *dev_info,
     *cs_ptr_out = cs_ptr;
  }
  
@@ -45,21 +45,14 @@ index df05efe..5cb517e 100644
 + * without a terminate entry: CR_ISP_RGN gives the entry count and the last
 + * entry is flagged.
 + */
-+static inline bool
-+pvr_has_sipf_v1(const struct pvr_device_info *dev_info)
-+{
-+   return PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
-+          !PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v2);
-+}
-+
  static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
                                           UNUSED uint32_t tsp_comp_format_in_dw,
                                           uint32_t tsp_data_size_in_bytes,
-@@ -3433,6 +3446,33 @@ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
+@@ -3433,6 +3439,33 @@ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
        PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v2);
     uint32_t *cs_ptr = *cs_ptr_out;
  
-+   if (pvr_has_sipf_v1(dev_info)) {
++   if (rogue_has_sipf_v1(dev_info)) {
 +      /* Format word: vertex count - 1 in bits 5..9, TSP vertex size in
 +       * dwords from bit 12. It is followed by the ISP state (ISPA) and a pad
 +       * word to 64 bits; the control stream entry gives the header size.
@@ -89,7 +82,7 @@ index df05efe..5cb517e 100644
     if (has_simple_internal_parameter_format_v2) {
        const uint32_t tsp_data_per_vrx_in_bytes =
           tsp_data_size_in_bytes / num_isp_vertices;
-@@ -4062,6 +4102,8 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4062,6 +4095,8 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
     uint32_t num_region_arrays;
     uint32_t total_stream_size;
     bool was_linked = false;
@@ -98,7 +91,7 @@ index df05efe..5cb517e 100644
     uint32_t rem_mappings;
     uint32_t num_sources;
     uint32_t *blk_cs_ptr;
-@@ -4124,11 +4166,20 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4124,11 +4159,20 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
        }
     }
  
@@ -107,7 +100,7 @@ index df05efe..5cb517e 100644
 -      pvr_transfer_prim_blocks_per_alloc(dev_info);
 -   region_arrays_size = ROGUE_IPF_CONTROL_STREAM_SIZE_DWORDS *
 -                        sizeof(uint32_t) * num_region_arrays;
-+   if (pvr_has_sipf_v1(dev_info)) {
++   if (rogue_has_sipf_v1(dev_info)) {
 +      /* All entries in one array, so no link entries are needed. */
 +      num_region_arrays = 1U;
 +      region_arrays_size =
@@ -124,12 +117,12 @@ index df05efe..5cb517e 100644
     total_stream_size = region_arrays_size + prim_blk_size;
  
     /* Allocate space for IPF control stream. */
-@@ -4494,6 +4545,25 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4494,6 +4538,25 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
  
                 cs_ptr = (uint32_t *)cs_byte_ptr;
  
 +               free_ctrl_stream_words -= 2;
-+            } else if (pvr_has_sipf_v1(dev_info)) {
++            } else if (rogue_has_sipf_v1(dev_info)) {
 +               const uint32_t num_prims = 2U * num_mappings;
 +
 +               /* 64-bit primitive entry: block header size in 64-bit words
@@ -150,11 +143,11 @@ index df05efe..5cb517e 100644
                 free_ctrl_stream_words -= 2;
              } else {
                 pvr_csb_pack (cs_ptr, IPF_PRIMITIVE_FORMAT, word) {
-@@ -4547,6 +4617,12 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4547,6 +4610,12 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
        cs_byte_ptr = pvr_isp_ctrl_stream_sipf_write_aligned(cs_byte_ptr, tmp, 1);
  
        cs_ptr = (uint32_t *)cs_byte_ptr;
-+   } else if (pvr_has_sipf_v1(dev_info)) {
++   } else if (rogue_has_sipf_v1(dev_info)) {
 +      /* No terminate entry: the last entry is flagged and CR_ISP_RGN holds
 +       * the number of entries.
 +       */
@@ -163,11 +156,11 @@ index df05efe..5cb517e 100644
     } else {
        pvr_csb_pack (cs_ptr, IPF_CONTROL_STREAM, word) {
           word.cs_type = ROGUE_IPF_CS_TYPE_TERM;
-@@ -4572,6 +4648,14 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4572,6 +4641,14 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
            */
           isp_rgn.cs_size_ipf_creq_pf = was_linked;
        }
-+   } else if (pvr_has_sipf_v1(dev_info)) {
++   } else if (rogue_has_sipf_v1(dev_info)) {
 +      pvr_csb_pack (&regs->isp_rgn, CR_ISP_RGN_SIPF, isp_rgn) {
 +         /* Number of primitive entries; all ones if unknown/too many, the
 +          * last entry is flagged either way.
@@ -178,6 +171,3 @@ index df05efe..5cb517e 100644
     } else {
        /* clang-format off */
        pvr_csb_pack(&regs->isp_rgn, CR_ISP_RGN, isp_rgn);
--- 
-2.53.0
-

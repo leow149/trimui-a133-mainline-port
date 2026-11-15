@@ -1,0 +1,93 @@
+From 02bec890bc2e7ae18bc036494933f1c0bb7d96a3 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 7 Nov 2026 20:02:56 +0100
+Subject: [PATCH 076/106] watchdog: sunxi: Stop the watchdog across system
+ suspend
+
+The watchdog keeps counting during system sleep while the userspace daemon
+that pings it is frozen. With a 16 s maximum timeout, any s2idle suspend
+longer than that ends in a reset. Stop the watchdog on suspend and re-arm
+it with a fresh timeout on resume when it was active.
+
+Tested on the TrimUI Smart Pro (A133): a 20 s s2idle suspend no longer
+resets the board.
+
+Also stop it when it is running without an open file (WDOG_HW_RUNNING,
+pinged by the watchdog core), and only restart on resume what suspend
+stopped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/watchdog/sunxi_wdt.c | 40 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+
+diff --git a/drivers/watchdog/sunxi_wdt.c b/drivers/watchdog/sunxi_wdt.c
+index b6c761acc..b80a51a0b 100644
+--- a/drivers/watchdog/sunxi_wdt.c
++++ b/drivers/watchdog/sunxi_wdt.c
+@@ -54,6 +54,7 @@ struct sunxi_wdt_dev {
+ 	struct watchdog_device wdt_dev;
+ 	void __iomem *wdt_base;
+ 	const struct sunxi_wdt_reg *wdt_regs;
++	bool suspended_running;	/* stopped by sunxi_wdt_suspend() */
+ };
+ 
+ /*
+@@ -285,6 +286,7 @@ static int sunxi_wdt_probe(struct platform_device *pdev)
+ 	watchdog_set_restart_priority(&sunxi_wdt->wdt_dev, 128);
+ 
+ 	watchdog_set_drvdata(&sunxi_wdt->wdt_dev, sunxi_wdt);
++	platform_set_drvdata(pdev, sunxi_wdt);
+ 
+ 	sunxi_wdt_stop(&sunxi_wdt->wdt_dev);
+ 
+@@ -299,10 +301,48 @@ static int sunxi_wdt_probe(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++/*
++ * The watchdog keeps counting during system sleep while whoever pings it
++ * (a userspace daemon, or the watchdog core's worker when it runs without an
++ * open file, WDOG_HW_RUNNING) is frozen, so stop it across suspend and re-arm
++ * it (with a fresh timeout) on resume.
++ */
++static int sunxi_wdt_suspend(struct device *dev)
++{
++	struct sunxi_wdt_dev *sunxi_wdt = dev_get_drvdata(dev);
++	struct watchdog_device *wdd = &sunxi_wdt->wdt_dev;
++	int ret;
++
++	sunxi_wdt->suspended_running = false;
++	if (!watchdog_active(wdd) && !watchdog_hw_running(wdd))
++		return 0;
++
++	ret = sunxi_wdt_stop(wdd);
++	if (ret)
++		return ret;
++	sunxi_wdt->suspended_running = true;
++	return 0;
++}
++
++static int sunxi_wdt_resume(struct device *dev)
++{
++	struct sunxi_wdt_dev *sunxi_wdt = dev_get_drvdata(dev);
++
++	if (!sunxi_wdt->suspended_running)
++		return 0;
++
++	sunxi_wdt->suspended_running = false;
++	return sunxi_wdt_start(&sunxi_wdt->wdt_dev);
++}
++
++static DEFINE_SIMPLE_DEV_PM_OPS(sunxi_wdt_pm_ops, sunxi_wdt_suspend,
++				sunxi_wdt_resume);
++
+ static struct platform_driver sunxi_wdt_driver = {
+ 	.probe		= sunxi_wdt_probe,
+ 	.driver		= {
+ 		.name		= DRV_NAME,
++		.pm		= pm_sleep_ptr(&sunxi_wdt_pm_ops),
+ 		.of_match_table	= sunxi_wdt_dt_ids,
+ 	},
+ };

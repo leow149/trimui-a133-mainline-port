@@ -1,7 +1,7 @@
-From d2579a02d76d66074c10d9730d9c3a8f5a8189d8 Mon Sep 17 00:00:00 2001
+From 497ae2a96a5e92fffdf19c4478b1eefb19272cf5 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
-Subject: [PATCH 1/4] pvr: Support the v1 simple internal parameter format
+Subject: [PATCH 01/10] pvr: Support the v1 simple internal parameter format
 
 The GE8300 (Series 8XE) uses version 1 of the simple internal parameter
 format, but the macrotile setup and the ISP tile count alignment asserted
@@ -11,15 +11,30 @@ whole render target, and only align to 2x2 tile groups on version 2.
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- src/imagination/include/hwdef/rogue_hw_utils.h |  7 +++----
- src/imagination/vulkan/pvr_arch_job_render.c   | 14 +++++++++++++-
- 2 files changed, 16 insertions(+), 5 deletions(-)
+ src/imagination/include/hwdef/rogue_hw_utils.h | 15 +++++++++++----
+ src/imagination/vulkan/pvr_arch_job_render.c   | 12 +++++++++++-
+ 2 files changed, 22 insertions(+), 5 deletions(-)
 
 diff --git a/src/imagination/include/hwdef/rogue_hw_utils.h b/src/imagination/include/hwdef/rogue_hw_utils.h
-index a859059..892587e 100644
+index a859059e9b6..11bb8d41abd 100644
 --- a/src/imagination/include/hwdef/rogue_hw_utils.h
 +++ b/src/imagination/include/hwdef/rogue_hw_utils.h
-@@ -154,10 +154,9 @@ rogue_get_isp_num_tiles_xy(const struct pvr_device_info *dev_info,
+@@ -53,6 +53,14 @@
+ 
+ #include "pvr_hw_utils.h"
+ 
++/* Version 1 of the simple internal parameter format (e.g. GE8300). */
++static inline bool rogue_has_sipf_v1(const struct pvr_device_info *dev_info)
++{
++   return PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++          PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0U) ==
++             1U;
++}
++
+ static inline void
+ rogue_get_isp_samples_per_tile_xy(const struct pvr_device_info *dev_info,
+                                   uint32_t samples,
+@@ -154,10 +162,9 @@ rogue_get_isp_num_tiles_xy(const struct pvr_device_info *dev_info,
     *x_out = DIV_ROUND_UP(width * scale_x, tile_samples_x);
     *y_out = DIV_ROUND_UP(height * scale_y, tile_samples_y);
  
@@ -34,17 +49,15 @@ index a859059..892587e 100644
        *x_out = ALIGN_POT(*x_out, 2);
        *y_out = ALIGN_POT(*y_out, 2);
 diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
-index f1cc515..0b7f172 100644
+index f1cc515f263..19187087ec1 100644
 --- a/src/imagination/vulkan/pvr_arch_job_render.c
 +++ b/src/imagination/vulkan/pvr_arch_job_render.c
-@@ -126,7 +126,19 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
+@@ -126,7 +126,17 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
  
     rogue_get_num_macrotiles_xy(dev_info, &info->mtiles_x, &info->mtiles_y);
  
 -   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
-+   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
-+       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0) ==
-+          1) {
++   if (rogue_has_sipf_v1(dev_info)) {
 +      /* A single macrotile covering the whole render target. */
 +      info->mtile_x1 = info->num_tiles_x;
 +      info->mtile_y1 = info->num_tiles_y;
@@ -58,6 +71,3 @@ index f1cc515..0b7f172 100644
        assert(PVR_GET_FEATURE_VALUE(dev_info,
                                     simple_parameter_format_version,
                                     0) == 2);
--- 
-2.56.0
-

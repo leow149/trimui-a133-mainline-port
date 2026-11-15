@@ -3,9 +3,14 @@
  * Protocol: docs/bluetooth-xr829-protocol.md (from the vendor rtk_hciattach "xradio" type).
  *
  *   xr829_bt_up [-d /dev/ttyS1] [-f fw.bin] [-a aa:bb:cc:dd:ee:ff] [-p]   (-p = probe only)
+ *               [-g chiplabel:line | -g none]   (BT_WAKE GPIO, default 7022000.pinctrl:4 = PL4)
+ *               [-n]   (stay in the foreground once attached, for a Type=exec service)
  *
  * Keeps the tty open for the whole sequence, then attaches it as an HCI H4 line discipline
- * and stays resident (the hci0 device lives as long as this fd is open).
+ * and stays resident (the hci0 device lives as long as this fd is open). The bring-up is
+ * bounded by a 40 s alarm, so a wedged controller cannot hang the caller. BT_WAKE is
+ * requested through the GPIO character device and held high for as long as the
+ * resident process lives, so the controller never enters its low-power mode.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +25,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <linux/gpio.h>
 
 #define N_HCI 15
 #define HCIUARTSETPROTO _IOW('U', 200, int)
@@ -47,14 +53,14 @@ static int write_file(const char *path, const char *s)
 	return r < 0 ? -1 : 0;
 }
 
-static char rfkill_state[128];
+static char rfkill_state[300];
 static int find_rfkill(void)
 {
 	DIR *d = opendir("/sys/class/rfkill");
 	struct dirent *e;
 	if (!d) return -1;
 	while ((e = readdir(d))) {
-		char p[160], t[32] = "";
+		char p[300], t[32] = "";
 		snprintf(p, sizeof p, "/sys/class/rfkill/%s/type", e->d_name);
 		FILE *f = fopen(p, "r");
 		if (!f) continue;
@@ -65,6 +71,58 @@ static int find_rfkill(void)
 		fclose(f);
 	}
 	closedir(d);
+	return -1;
+}
+
+/*
+ * Request "label:line" as an output driven high; returns the line fd (keep it open to
+ * keep the line high) or -1.
+ */
+static int bt_wake_request(const char *spec)
+{
+	char label[GPIO_MAX_NAME_SIZE];
+	const char *colon = strrchr(spec, ':');
+	unsigned int line;
+
+	if (!colon || colon == spec || (size_t)(colon - spec) >= sizeof label ||
+	    sscanf(colon + 1, "%u", &line) != 1) {
+		fprintf(stderr, "bad -g %s (want chiplabel:line)\n", spec);
+		return -1;
+	}
+	memcpy(label, spec, colon - spec);
+	label[colon - spec] = 0;
+
+	for (int n = 0; n < 16; n++) {
+		char path[32];
+		struct gpiochip_info info;
+		struct gpio_v2_line_request req;
+
+		snprintf(path, sizeof path, "/dev/gpiochip%d", n);
+		int c = open(path, O_RDWR | O_CLOEXEC);
+		if (c < 0)
+			continue;
+		if (ioctl(c, GPIO_GET_CHIPINFO_IOCTL, &info) || strcmp(info.label, label)) {
+			close(c);
+			continue;
+		}
+		memset(&req, 0, sizeof req);
+		req.offsets[0] = line;
+		req.num_lines = 1;
+		req.config.flags = GPIO_V2_LINE_FLAG_OUTPUT;
+		req.config.num_attrs = 1;
+		req.config.attrs[0].attr.id = GPIO_V2_LINE_ATTR_ID_OUTPUT_VALUES;
+		req.config.attrs[0].attr.values = 1;
+		req.config.attrs[0].mask = 1;
+		snprintf(req.consumer, sizeof req.consumer, "xr829-bt-wake");
+		int r = ioctl(c, GPIO_V2_GET_LINE_IOCTL, &req);
+		close(c);
+		if (r) {
+			perror("BT_WAKE line request");
+			return -1;
+		}
+		return req.fd;
+	}
+	fprintf(stderr, "no gpiochip labelled %s\n", label);
 	return -1;
 }
 
@@ -160,10 +218,11 @@ static int brom_ack(const char *what)
 	return 0;
 }
 
+/* tries > 0: give up after that many 0x55 bytes (each ~20 ms, plus power cycles) */
 static int brom_sync(int tries, int cycle_after)
 {
 	uint8_t b[2];
-	for (int i = 0; ; i++) {
+	for (int i = 0; i < tries; i++) {
 		uint8_t c = 0x55;
 		wr(&c, 1);
 		msleep(20);
@@ -173,13 +232,13 @@ static int brom_sync(int tries, int cycle_after)
 			if (n == 1) n += rd(b + 1, 1, 50);
 			if (n == 2 && ((b[0] == 'O' && b[1] == 'K') || (b[0] == 'K' && b[1] == 'O'))) return 0;
 		}
-		if (tries && i + 1 >= tries) return -1;
 		if (cycle_after && (i + 1) % cycle_after == 0) {
 			fprintf(stderr, "sync: no answer after %d tries, power cycle\n", i + 1);
 			power_cycle(500); msleep(20);
 			tcflush(fd, TCIOFLUSH);
 		}
 	}
+	return -1;
 }
 
 static int hci_cmd(const uint8_t *cmd, int n, const char *what)
@@ -199,9 +258,11 @@ static int hci_cmd(const uint8_t *cmd, int n, const char *what)
 int main(int argc, char **argv)
 {
 	const char *dev = "/dev/ttyS1", *fw = "/lib/firmware/xr829/fw_xr829_bt.bin";
+	const char *wake_gpio = "7022000.pinctrl:4";
+	int wake_fd = -1, nofork = 0;
 	uint8_t bd[6] = { 0 }; int have_bd = 0, probe = 0, fast = 1500000, flow = 1, postb = 115200, wake = 1, rstlow = 20, ibaud = 115200;
 	int o;
-	while ((o = getopt(argc, argv, "d:f:a:pqw:r:i:F:B:")) != -1) {
+	while ((o = getopt(argc, argv, "d:f:a:pqw:r:i:F:B:g:n")) != -1) {
 		switch (o) {
 		case 'd': dev = optarg; break;
 		case 'f': fw = optarg; break;
@@ -212,6 +273,8 @@ int main(int argc, char **argv)
 		case 'w': wake = atoi(optarg); break;
 		case 'r': rstlow = atoi(optarg); break;
 		case 'i': ibaud = atoi(optarg); break;
+		case 'g': wake_gpio = optarg; break;
+		case 'n': nofork = 1; break;
 		case 'a': {
 			unsigned a[6];
 			if (sscanf(optarg, "%x:%x:%x:%x:%x:%x", a, a+1, a+2, a+3, a+4, a+5) != 6) return 2;
@@ -220,19 +283,23 @@ int main(int argc, char **argv)
 		default: return 2;
 		}
 	}
+	alarm(40);	/* SIGALRM ends a wedged bring-up */
 	if (find_rfkill()) { fprintf(stderr, "no bluetooth rfkill\n"); return 1; }
 	fd = open(dev, O_RDWR | O_NOCTTY | O_NONBLOCK);
 	if (fd < 0) { perror(dev); return 1; }
 	if (set_baud(ibaud == 115200 ? B115200 : ibaud == 921600 ? B921600 : ibaud == 1500000 ? B1500000 : B9600, 0)) { perror("termios"); return 1; }
 
-	/* 2: reset pulse, 3: wake on, lpm off */
-	power_cycle(rstlow); 
-	write_file("/proc/bluetooth/sleep/btwake", wake ? "1" : "0");
-	write_file("/proc/bluetooth/sleep/lpm", "0");
+	/* BT_WAKE high (unless -w 0 or -g none), then a reset pulse */
+	if (wake && strcmp(wake_gpio, "none")) {
+		wake_fd = bt_wake_request(wake_gpio);
+		if (wake_fd < 0)
+			fprintf(stderr, "warning: BT_WAKE not driven\n");
+	}
+	power_cycle(rstlow);
 	{ uint8_t u[64]; int k = rd(u, 64, 150); fprintf(stderr, "unsolicited rx after reset: %d bytes\n", k); hexdump("unsol", u, k); }
 
 	fprintf(stderr, "== BROM sync @%d\n", ibaud);
-	if (brom_sync(probe ? 100 : 0, 16)) { fprintf(stderr, "sync failed\n"); return 1; }
+	if (brom_sync(probe ? 100 : 200, 16)) { fprintf(stderr, "sync failed\n"); return 1; }
 	fprintf(stderr, "BROM answered OK\n");
 	if (probe) return 0;
 
@@ -250,9 +317,14 @@ int main(int argc, char **argv)
 
 	FILE *ff = fopen(fw, "rb");
 	if (!ff) { perror(fw); return 1; }
-	fseek(ff, 0, SEEK_END); long sz = ftell(ff); rewind(ff);
+	long sz = -1;
+	if (!fseek(ff, 0, SEEK_END))
+		sz = ftell(ff);
+	if (sz <= 0 || sz > 4 * 1024 * 1024) { fprintf(stderr, "%s: bad size %ld\n", fw, sz); return 1; }
+	rewind(ff);
 	uint8_t *img = malloc(sz);
-	if (fread(img, 1, sz, ff) != (size_t)sz) return 1;
+	if (!img) { perror("malloc"); return 1; }
+	if (fread(img, 1, sz, ff) != (size_t)sz) { perror(fw); return 1; }
 	fclose(ff);
 	fprintf(stderr, "== upload %s (%ld bytes)\n", fw, sz);
 	for (long off = 0; off < sz; off += 1024) {
@@ -276,16 +348,17 @@ int main(int argc, char **argv)
 		static const uint8_t rst[] = { 1, 3, 0x0c, 0 };
 		int rates[] = { 1500000, 115200, 921600, 3000000, 2000000, 460800, 230400, 57600 };
 		speed_t sp[] = { B1500000, B115200, B921600, B3000000, B2000000, B460800, B230400, B57600 };
-		for (int ri = 0; ri < 8; ri++) for (int fl = 0; fl < 1; fl++) {
+		/* Debug: look for the firmware's HCI at the usual baud rates, no flow control. */
+		for (int ri = 0; ri < 8; ri++) {
 			tcflush(fd, TCIOFLUSH);
-			set_baud(sp[ri], fl);
+			set_baud(sp[ri], 0);
 			uint8_t u[64]; memset(u,0xee,64); int k = rd(u, 64, 300);
-			fprintf(stderr, "dbg %d flow=%d passive rx %d\n", rates[ri], fl, k); hexdump("  rx", u, k);
+			fprintf(stderr, "dbg %d passive rx %d\n", rates[ri], k); hexdump("  rx", u, k);
 			wr(rst, 4);
 			memset(u,0xee,64); k = rd(u, 64, 500);
-			fprintf(stderr, "dbg %d flow=%d reset rx %d\n", rates[ri], fl, k); hexdump("  rx", u, k);
+			fprintf(stderr, "dbg %d reset rx %d\n", rates[ri], k); hexdump("  rx", u, k);
 		}
-dbg_done: return 0;
+		return 0;
 	}
 	msleep(300);	/* firmware boot time: a reset sent after only ~15 ms is lost */
 	set_baud(postb == 1500000 ? B1500000 : B115200, flow);
@@ -312,7 +385,11 @@ dbg_done: return 0;
 	if (ioctl(fd, TIOCSETD, &ld)) { perror("TIOCSETD"); return 1; }
 	if (ioctl(fd, HCIUARTSETPROTO, (long)proto)) { perror("HCIUARTSETPROTO"); return 1; }
 	fprintf(stderr, "attached as H4; staying resident\n");
-	if (!fork()) {	/* child keeps fd open */
+	alarm(0);
+	if (nofork) {
+		for (;;) pause();
+	}
+	if (!fork()) {	/* child keeps the tty (and the BT_WAKE line) open */
 		setsid();
 		int nul = open("/dev/null", O_RDWR); dup2(nul, 0); dup2(nul, 1); dup2(nul, 2);
 		for (;;) pause();

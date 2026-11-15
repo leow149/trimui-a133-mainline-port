@@ -1,0 +1,148 @@
+From 461fd526596052a520d6f6d3bc3b9c43844e93a7 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:11:57 +0100
+Subject: [PATCH 096/106] phy: sun4i-usb: Give a USB-C source time to switch
+ VBUS on before driving it
+
+On the TrimUI Smart Pro the board's CC/ID circuit pulls the ID pin low
+(host) for any USB-C partner, a charger included. A USB-C source only
+switches VBUS on after tCCDebounce plus tVBUSON (up to ~475 ms), so phy0
+saw "host, no external VBUS" and enabled the AXP717 boost at once. The
+TrimUI then back-fed 5.1 V into the charger's port, and the charger,
+which must not switch on while VBUS is already present, never did: the
+battery discharged while plugged in.
+
+Only drive VBUS once the ID has said host for one second and no
+external VBUS has shown up by then.
+
+Tested: on a 140 W USB-C charger (C-to-C) the boost stays off at boot
+and across an unplug/replug, VBUS comes from the charger and the battery
+charges.
+
+The delay is a per-SoC setting (host_vbus_delay_ms), only set for the
+A100/A133 whose boards derive the ID pin from the USB-C CC lines; other
+SoCs keep driving VBUS as soon as the ID says host. phy_power_on() calls
+inside the delay window reschedule the detect work, so VBUS still comes
+on once the delay is over.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/phy/allwinner/phy-sun4i-usb.c | 60 ++++++++++++++++++++-------
+ 1 file changed, 45 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
+index 24bcab055..fcec1d77b 100644
+--- a/drivers/phy/allwinner/phy-sun4i-usb.c
++++ b/drivers/phy/allwinner/phy-sun4i-usb.c
+@@ -110,6 +110,12 @@ struct sun4i_usb_phy_cfg {
+ 	bool tune_siddq_in_base;
+ 	/* PHY0 needs the vendor "end of reset" pulse on PHY_RX_RESET */
+ 	bool phy0_rx_reset_pulse;
++	/*
++	 * Time to wait after the ID pin goes to host before phy0 drives VBUS.
++	 * Needed where the ID pin is derived from a USB-C CC line, see
++	 * sun50i_a100_cfg.
++	 */
++	unsigned int host_vbus_delay_ms;
+ 	bool siddq_in_base;
+ 	bool poll_vbusen;
+ 	int missing_phys;
+@@ -144,6 +150,7 @@ struct sun4i_usb_phy_data {
+ 	int id_det_irq;
+ 	int vbus_det_irq;
+ 	int id_det;
++	unsigned long host_vbus_after;
+ 	int vbus_det;
+ 	struct delayed_work detect;
+ };
+@@ -508,10 +515,18 @@ static int sun4i_usb_phy_power_on(struct phy *_phy)
+ 	 * VBUS; the detect work switches it on and off as the ID changes.
+ 	 * Unknown states (-1, before the first scan) count as "no".
+ 	 */
+-	if (phy->index == 0 && data->id_det_gpio &&
+-	    (data->id_det != 0 ||
+-	     (sun4i_usb_phy0_have_vbus_det(data) && data->vbus_det != 0)))
+-		return 0;
++	if (phy->index == 0 && data->id_det_gpio) {
++		if (data->id_det != 0)
++			return 0;
++		if (sun4i_usb_phy0_have_vbus_det(data) && data->vbus_det != 0)
++			return 0;
++		if (time_before(jiffies, data->host_vbus_after)) {
++			/* The detect work retries once the delay is over. */
++			mod_delayed_work(system_percpu_wq, &data->detect,
++					 data->host_vbus_after - jiffies + 1);
++			return 0;
++		}
++	}
+ 
+ 	/* For phy0 only turn on Vbus if we don't have an ext. Vbus */
+ 	if (phy->index == 0 && sun4i_usb_phy0_have_vbus_det(data) &&
+@@ -685,6 +700,9 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		sun4i_usb_phy0_set_id_detect(phy0, id_det);
+ 		data->id_det = id_det;
+ 		id_notify = true;
++		if (id_det == 0)
++			data->host_vbus_after = jiffies +
++				msecs_to_jiffies(data->cfg->host_vbus_delay_ms);
+ 
+ 		/* Leaving host role: stop driving VBUS before anything else. */
+ 		if (id_det != 0 && phy->regulator_on) {
+@@ -719,19 +737,21 @@ static void sun4i_usb_phy0_id_vbus_det_scan(struct work_struct *work)
+ 		/* Re-route PHY0 if necessary */
+ 		if (data->cfg->phy0_dual_route)
+ 			sun4i_usb_phy0_reroute(data, id_det);
+-
+-		/*
+-		 * Entering host role: drive VBUS if the HCI asked for it. Take
+-		 * phy0->mutex like the PHY core does around ->power_on(), so
+-		 * this cannot race with the HCI's phy_power_on()/off().
+-		 */
+-		mutex_lock(&phy0->mutex);
+-		if (data->phy0_init && id_det == 0 && phy->power_wanted &&
+-		    !phy->regulator_on)
+-			sun4i_usb_phy_power_on(phy0);
+-		mutex_unlock(&phy0->mutex);
+ 	}
+ 
++	/*
++	 * Host role: drive VBUS if the HCI asked for it. power_on checks the
++	 * ID, external VBUS and the host_vbus_delay_ms window, and reschedules
++	 * this work if the window is still open. Take phy0->mutex like the PHY
++	 * core does around ->power_on(), so this cannot race with the HCI's
++	 * phy_power_on()/phy_power_off() on regulator_on.
++	 */
++	mutex_lock(&phy0->mutex);
++	if (data->phy0_init && data->id_det == 0 && phy->power_wanted &&
++	    !phy->regulator_on)
++		sun4i_usb_phy_power_on(phy0);
++	mutex_unlock(&phy0->mutex);
++
+ 	if (vbus_notify)
+ 		extcon_set_state_sync(data->extcon, EXTCON_USB, vbus_det);
+ 
+@@ -812,6 +832,7 @@ static int sun4i_usb_phy_probe(struct platform_device *pdev)
+ 
+ 	spin_lock_init(&data->reg_lock);
+ 	INIT_DELAYED_WORK(&data->detect, sun4i_usb_phy0_id_vbus_det_scan);
++	data->host_vbus_after = jiffies;
+ 	dev_set_drvdata(dev, data);
+ 	data->cfg = of_device_get_match_data(dev);
+ 	if (!data->cfg)
+@@ -1081,6 +1102,15 @@ static const struct sun4i_usb_phy_cfg sun50i_a100_cfg = {
+ 	.siddq_helper = 1,
+ 	.tune_siddq_in_base = true,
+ 	.phy0_rx_reset_pulse = true,
++	/*
++	 * Boards with this SoC (TrimUI Smart Pro) derive the ID pin from the
++	 * USB-C CC lines, so it reports host as soon as anything is attached.
++	 * A USB-C source (charger) only switches its VBUS on after
++	 * tCCDebounce (up to 200 ms) plus tVBUSON (up to 275 ms): give it a
++	 * second before driving VBUS ourselves, else we back-feed the
++	 * charger, which then never switches its own VBUS on.
++	 */
++	.host_vbus_delay_ms = 1000,
+ };
+ 
+ static const struct sun4i_usb_phy_cfg sun50i_a64_cfg = {

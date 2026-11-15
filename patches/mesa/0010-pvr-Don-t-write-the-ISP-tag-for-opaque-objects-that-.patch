@@ -1,8 +1,8 @@
-From 36b37a91a86bbd69f62e32275ed50f806bbc2608 Mon Sep 17 00:00:00 2001
+From af8157066a8e8ff2bc6f0c02cf5d97669b34e898 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 14:24:13 +0100
-Subject: [PATCH] pvr: Don't write the ISP tag for opaque objects that write no
- colour
+Subject: [PATCH 10/10] pvr: Don't write the ISP tag for opaque objects that
+ write no colour
 
 A pipeline whose colour writes are all masked off (colorWriteMask 0) gets
 its colour stores removed by nir_lower_blend, so its fragment shader
@@ -91,10 +91,10 @@ index 540e4cd099c..d334d000c38 100644
     util_dynarray_fini(&state.loads);
  
 diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-index 87b70ddf6a5..55be8d3f699 100644
+index d560d34f44b..a3b9279dfd0 100644
 --- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
 +++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-@@ -7179,9 +7179,22 @@ pvr_setup_isp_faces_and_control(struct pvr_cmd_buffer *const cmd_buffer,
+@@ -7197,9 +7197,22 @@ pvr_setup_isp_faces_and_control(struct pvr_cmd_buffer *const cmd_buffer,
     pvr_csb_pack (&isp_control, TA_STATE_ISPCTL, ispctl) {
        ispctl.upass = pass_info->isp_userpass;
  
@@ -118,6 +118,3 @@ index 87b70ddf6a5..55be8d3f699 100644
  
        ispctl.two_sided = is_two_sided;
        ispctl.bpres = header->pres_ispctl_fb || header->pres_ispctl_bb;
--- 
-2.53.0
-

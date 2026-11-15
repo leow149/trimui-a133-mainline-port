@@ -1,4 +1,4 @@
-From 6aa8411a261720a501bf9ee7739dd535b25b85af Mon Sep 17 00:00:00 2001
+From 80d0611ea5568b318673f2825d3b3cc6cdf9300f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 7 Sep 2026 19:17:49 +0200
 Subject: [PATCH 1/3] sunxi: add TrimUI Smart Pro (A133) board support
@@ -15,12 +15,22 @@ Board bring-up for the TrimUI Smart Pro handheld (Allwinner A133 Plus):
 Boots mainline U-Boot end to end on real hardware (SPL -> BL31 ->
 U-Boot -> distro-boot).
 
+The DRAM parameters come from the vendor's resolved device tree (/dram
+dram_para) on the running device and match the boot0 log (792 MHz, para1
+0x30fa, para2 0x4000000, tpr13 0x7521). SUNXI_BL31_BASE gets a
+0x40000000 default for the A133: TF-A links BL31 for this SoC into DRAM
+(SUNXI_BL31_IN_DRAM), and the H6 default (SRAM, 0x104000) made BL31
+crash at once. AXP_DCDC3_VOLT (DRAM supply) has no default for the
+AXP717 and is set to the 1100 mV the boot0 log reports. The board DT is
+a reduced copy of the Linux one (UART, MMC, PMIC, USB) kept in
+dts/upstream until the Linux board DT is merged and synced.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  arch/arm/mach-sunxi/Kconfig                   |   7 +
- configs/trimui-smartpro_defconfig             |  64 ++++
- .../allwinner/sun50i-a133-trimui-smartpro.dts | 285 ++++++++++++++++++
- 3 files changed, 356 insertions(+)
+ configs/trimui-smartpro_defconfig             |  37 +++
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 217 ++++++++++++++++++
+ 3 files changed, 261 insertions(+)
  create mode 100644 configs/trimui-smartpro_defconfig
  create mode 100644 dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
 
@@ -44,19 +54,10 @@ index b0c5d3cd..c12f9b4c 100644
  	default 0x0
 diff --git a/configs/trimui-smartpro_defconfig b/configs/trimui-smartpro_defconfig
 new file mode 100644
-index 00000000..64d26459
+index 00000000..511f2676
 --- /dev/null
 +++ b/configs/trimui-smartpro_defconfig
-@@ -0,0 +1,64 @@
-+# TrimUI Smart Pro (Allwinner A133 Plus, sun50iw10p1) — out-of-tree hobbyist port
-+#
-+# DRAM_* values below are REAL, pulled directly from the live device's own
-+# /sys/firmware/fdt (the "/dram" node's dram_para[00..31] array — the actual
-+# resolved config the vendor kernel booted with, not a guess). Cross-checked
-+# against the boot0 UART console log (CLK=792MHz, para1=0x30fa, para2=0x4000000,
-+# tpr13=0x7521 all matched exactly). Several of these differ from the
-+# liontron-h-a133l placeholder values previously here (TPR6/TPR11/TPR12 were
-+# wrong; TPR10/TPR13/TPR14 happened to already be correct).
+@@ -0,0 +1,37 @@
 +CONFIG_ARM=y
 +CONFIG_ARCH_SUNXI=y
 +CONFIG_DEFAULT_DEVICE_TREE="allwinner/sun50i-a133-trimui-smartpro"
@@ -79,20 +80,6 @@ index 00000000..64d26459
 +CONFIG_DRAM_SUNXI_TPR13=0x7521
 +CONFIG_DRAM_SUNXI_TPR14=0x2023211f
 +CONFIG_MACH_SUN50I_A133=y
-+# Real bug found via hardware testing: MACH_SUN50I_A133 `select`s
-+# SUN50I_GEN_H6 (shared peripheral IP with the H6 generation, correct), but
-+# arch/arm/mach-sunxi/Kconfig's SUNXI_BL31_BASE default table had no case
-+# for A133 specifically, so it silently fell through to the H6 default of
-+# 0x00104000 (SRAM). TF-A's own plat/allwinner/sun50i_a133/platform.mk sets
-+# SUNXI_BL31_IN_DRAM := 1, meaning BL31 for THIS chip is actually linked to
-+# run from DRAM (SUNXI_DRAM_BASE = 0x40000000), not SRAM. The address
-+# mismatch made BL31 crash instantly on real hardware (jumped to garbage
-+# near 0x40000000 within its first few instructions, confirmed via a
-+# DEBUG=1 TF-A build's exception dump) — same root cause for both the FEL
-+# and SD-card boot paths, since both load BL31 wherever this config says.
-+# SUNXI_BL31_BASE has no Kconfig `prompt`, so it can't be overridden here —
-+# fixed properly at the source: arch/arm/mach-sunxi/Kconfig now has an
-+# explicit `default 0x40000000 if MACH_SUN50I_A133` case added.
 +CONFIG_SUNXI_DRAM_A133_LPDDR4=y
 +CONFIG_MMC_SUNXI_SLOT_EXTRA=2
 +CONFIG_R_I2C_ENABLE=y
@@ -105,43 +92,25 @@ index 00000000..64d26459
 +CONFIG_SUPPORT_EMMC_BOOT=y
 +CONFIG_AXP717_POWER=y
 +CONFIG_AXP_I2C_ADDRESS=0x34
-+# AXP_DCDC2_VOLT has a Kconfig default (1000mV) under AXP717_POWER, but
-+# AXP_DCDC3_VOLT does NOT — leaving it unset makes syncconfig block on an
-+# interactive prompt forever (found the hard way). 1100mV confirmed REAL:
-+# matches the boot0 console log's "DRAM_VCC set to 1100 mv" exactly.
 +CONFIG_AXP_DCDC3_VOLT=1100
 +CONFIG_USB_EHCI_HCD=y
 +CONFIG_USB_OHCI_HCD=y
 diff --git a/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
 new file mode 100644
-index 00000000..c6369a91
+index 00000000..bb3cc3dc
 --- /dev/null
 +++ b/dts/upstream/src/arm64/allwinner/sun50i-a133-trimui-smartpro.dts
-@@ -0,0 +1,285 @@
+@@ -0,0 +1,217 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
-+ * Copyright (c) 2026 (out-of-tree hobbyist port, not yet upstream)
++ * TrimUI Smart Pro (Allwinner A133).
 + *
-+ * Board: TrimUI Smart Pro (Allwinner A133 Plus / sun50iw10p1)
-+ *
-+ * Sourced from:
-+ *  - vendor DTB extracted from Knulli image (dtb_86065152.dts, offset
-+ *    86065152 in knulli-a133-trimui-smart-pro-scarab-20260511.img)
-+ *  - sun50i-a133-liontron-h-a133l.dts (mainline reference board, same SoC)
-+ *  - sun50i-h700-anbernic-rg35xx-2024.dts (mainline handheld reference for
-+ *    AXP717 regulator/battery wiring style)
-+ *  - LIVE data pulled directly off the running unit over UART (root shell +
-+ *    /sys/firmware/fdt, the kernel's own resolved device tree — not a guess):
-+ *    real regulator voltages (confirmed via U-Boot's PMIC init console log),
-+ *    real DRAM timing table (see trimui-smartpro_defconfig), real panel
-+ *    timings (see the lcd0 comment block below).
-+ *
-+ * TODO markers below are places nothing above could resolve: buttons/
-+ * joystick are NOT GPIO at all (confirmed: read over a UART-attached
-+ * co-microcontroller, see BUTTON_PROBING_PLAN.md — needs a from-scratch
-+ * serdev driver, not a DT gpio-keys node), and the panel's DSI
-+ * init command sequence (register writes for the otm1289a controller) is
-+ * not yet captured.
++ * The U-Boot copy of the board DT: only what the boot loader needs (UARTs,
++ * MMC, PMIC, USB). The full board description, including the buttons, Wi-Fi,
++ * Bluetooth, display and GPU, is the Linux DT
++ * (arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts in the
++ * kernel series); this file lives in dts/upstream until that one is merged
++ * in Linux and synced here, and then has to be replaced by it.
 + */
 +
 +/dts-v1/;
@@ -184,19 +153,9 @@ index 00000000..c6369a91
 +		regulator-always-on;
 +	};
 +
-+	/* TODO: face buttons (A/B/X/Y, D-pad, L1/L2/R1/R2, start/select,
-+	 * joystick clicks). The vendor DTB has NO gpio-keys node and no
-+	 * "trimui_keypad"-style driver string was found in the firmware —
-+	 * only a 3-key ADC "allwinner,keyboard_1350mv" node exists (that's
-+	 * volume/fastboot-combo, not the face buttons). Real GPIO/ADC
-+	 * assignments need to come from live probing on the actual unit
-+	 * (pinctrl debugfs, evtest against the stock kernel, or a UART
-+	 * dmesg capture during boot) — not guessed from another device.
-+	 */
 +};
 +
 +&cpu0 {
-+	/* TODO: verify against A133 PLUS-rated OPP ceiling, not just A100's */
 +	cpu-supply = <&reg_dcdc1>;
 +};
 +
@@ -359,50 +318,3 @@ index 00000000..c6369a91
 +	pinctrl-0 = <&uart0_pb_pins>; /* only pin group this SoC's dtsi defines; matches vendor cmdline's ttyS0 */
 +	status = "okay";
 +};
-+
-+/*
-+ * TODO: WiFi/BT (XR829 on SDIO bus 1 / &mmc1, confirmed from strings:
-+ * boot_xr829.bin, fw_xr829.bin, fw_xr829_bt.bin, sdd_xr829.bin — and
-+ * confirmed live via the running kernel's "XRADIO WIFI OPEN" driver log,
-+ * MAC dc:44:60:xx:xx:xx (redacted)). Power rails: bldo1 (3300mV, switched on
-+ * dynamically, not always-on) + aldo3 (3300mV, always-on) — both wired
-+ * above. GPIO wiring is REAL, read directly off the live unit's
-+ * /sys/kernel/debug/gpio (not decoded from packed vendor fields):
-+ *   bt_rst         = r_pio 0 2  (PL2)  output, active low
-+ *   bt_hostwake    = r_pio 0 3  (PL3)  input
-+ *   bt_wake        = r_pio 0 4  (PL4)  output
-+ *   wlan_regon     = r_pio 0 5  (PL5)  output
-+ *   wlan_hostwake  = r_pio 0 6  (PL6)  input
-+ * Mainline equivalent is an mmc1 node + mmc-pwrseq-simple (using
-+ * wlan_regon as the reset-gpios line) + whatever XR829 driver ends up
-+ * used (no mainline driver exists yet — see project notes for the
-+ * out-of-tree candidates). Not wired into an actual mmc1 node yet.
-+ */
-+
-+/*
-+ * TODO: display. Panel is a 4-lane MIPI-DSI unit driven by an "otm1289a"
-+ * controller IC (confirmed: boot log "OTM1289A:lcd panel init" + vendor
-+ * live DTB's lcd_driver_name). Real timings pulled from the live lcd0 node
-+ * (vendor's old "disp2"-style "allwinner,sunxi-lcd0" binding, not mainline):
-+ *   native panel res: 720x1280 (portrait) — presented as 1280x720 landscape
-+ *     via software rotation (boot log: "TRIMUI disp rotate:3" = 270°)
-+ *   physical size: 135mm x 216mm
-+ *   dot clock: 69 MHz (lcd_dclk_freq=0x45, matches boot log "dclk(69000000)")
-+ *   horizontal: total=880 back-porch=88 sync-pulse=4  (lcd_ht/hbp/hspw)
-+ *   vertical:   total=1320 back-porch=9 sync-pulse=4  (lcd_vt/vbp/vspw)
-+ *   backlight PWM: 50000 Hz (lcd_pwm_freq=0xc350)
-+ *   power rails: cldo1 (1800mV) + cldo4 (3300mV) — both wired above
-+ * NOT yet captured: the panel's DSI init command sequence (the actual
-+ * register writes the vendor driver sends to the otm1289a on power-up) —
-+ * that's a separate reverse-engineering step (likely needs a DSI bus
-+ * sniffer or kernel driver instrumentation, not just a UART/DTB pull) and
-+ * is what a real mainline `panel-otm1289a` driver would still be missing.
-+ */
-+
-+/*
-+ * TODO: GPU (img,gpu / PowerVR GE8300) — no mainline binding to reference
-+ * yet.
-+ */
--- 
-2.56.0
-

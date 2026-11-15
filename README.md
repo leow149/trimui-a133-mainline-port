@@ -27,7 +27,7 @@ Not submitted upstream yet.
 | Other | ✅ SD card, eMMC, RTC, RGB LEDs (23), UART console, reboot, hardware watchdog |
 | Not working yet | ❌ video encoding. GPU frequency scaling isn't implemented (the GPU runs at a fixed 696 MHz). VP9 hardware decode is not possible: the A133 has no Hantro G2 (see docs/vp9-bringup.md); VP9 decodes in software. |
 
-Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (patches 0063-0064 fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm and by the power, volume up and volume down keys is verified. The USB gadget re-enumerates after resume (patch 0073) and the GPU survives suspend (patch 0076).
+Suspend (s2idle) re-tested 2026-11-07 with the GPU, video engine and WiFi active (the xradio and sunxi watchdog suspend patches fixed a resume hang in the XR829 driver and a watchdog reset). Wake by RTC alarm and by the power, volume up and volume down keys is verified. The USB gadget re-enumerates after resume (musb "Preserve the session" patch) and the GPU survives suspend (powervr "system sleep PM ops" patch).
 
 [`docs/gpu-video.md`](docs/gpu-video.md) describes the GPU and video bring-up in detail.
 

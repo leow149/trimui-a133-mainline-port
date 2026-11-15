@@ -1,32 +1,47 @@
-From 957d9f165fd44bc356acb38d12cacb8efe5dce5c Mon Sep 17 00:00:00 2001
+From 4b59a965ca651d4912f8955be300824942bcbeac Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:28 +0100
-Subject: [PATCH 10/60] drm/sun4i: dsi: Decode DCS long read responses
+Subject: [PATCH 010/106] drm/sun4i: dsi: Decode DCS long read responses
 
 Some panels answer even a one-byte DCS read with a long read response. The
 driver returned byte 1 of the header (the word count) as data. Check the RX
 flag like the vendor driver, and decode short (1/2 byte) and long responses.
 
+Responses are copied up to msg->rx_len: one or two bytes for short
+responses, the payload (up to the 28 bytes of the RX registers) for long
+ones.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c | 35 ++++++++++++++++----------
- 1 file changed, 22 insertions(+), 13 deletions(-)
+ drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c | 53 ++++++++++++++++++++------
+ 1 file changed, 41 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
-index d504ae583..64bd36830 100644
+index d504ae583..fab08193b 100644
 --- a/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
 +++ b/drivers/gpu/drm/sun4i/sun6i_mipi_dsi.c
-@@ -927,7 +927,7 @@ static int sun6i_dsi_dcs_write_long(struct sun6i_dsi *dsi,
+@@ -153,6 +153,8 @@
+ #define SUN6I_DSI_CMD_CTL_TX_FLAG		BIT(9)
+ 
+ #define SUN6I_DSI_CMD_RX_REG(n)		(0x240 + (n) * 0x04)
++/* Long read payload that fits in RX(1)..RX(7) */
++#define SUN6I_DSI_RX_LONG_MAX		28
+ 
+ #define SUN6I_DSI_DEBUG_DATA_REG	0x2f8
+ 
+@@ -927,7 +929,9 @@ static int sun6i_dsi_dcs_write_long(struct sun6i_dsi *dsi,
  static int sun6i_dsi_dcs_read(struct sun6i_dsi *dsi,
  			      const struct mipi_dsi_msg *msg)
  {
 -	u32 val;
++	u8 *rx = msg->rx_buf;
 +	u32 val, ctl;
++	size_t i, j, len;
  	int ret;
  	u8 byte0;
  
-@@ -944,23 +944,32 @@ static int sun6i_dsi_dcs_read(struct sun6i_dsi *dsi,
+@@ -944,23 +948,48 @@ static int sun6i_dsi_dcs_read(struct sun6i_dsi *dsi,
  		return ret;
  	}
  
@@ -47,30 +62,42 @@ index d504ae583..64bd36830 100644
 -	if (byte0 == MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT)
 +	switch (byte0) {
 +	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_1BYTE:
++	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_1BYTE:
++		len = min_t(size_t, msg->rx_len, 1);
++		break;
 +	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
-+		((u8 *)msg->rx_buf)[0] = val >> 8;
-+		return 1;
++	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
++		len = min_t(size_t, msg->rx_len, 2);
++		break;
 +	case MIPI_DSI_RX_DCS_LONG_READ_RESPONSE:
++	case MIPI_DSI_RX_GENERIC_LONG_READ_RESPONSE:
 +		/*
 +		 * Some panels answer even a one-byte read with a long
 +		 * packet: word count in bytes 1-2, payload from RX(1) on.
 +		 */
-+		if (!((val >> 8) & 0xffff))
++		len = (val >> 8) & 0xffff;
++		if (!len || len > SUN6I_DSI_RX_LONG_MAX)
 +			return -EIO;
-+		regmap_read(dsi->regs, SUN6I_DSI_CMD_RX_REG(1), &val);
-+		((u8 *)msg->rx_buf)[0] = val & 0xff;
-+		return 1;
++		len = min_t(size_t, msg->rx_len, len);
++		for (i = 0; i < len; i += 4) {
++			regmap_read(dsi->regs, SUN6I_DSI_CMD_RX_REG(1 + i / 4),
++				    &val);
++			for (j = 0; j < 4 && i + j < len; j++)
++				rx[i + j] = val >> (8 * j);
++		}
++		return len;
 +	default:
 +		/* includes MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT */
  		return -EIO;
--
++	}
+ 
 -	((u8 *)msg->rx_buf)[0] = (val >> 8);
 -
 -	return 1;
-+	}
++	/* Short response: data in bytes 1-2 of the header. */
++	for (j = 0; j < len; j++)
++		rx[j] = val >> (8 * (j + 1));
++	return len;
  }
  
  static int sun6i_dsi_attach(struct mipi_dsi_host *host,
--- 
-2.56.0
-

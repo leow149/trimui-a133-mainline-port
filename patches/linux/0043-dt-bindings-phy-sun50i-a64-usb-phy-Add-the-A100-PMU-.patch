@@ -1,0 +1,68 @@
+From 71a7791e0a3ed2f17255b94b0f833050d523579f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:39:30 +0100
+Subject: [PATCH 043/106] dt-bindings: phy: sun50i-a64-usb-phy: Add the A100
+ PMU clocks
+
+On the A100/A133 the PMU (HCI) registers of each PHY are only accessible
+with the bus clock of the matching EHCI controller running, which the PHY
+driver enables as pmu0_clk/pmu1_clk. Allow these two clocks for the A100
+PHY only.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../phy/allwinner,sun50i-a64-usb-phy.yaml     | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml b/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
+index 580c3296a..5103eef0d 100644
+--- a/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
+@@ -38,14 +38,20 @@ properties:
+       - const: pmu1
+ 
+   clocks:
++    minItems: 2
+     items:
+       - description: USB OTG PHY bus clock
+       - description: USB Host 0 PHY bus clock
++      - description: USB OTG PHY PMU (HCI 0) bus clock
++      - description: USB Host 0 PHY PMU (HCI 1) bus clock
+ 
+   clock-names:
++    minItems: 2
+     items:
+       - const: usb0_phy
+       - const: usb1_phy
++      - const: pmu0_clk
++      - const: pmu1_clk
+ 
+   resets:
+     items:
+@@ -84,6 +90,26 @@ required:
+   - resets
+   - reset-names
+ 
++if:
++  properties:
++    compatible:
++      contains:
++        const: allwinner,sun50i-a100-usb-phy
++
++then:
++  properties:
++    clocks:
++      minItems: 4
++    clock-names:
++      minItems: 4
++
++else:
++  properties:
++    clocks:
++      maxItems: 2
++    clock-names:
++      maxItems: 2
++
+ additionalProperties: false
+ 
+ examples:

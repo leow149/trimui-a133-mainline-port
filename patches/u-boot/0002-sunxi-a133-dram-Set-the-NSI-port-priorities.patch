@@ -1,4 +1,4 @@
-From f2f1bad679db74a278c22de50ec11ac585c13615 Mon Sep 17 00:00:00 2001
+From f927a91a5038ebf76692778aa835200a8ccfadad Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:44:47 +0100
 Subject: [PATCH 2/3] sunxi: a133: dram: Set the NSI port priorities
@@ -13,6 +13,7 @@ Measured on the TrimUI Smart Pro with vkcube running: 861 TCON underflows
 in 30 s before, none after.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../include/asm/arch-sunxi/cpu_sun50i_h6.h    |  1 +
  arch/arm/mach-sunxi/dram_sun50i_a133.c        | 97 +++++++++++++++++++
@@ -144,6 +145,3 @@ index ca3e2513..8e7d2e1f 100644
 +
  	return calculate_dram_size(&config);
  }
--- 
-2.56.0
-
