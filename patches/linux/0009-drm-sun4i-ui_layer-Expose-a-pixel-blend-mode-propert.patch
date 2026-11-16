@@ -1,4 +1,4 @@
-From d527e09e25eb31343cda93916d40df5ef7bdff9e Mon Sep 17 00:00:00 2001
+From 2bdba22cf97e0dc5ed1c208e1bb69de60aeeb3e5 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
 Subject: [PATCH 009/106] drm/sun4i: ui_layer: Expose a pixel blend mode

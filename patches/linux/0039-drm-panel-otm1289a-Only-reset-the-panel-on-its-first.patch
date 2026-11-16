@@ -1,4 +1,4 @@
-From 75518b35c0cadabe7c8c2ca28f3c132b02d06eed Mon Sep 17 00:00:00 2001
+From e5b783657bb41a2b34156cbb3c5d9300714a2245 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:06:24 +0100
 Subject: [PATCH 039/106] drm/panel: otm1289a: Only reset the panel on its
@@ -18,14 +18,17 @@ sleep-out and display-on, and disable leaves the panel in sleep mode. This
 makes blanking and system suspend/resume work. Drop the unused "prepared"
 flag and the empty enable and unprepare callbacks while at it.
 
+Unbinding through sysfs is disabled: after a rebind the panel would need
+a power cycle that the board cannot do.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 70 ++++++++++---------
- 1 file changed, 36 insertions(+), 34 deletions(-)
+ .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 76 ++++++++++---------
+ 1 file changed, 42 insertions(+), 34 deletions(-)
 
 diff --git a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
-index 2b3df810c..fc13e4fb5 100644
+index 2b3df810c..94cab02b7 100644
 --- a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
 +++ b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
 @@ -32,7 +32,7 @@ struct otm1289a {
@@ -150,3 +153,16 @@ index 2b3df810c..fc13e4fb5 100644
  }
  
  static const struct of_device_id orisetech_otm1289a_of_match[] = {
+@@ -445,6 +447,12 @@ static struct mipi_dsi_driver orisetech_otm1289a_driver = {
+ 	.driver = {
+ 		.name = "panel-orisetech-otm1289a",
+ 		.of_match_table = orisetech_otm1289a_of_match,
++		/*
++		 * The panel is only reset on its first power-up (see
++		 * otm1289a_power_up()) and cannot be brought back after a
++		 * rebind without a power cycle, which the board cannot do.
++		 */
++		.suppress_bind_attrs = true,
+ 	},
+ };
+ module_mipi_dsi_driver(orisetech_otm1289a_driver);

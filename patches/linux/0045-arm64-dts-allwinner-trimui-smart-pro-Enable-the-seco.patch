@@ -1,4 +1,4 @@
-From db6ccc97449cc4b101a5538f2a997bd2c7c34ddd Mon Sep 17 00:00:00 2001
+From cfe7d0eaef5b27cf9aa5600fd5b3ed76c34c5213 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:59:18 +0100
 Subject: [PATCH 045/106] arm64: dts: allwinner: trimui-smart-pro: Enable the
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 21 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index ee678ca42..8259ceb56 100644
+index d9a1bbc2a..1198fd10a 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -85,6 +85,17 @@ switch-slider {
@@ -36,7 +36,7 @@ index ee678ca42..8259ceb56 100644
  	reg_vcc_pad: regulator-vcc-pad {
  		compatible = "regulator-fixed";
  		regulator-name = "vcc-pad";
-@@ -537,6 +548,16 @@ &usb_otg {
+@@ -535,6 +546,16 @@ &usb_otg {
  };
  
  &usbphy {

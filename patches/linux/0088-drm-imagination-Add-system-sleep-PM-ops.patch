@@ -1,4 +1,4 @@
-From 3d17ac7a6a80c3957644b12882ae727776d76615 Mon Sep 17 00:00:00 2001
+From 92612778f8d6721cbeffb2ce6c39bb948b17c0f6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:00:46 +0100
 Subject: [PATCH 088/106] drm/imagination: Add system sleep PM ops

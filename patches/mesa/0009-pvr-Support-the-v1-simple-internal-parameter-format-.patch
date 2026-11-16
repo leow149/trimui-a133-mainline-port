@@ -1,4 +1,4 @@
-From ebb21a75a634f28a8d577117467e5a7458bb33bf Mon Sep 17 00:00:00 2001
+From bfbbdaa1fabddecd1ec1ca4a562c2e4b88ee4fdb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:39 +0100
 Subject: [PATCH 09/10] pvr: Support the v1 simple internal parameter format in
@@ -28,14 +28,22 @@ after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- .../vulkan/pvr_arch_job_transfer.c            | 87 +++++++++++++++++--
- 1 file changed, 82 insertions(+), 5 deletions(-)
+ .../vulkan/pvr_arch_job_transfer.c            | 88 +++++++++++++++++--
+ 1 file changed, 83 insertions(+), 5 deletions(-)
 
 diff --git a/src/imagination/vulkan/pvr_arch_job_transfer.c b/src/imagination/vulkan/pvr_arch_job_transfer.c
-index df05efe7e2e..d00b4c0c502 100644
+index df05efe7e2e..740d08776af 100644
 --- a/src/imagination/vulkan/pvr_arch_job_transfer.c
 +++ b/src/imagination/vulkan/pvr_arch_job_transfer.c
-@@ -3422,6 +3422,12 @@ static void pvr_isp_prim_block_pds_state(const struct pvr_device_info *dev_info,
+@@ -28,6 +28,7 @@
+ #include <string.h>
+ #include <vulkan/vulkan.h>
+ 
++#include "hwdef/rogue_hw_utils.h"
+ #include "pvr_cmd_buffer.h"
+ #include "pvr_csb.h"
+ #include "pvr_csb_enum_helpers.h"
+@@ -3422,6 +3423,12 @@ static void pvr_isp_prim_block_pds_state(const struct pvr_device_info *dev_info,
     *cs_ptr_out = cs_ptr;
  }
  
@@ -48,7 +56,7 @@ index df05efe7e2e..d00b4c0c502 100644
  static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
                                           UNUSED uint32_t tsp_comp_format_in_dw,
                                           uint32_t tsp_data_size_in_bytes,
-@@ -3433,6 +3439,33 @@ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
+@@ -3433,6 +3440,33 @@ static void pvr_isp_prim_block_isp_state(const struct pvr_device_info *dev_info,
        PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format_v2);
     uint32_t *cs_ptr = *cs_ptr_out;
  
@@ -82,7 +90,7 @@ index df05efe7e2e..d00b4c0c502 100644
     if (has_simple_internal_parameter_format_v2) {
        const uint32_t tsp_data_per_vrx_in_bytes =
           tsp_data_size_in_bytes / num_isp_vertices;
-@@ -4062,6 +4095,8 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4062,6 +4096,8 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
     uint32_t num_region_arrays;
     uint32_t total_stream_size;
     bool was_linked = false;
@@ -91,7 +99,7 @@ index df05efe7e2e..d00b4c0c502 100644
     uint32_t rem_mappings;
     uint32_t num_sources;
     uint32_t *blk_cs_ptr;
-@@ -4124,11 +4159,20 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4124,11 +4160,20 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
        }
     }
  
@@ -117,7 +125,7 @@ index df05efe7e2e..d00b4c0c502 100644
     total_stream_size = region_arrays_size + prim_blk_size;
  
     /* Allocate space for IPF control stream. */
-@@ -4494,6 +4538,25 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4494,6 +4539,25 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
  
                 cs_ptr = (uint32_t *)cs_byte_ptr;
  
@@ -143,7 +151,7 @@ index df05efe7e2e..d00b4c0c502 100644
                 free_ctrl_stream_words -= 2;
              } else {
                 pvr_csb_pack (cs_ptr, IPF_PRIMITIVE_FORMAT, word) {
-@@ -4547,6 +4610,12 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4547,6 +4611,12 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
        cs_byte_ptr = pvr_isp_ctrl_stream_sipf_write_aligned(cs_byte_ptr, tmp, 1);
  
        cs_ptr = (uint32_t *)cs_byte_ptr;
@@ -156,7 +164,7 @@ index df05efe7e2e..d00b4c0c502 100644
     } else {
        pvr_csb_pack (cs_ptr, IPF_CONTROL_STREAM, word) {
           word.cs_type = ROGUE_IPF_CS_TYPE_TERM;
-@@ -4572,6 +4641,14 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
+@@ -4572,6 +4642,14 @@ static VkResult pvr_isp_ctrl_stream(const struct pvr_device_info *dev_info,
            */
           isp_rgn.cs_size_ipf_creq_pf = was_linked;
        }

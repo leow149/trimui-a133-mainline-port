@@ -1,4 +1,4 @@
-From b760300ddc3bae533f0014411abf1dc677887be5 Mon Sep 17 00:00:00 2001
+From a1e485e0cbea348b0717b85626c62090b822f7fe Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 083/106] wifi: xradio: enable HT40 and short guard interval
@@ -32,7 +32,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  4 files changed, 43 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
-index e6ddea2fe..50c6ef2de 100644
+index 9fd9c3b21..fa23576f3 100644
 --- a/drivers/net/wireless/xradio/main.c
 +++ b/drivers/net/wireless/xradio/main.c
 @@ -112,6 +112,9 @@ static struct ieee80211_supported_band xradio_band_2ghz = {
@@ -46,7 +46,7 @@ index e6ddea2fe..50c6ef2de 100644
  		.ht_supported  = 1,
  		.ampdu_factor  = IEEE80211_HT_MAX_AMPDU_32K,
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
-index 7b867f74b..076eca1e1 100644
+index a61f8db5e..5606836f4 100644
 --- a/drivers/net/wireless/xradio/wsm.c
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -447,6 +447,26 @@ struct wsm_association_mode_ht40 {
@@ -113,7 +113,7 @@ index 7b867f74b..076eca1e1 100644
  		WSM_PUT(buf, &arg->bssid[0], sizeof(arg->bssid));
  		WSM_PUT16(buf, arg->atimWindow);
 diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
-index 0d3abc5f1..5044c002e 100644
+index 8980d668a..a69e9cb1b 100644
 --- a/drivers/net/wireless/xradio/wsm.h
 +++ b/drivers/net/wireless/xradio/wsm.h
 @@ -916,6 +916,7 @@ struct wsm_tx_ht40 {
@@ -125,7 +125,7 @@ index 0d3abc5f1..5044c002e 100644
  #define WSM_PHY_MODE_BAND_SHIFT		8
  #define WSM_PHY_MODE_PREAMBLE_SHIFT	12
 diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
-index 72888fc4a..e2e95fa27 100644
+index 11a714dfc..b0050c6de 100644
 --- a/drivers/net/wireless/xradio/xradio.h
 +++ b/drivers/net/wireless/xradio/xradio.h
 @@ -287,6 +287,7 @@ struct xradio_common {

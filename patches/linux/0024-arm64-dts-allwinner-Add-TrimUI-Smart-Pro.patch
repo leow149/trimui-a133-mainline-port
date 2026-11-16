@@ -1,4 +1,4 @@
-From 2c4c2b6b82fc2beeabddbfa2a65fea1761b3a550 Mon Sep 17 00:00:00 2001
+From 91430117729f19eb4d3755da0632fcead0726d6c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:32 +0100
 Subject: [PATCH 024/106] arm64: dts: allwinner: Add TrimUI Smart Pro
@@ -11,8 +11,8 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/Makefile        |   1 +
- .../allwinner/sun50i-a133-trimui-smartpro.dts | 502 ++++++++++++++++++
- 2 files changed, 503 insertions(+)
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 500 ++++++++++++++++++
+ 2 files changed, 501 insertions(+)
  create mode 100644 arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 
 diff --git a/arch/arm64/boot/dts/allwinner/Makefile b/arch/arm64/boot/dts/allwinner/Makefile
@@ -29,10 +29,10 @@ index aa21f58a4..6132fda32 100644
  dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h5-emlid-neutis-n5-devboard.dtb
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 new file mode 100644
-index 000000000..5112e0d94
+index 000000000..44dab35a1
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-@@ -0,0 +1,502 @@
+@@ -0,0 +1,500 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * TrimUI Smart Pro handheld (Allwinner A133).
@@ -306,7 +306,6 @@ index 000000000..5112e0d94
 +
 +/* Buttons and sticks: one microcontroller per side, each on its own UART. */
 +&uart3 {
-+	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&uart3_pd_pins>;
 +	status = "okay";
@@ -318,7 +317,6 @@ index 000000000..5112e0d94
 +};
 +
 +&uart4 {
-+	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&uart4_pd_pins>;
 +	status = "okay";
@@ -510,10 +508,10 @@ index 000000000..5112e0d94
 +	};
 +
 +	pwm: pwm@300a000 {
-+		compatible = "allwinner,sun50i-a133-pwm";
++		compatible = "allwinner,sun50i-a100-pwm";
 +		reg = <0x0300a000 0x400>;
-+		clocks = <&ccu CLK_BUS_PWM>;
-+		clock-names = "bus";
++		clocks = <&ccu CLK_BUS_PWM>, <&dcxo24M>;
++		clock-names = "bus", "hosc";
 +		resets = <&ccu RST_BUS_PWM>;
 +		pinctrl-names = "default";
 +		pinctrl-0 = <&pwm0_pins>;

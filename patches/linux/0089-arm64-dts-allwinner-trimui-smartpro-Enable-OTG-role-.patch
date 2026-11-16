@@ -1,4 +1,4 @@
-From 897d7584cc8f10832c3eb04a31fe8d3cbd11078d Mon Sep 17 00:00:00 2001
+From ae58329fb990d047c1700f742f87e6c6c4801abb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:07:59 +0100
 Subject: [PATCH 089/106] arm64: dts: allwinner: trimui-smartpro: Enable OTG
@@ -20,10 +20,10 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 7 insertions(+), 3 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 4d2c0d3ce..24d780cdb 100644
+index 79e79b645..f5e0692b8 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-@@ -680,15 +680,19 @@ gamepad {
+@@ -678,15 +678,19 @@ gamepad {
  };
  
  /*

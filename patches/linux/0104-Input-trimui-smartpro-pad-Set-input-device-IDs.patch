@@ -1,4 +1,4 @@
-From 9b1bbb383b8d641df3b44af2e9657128edb7c8f6 Mon Sep 17 00:00:00 2001
+From 4ed2bf30a1cb687aed076434027332ebecae83c0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 14 Nov 2026 18:46:02 +0100
 Subject: [PATCH 104/106] Input: trimui-smartpro-pad: Set input device IDs
@@ -17,7 +17,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
-index 97359e084..ab12ad5be 100644
+index ab65d2e95..26a03b2df 100644
 --- a/drivers/input/joystick/trimui-smartpro-pad.c
 +++ b/drivers/input/joystick/trimui-smartpro-pad.c
 @@ -275,7 +275,15 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)

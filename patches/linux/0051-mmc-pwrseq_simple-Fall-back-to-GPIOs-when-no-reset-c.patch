@@ -1,4 +1,4 @@
-From 05241b76b05782df65a64cf47651cc1c079e7bb6 Mon Sep 17 00:00:00 2001
+From 117aeaa3f46f9a9f254ea64c4ae47b1cc4900388 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
 Subject: [PATCH 051/106] mmc: pwrseq_simple: Fall back to GPIOs when no reset

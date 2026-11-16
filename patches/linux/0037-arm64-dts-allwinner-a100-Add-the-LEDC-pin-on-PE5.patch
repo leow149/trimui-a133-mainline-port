@@ -1,4 +1,4 @@
-From cd27dadabc274645fead60810945e39eab116fce Mon Sep 17 00:00:00 2001
+From d96d3d51dd118738d6bbb33f373a5c139ca51151 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
 Subject: [PATCH 037/106] arm64: dts: allwinner: a100: Add the LEDC pin on PE5
@@ -10,7 +10,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 88e48132f..7b07bf602 100644
+index 55902ef36..fc4dd8273 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -260,6 +260,11 @@ uart0_pb_pins: uart0-pb-pins {

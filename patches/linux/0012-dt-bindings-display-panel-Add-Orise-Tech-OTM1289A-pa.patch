@@ -1,4 +1,4 @@
-From a3c1e4bd5dd99da2680e95da04250111c0fa1cf0 Mon Sep 17 00:00:00 2001
+From ee711e02f7d1d34f22f88f2700a14b4d42244c2a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:19:10 +0100
 Subject: [PATCH 012/106] dt-bindings: display: panel: Add Orise Tech OTM1289A

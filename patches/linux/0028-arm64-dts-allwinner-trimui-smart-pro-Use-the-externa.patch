@@ -1,4 +1,4 @@
-From 5340d914a9014ced295f4f2227401ebcf389e2b8 Mon Sep 17 00:00:00 2001
+From 681d018f1390a224c48b7a8c0b88c8ad7ee44c66 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:23 +0100
 Subject: [PATCH 028/106] arm64: dts: allwinner: trimui-smart-pro: Use the
@@ -14,7 +14,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 14 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 5112e0d94..4ff7f1e92 100644
+index 44dab35a1..6a904c3d4 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -50,6 +50,13 @@ bl31@40000000 {

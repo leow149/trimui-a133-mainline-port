@@ -1,4 +1,4 @@
-From 6ec3d3e40de024ba3747db84366ca9de45bd0233 Mon Sep 17 00:00:00 2001
+From 0402dc6aded3d879d1bfa97c80c5d5558f63aba1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 035/106] dt-bindings: leds: sun50i-a100-ledc: Per-LED channel

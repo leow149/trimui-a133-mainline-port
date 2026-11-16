@@ -1,4 +1,4 @@
-From d2100a4b9ff4d9b0c0e86ab4cf1ae504244294af Mon Sep 17 00:00:00 2001
+From 194c3dcd5b0e086919a8d2d7d9bfe107ac4ffed6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 14:30:00 +0100
 Subject: [PATCH 07/10] pvr: Advertise linear filtering for linear (strided) 2D

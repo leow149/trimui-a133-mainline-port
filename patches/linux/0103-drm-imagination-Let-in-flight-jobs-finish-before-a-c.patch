@@ -1,4 +1,4 @@
-From 33d1942186384039bc60fa027f86db1639cb52f4 Mon Sep 17 00:00:00 2001
+From f6f13cddd8024df2214e145671c533a031076f87 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:23:29 +0100
 Subject: [PATCH 103/106] drm/imagination: Let in-flight jobs finish before a
@@ -26,10 +26,10 @@ vkcube on the GE8300.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/gpu/drm/imagination/pvr_job.c |  8 +++++
- drivers/gpu/drm/imagination/pvr_vm.c  | 52 +++++++++++++++++++++++++++
- drivers/gpu/drm/imagination/pvr_vm.h  |  6 ++++
- 3 files changed, 66 insertions(+)
+ drivers/gpu/drm/imagination/pvr_job.c |  8 ++++
+ drivers/gpu/drm/imagination/pvr_vm.c  | 57 +++++++++++++++++++++++++++
+ drivers/gpu/drm/imagination/pvr_vm.h  |  6 +++
+ 3 files changed, 71 insertions(+)
 
 diff --git a/drivers/gpu/drm/imagination/pvr_job.c b/drivers/gpu/drm/imagination/pvr_job.c
 index b8a58d817..ff6b368ac 100644
@@ -65,10 +65,10 @@ index b8a58d817..ff6b368ac 100644
  		enum dma_resv_usage usage = job->type == DRM_PVR_JOB_TYPE_GEOMETRY ?
  					    DMA_RESV_USAGE_WRITE : DMA_RESV_USAGE_READ;
 diff --git a/drivers/gpu/drm/imagination/pvr_vm.c b/drivers/gpu/drm/imagination/pvr_vm.c
-index ceb78694c..9d172a135 100644
+index cbdd15ed7..41af838f1 100644
 --- a/drivers/gpu/drm/imagination/pvr_vm.c
 +++ b/drivers/gpu/drm/imagination/pvr_vm.c
-@@ -877,16 +877,68 @@ pvr_vm_unmap(struct pvr_vm_context *vm_ctx, u64 device_addr, u64 size)
+@@ -877,16 +877,73 @@ pvr_vm_unmap(struct pvr_vm_context *vm_ctx, u64 device_addr, u64 size)
  	return err;
  }
  
@@ -120,7 +120,12 @@ index ceb78694c..9d172a135 100644
 + * Jobs submitted on the VM may still be running, e.g. when a file is closed
 + * mid-frame (pvr_destroy_contexts_for_file()): wait for them first, otherwise
 + * they page-fault, which the firmware reports as a guilty lockup and the GPU
-+ * is reset for every context. The wait is bounded by the job timeout.
++ * is reset for every context.
++ *
++ * The wait is uninterruptible on purpose: the typical caller is the release
++ * of the file of a process killed by a signal, where an interruptible wait
++ * would return at once. Running jobs normally finish within a frame; a hung
++ * one is ended by the scheduler's timeout handler, which bounds the wait.
   */
  void
  pvr_vm_unmap_all(struct pvr_vm_context *vm_ctx)

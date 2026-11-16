@@ -1,4 +1,4 @@
-From 4bfbef389a219c473217ad89e5bfa808923e7a3a Mon Sep 17 00:00:00 2001
+From 676473647f5dcc36f664d8b51f3014c392360e69 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
 Subject: [PATCH 047/106] usb: musb: sunxi: Add DMA support
@@ -33,10 +33,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  4 files changed, 326 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/usb/musb/Kconfig b/drivers/usb/musb/Kconfig
-index f56929267..95b375486 100644
+index 1b0d27d8e..7e9047159 100644
 --- a/drivers/usb/musb/Kconfig
 +++ b/drivers/usb/musb/Kconfig
-@@ -144,6 +144,13 @@ config USB_UX500_DMA
+@@ -143,6 +143,13 @@ config USB_UX500_DMA
  	help
  	  Enable DMA transfers on UX500 platforms.
  
@@ -66,10 +66,10 @@ index 66785ceca..b384b502c 100644
  #define musb_dma_sunxi(musb)		0
  #endif
 diff --git a/drivers/usb/musb/musb_host.c b/drivers/usb/musb/musb_host.c
-index eff796661..d91639027 100644
+index 6a1f602f4..cf5f919f7 100644
 --- a/drivers/usb/musb/musb_host.c
 +++ b/drivers/usb/musb/musb_host.c
-@@ -1849,8 +1849,13 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1861,8 +1861,13 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  	 * while processing this irq for earlier completions.
  	 */
  

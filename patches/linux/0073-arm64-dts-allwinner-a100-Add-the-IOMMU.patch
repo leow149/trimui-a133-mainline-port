@@ -1,4 +1,4 @@
-From 64b312a28c8aceafc9072076dc94dcbc191008be Mon Sep 17 00:00:00 2001
+From 373b74ce93296b7d5aecd77db5f8b2f0385bc30b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:12:25 +0100
 Subject: [PATCH 073/106] arm64: dts: allwinner: a100: Add the IOMMU
@@ -13,7 +13,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 9 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 7e3030269..4e343d699 100644
+index 02db50b22..b0a99f4af 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -200,6 +200,7 @@ video-codec@1c0e000 {

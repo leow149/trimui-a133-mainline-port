@@ -1,4 +1,4 @@
-From 76d2dd6092ebe232c8c705153d541f0aa2af3c67 Mon Sep 17 00:00:00 2001
+From bab369960a5867dfd825a26706b55d0b49698f49 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:12:24 +0100
 Subject: [PATCH 071/106] dt-bindings: iommu: sun50i: Add the A100 IOMMU

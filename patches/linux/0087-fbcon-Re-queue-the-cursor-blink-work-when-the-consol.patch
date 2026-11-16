@@ -1,4 +1,4 @@
-From fdbac33f468b6ec6ff274f719e2c5e780bab567b Mon Sep 17 00:00:00 2001
+From 59ecd90f16f842a7fc321521c33674beb81b7c11 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:54:41 +0100
 Subject: [PATCH 087/106] fbcon: Re-queue the cursor blink work when the
@@ -27,7 +27,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 11 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/video/fbdev/core/fbcon.c b/drivers/video/fbdev/core/fbcon.c
-index 23b3c536d..b97273289 100644
+index 9a5d50d69..fcdff556c 100644
 --- a/drivers/video/fbdev/core/fbcon.c
 +++ b/drivers/video/fbdev/core/fbcon.c
 @@ -402,8 +402,18 @@ static void fb_flashcursor(struct work_struct *work)

@@ -1,4 +1,4 @@
-From 4c2fd5e40c0b50f3f7952d1a1a4d9150b27adc70 Mon Sep 17 00:00:00 2001
+From 7914aeef6a6fcbd7292b51264a0fd56ff2d5694b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:49 +0100
 Subject: [PATCH 046/106] usb: musb: Let other dmaengine based glue share the
@@ -73,7 +73,7 @@ index 016d3f3fc..045858361 100644
  
  				struct dma_controller *c;
 diff --git a/drivers/usb/musb/musb_host.c b/drivers/usb/musb/musb_host.c
-index 8efd2fa47..eff796661 100644
+index 31b061248..6a1f602f4 100644
 --- a/drivers/usb/musb/musb_host.c
 +++ b/drivers/usb/musb/musb_host.c
 @@ -631,7 +631,7 @@ static bool musb_tx_dma_program(struct dma_controller *dma,
@@ -85,7 +85,7 @@ index 8efd2fa47..eff796661 100644
  		musb_tx_dma_set_mode_mentor(hw_ep, qh,
  					    &length, &mode);
  	else if (is_cppi_enabled(hw_ep->musb) || tusb_dma_omap(hw_ep->musb))
-@@ -1850,7 +1850,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1862,7 +1862,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  	 */
  
  	/* FIXME this is _way_ too much in-line logic for Mentor DMA */
@@ -94,7 +94,7 @@ index 8efd2fa47..eff796661 100644
  	    (rx_csr & MUSB_RXCSR_H_REQPKT)) {
  		/* REVISIT this happened for a while on some short reads...
  		 * the cleanup still needs investigation... looks bad...
-@@ -1882,7 +1882,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1894,7 +1894,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  			| MUSB_RXCSR_RXPKTRDY);
  		musb_writew(hw_ep->regs, MUSB_RXCSR, val);
  
@@ -103,7 +103,7 @@ index 8efd2fa47..eff796661 100644
  		    musb_dma_cppi41(musb)) {
  			    done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
  			    musb_dbg(hw_ep->musb,
-@@ -1911,7 +1911,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1923,7 +1923,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  		}
  
  		/* we are expecting IN packets */

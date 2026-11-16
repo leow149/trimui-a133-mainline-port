@@ -1,4 +1,4 @@
-From 1123abe04c77aa5238de6bc0e43dc565cf9b375a Mon Sep 17 00:00:00 2001
+From 47d7ebaded613354c74930c289d005ef0d36b07a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:34:49 +0100
 Subject: [PATCH 023/106] dt-bindings: arm: sunxi: Add the TrimUI Smart Pro

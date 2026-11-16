@@ -1,4 +1,4 @@
-From 25b537fc38f50711c5c669b814b1d5a9bf513dd8 Mon Sep 17 00:00:00 2001
+From 77026cca36defb2641b14bf7462794447b49eb7c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 084/106] wifi: xradio: report the real TX rate entries to
@@ -26,7 +26,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  3 files changed, 69 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
-index 74927b244..000fc4205 100644
+index 60478bf73..4d2fd6194 100644
 --- a/drivers/net/wireless/xradio/tx.c
 +++ b/drivers/net/wireless/xradio/tx.c
 @@ -1097,6 +1097,22 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
@@ -55,7 +55,7 @@ index 74927b244..000fc4205 100644
 @@ -1227,8 +1243,52 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
  			//}
  		}
- 		
+ 
 +		/*
 +		 * HT40 API: the firmware reports whole rate entries (with
 +		 * bandwidth and guard interval), keep them as they are so
@@ -107,7 +107,7 @@ index 74927b244..000fc4205 100644
  			s8 nibble, txed_idx;
  			if(likely(!arg->rate_try[i])) continue;
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
-index 076eca1e1..347b6d938 100644
+index 5606836f4..8adae886e 100644
 --- a/drivers/net/wireless/xradio/wsm.c
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -634,7 +634,8 @@ static int wsm_tx_confirm(struct xradio_common *hw_priv,
@@ -130,7 +130,7 @@ index 076eca1e1..347b6d938 100644
  				continue;
  			shift = (idx & 7) * 4;
 diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
-index 5044c002e..c9bf6e7d9 100644
+index a69e9cb1b..167683c05 100644
 --- a/drivers/net/wireless/xradio/wsm.h
 +++ b/drivers/net/wireless/xradio/wsm.h
 @@ -829,6 +829,10 @@ struct wsm_tx_confirm {

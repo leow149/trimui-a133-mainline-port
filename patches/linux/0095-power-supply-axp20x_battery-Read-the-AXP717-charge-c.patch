@@ -1,4 +1,4 @@
-From f1e028856ea269d14acd9d0bd0882d3a2b6083f7 Mon Sep 17 00:00:00 2001
+From 0226b50fa8944a2ace62ff7ca398136953fd09b3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 11:30:55 +0100
 Subject: [PATCH 095/106] power: supply: axp20x_battery: Read the AXP717 charge
@@ -26,7 +26,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/power/supply/axp20x_battery.c b/drivers/power/supply/axp20x_battery.c
-index 50ca8e110..d662e8f93 100644
+index ee8701a6e..23825cbb7 100644
 --- a/drivers/power/supply/axp20x_battery.c
 +++ b/drivers/power/supply/axp20x_battery.c
 @@ -100,6 +100,7 @@ struct axp_data {

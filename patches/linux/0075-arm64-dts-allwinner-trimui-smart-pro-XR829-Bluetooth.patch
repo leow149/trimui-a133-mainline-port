@@ -1,4 +1,4 @@
-From 74c5fbd8d96ecaf362f2f20013d7c22d76794130 Mon Sep 17 00:00:00 2001
+From 602291dd20529fe0df652e31bd59392e21523027 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Fri, 6 Nov 2026 08:41:15 +0100
 Subject: [PATCH 075/106] arm64: dts: allwinner: trimui-smart-pro: XR829
@@ -19,7 +19,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  2 files changed, 28 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 4e343d699..1a08364ec 100644
+index b0a99f4af..52a0b7762 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -314,6 +314,12 @@ uart4_pd_pins: uart4-pd-pins {
@@ -36,7 +36,7 @@ index 4e343d699..1a08364ec 100644
  
  		iommu: iommu@30f0000 {
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 47ef62729..f3499d633 100644
+index 412eadd8d..a3abfa14b 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -551,6 +551,28 @@ &uart0 {
@@ -67,4 +67,4 @@ index 47ef62729..f3499d633 100644
 +
  /* Buttons and sticks: one microcontroller per side, each on its own UART. */
  &uart3 {
- 	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 	pinctrl-names = "default";

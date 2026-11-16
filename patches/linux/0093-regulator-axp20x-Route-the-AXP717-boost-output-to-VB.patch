@@ -1,4 +1,4 @@
-From f0988a2e054d2c2b26ef44e48375b754e8002546 Mon Sep 17 00:00:00 2001
+From 724bb48f3854efb86bcdec00aa028dff8da85829 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:22 +0100
 Subject: [PATCH 093/106] regulator: axp20x: Route the AXP717 boost output to
@@ -36,7 +36,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  3 files changed, 108 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/mfd/axp20x.c b/drivers/mfd/axp20x.c
-index 679364189..418e88711 100644
+index 50df66de2..78375cb8f 100644
 --- a/drivers/mfd/axp20x.c
 +++ b/drivers/mfd/axp20x.c
 @@ -220,6 +220,7 @@ static const struct regmap_access_table axp313a_volatile_table = {

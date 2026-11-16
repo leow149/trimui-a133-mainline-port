@@ -1,4 +1,4 @@
-From b4348d02d5ea88045fe948812844d04700032043 Mon Sep 17 00:00:00 2001
+From 918232471ceb0b67f90fad056547f8d5dbef442a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:27:25 +0100
 Subject: [PATCH 097/106] power: supply: axp20x_usb_power: Set the AXP717 input
@@ -26,7 +26,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 57 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/power/supply/axp20x_usb_power.c b/drivers/power/supply/axp20x_usb_power.c
-index 29f105f92..e7c0c7b91 100644
+index e951b2b64..2a5a8588d 100644
 --- a/drivers/power/supply/axp20x_usb_power.c
 +++ b/drivers/power/supply/axp20x_usb_power.c
 @@ -93,6 +93,8 @@ struct axp20x_usb_power {

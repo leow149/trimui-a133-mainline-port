@@ -1,4 +1,4 @@
-From af8157066a8e8ff2bc6f0c02cf5d97669b34e898 Mon Sep 17 00:00:00 2001
+From 1dd374c2f1590a328eefadb0e907cb66bb6e4b78 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 14:24:13 +0100
 Subject: [PATCH 10/10] pvr: Don't write the ISP tag for opaque objects that
@@ -91,10 +91,10 @@ index 540e4cd099c..d334d000c38 100644
     util_dynarray_fini(&state.loads);
  
 diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-index d560d34f44b..a3b9279dfd0 100644
+index abb25b85417..e38c9dbf323 100644
 --- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
 +++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-@@ -7197,9 +7197,22 @@ pvr_setup_isp_faces_and_control(struct pvr_cmd_buffer *const cmd_buffer,
+@@ -7196,9 +7196,22 @@ pvr_setup_isp_faces_and_control(struct pvr_cmd_buffer *const cmd_buffer,
     pvr_csb_pack (&isp_control, TA_STATE_ISPCTL, ispctl) {
        ispctl.upass = pass_info->isp_userpass;
  

@@ -1,4 +1,4 @@
-From 8f77ecf9308cc8b8a89200ef14f808d5d0589872 Mon Sep 17 00:00:00 2001
+From 4dd14b48edc379ecdc61ce531c4a5d0f5f85381c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:53:12 +0100
 Subject: [PATCH 05/10] pvr: Don't regenerate the render setup for every
@@ -36,7 +36,7 @@ buffers.
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  84 +++++-
+ src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  83 +++++-
  src/imagination/vulkan/pvr_arch_device.c      |   3 +
  src/imagination/vulkan/pvr_arch_framebuffer.c |  95 ++++++-
  src/imagination/vulkan/pvr_arch_mrt.c         | 130 ++++++++-
@@ -48,10 +48,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  src/imagination/vulkan/pvr_mrt.h              |   4 +
  src/imagination/vulkan/pvr_spm.c              |   5 +-
  src/imagination/vulkan/pvr_spm.h              |   3 +
- 12 files changed, 695 insertions(+), 40 deletions(-)
+ 12 files changed, 694 insertions(+), 40 deletions(-)
 
 diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-index a029859e4a9..6db8a0689a4 100644
+index a029859e4a9..984699d1497 100644
 --- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
 +++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
 @@ -221,6 +221,10 @@ static void pvr_cmd_buffer_free_resources(struct pvr_cmd_buffer *cmd_buffer)
@@ -84,7 +84,7 @@ index a029859e4a9..6db8a0689a4 100644
     struct pvr_eot_props props = {
        .emit_count = emit_count,
        .shared_words = false,
-@@ -614,20 +623,64 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
+@@ -614,20 +623,63 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
           props.msaa_samples = 1;
     }
  
@@ -105,7 +105,7 @@ index a029859e4a9..6db8a0689a4 100644
 +   if (cached) {
 +      usc_eot_program = cached->usc_bo;
 +      usc_temp_count = cached->temps_count;
-+      util_dynarray_append(&cmd_buffer->prog_cache_refs, const void *, cached);
++      util_dynarray_append(&cmd_buffer->prog_cache_refs, (const void *)cached);
 +   } else {
 +      eot = pvr_usc_eot(device->pdevice->pco_ctx,
 +                        &props,
@@ -151,8 +151,7 @@ index a029859e4a9..6db8a0689a4 100644
 +         list_del(&usc_eot_program->link);
 +         eot_program_cached = true;
 +         util_dynarray_append(&cmd_buffer->prog_cache_refs,
-+                              const void *,
-+                              cached);
++                              (const void *)cached);
 +      }
 +   }
 +
@@ -160,7 +159,7 @@ index a029859e4a9..6db8a0689a4 100644
  
     pvr_pds_setup_doutu(&pixel_event_program.task_control,
                         usc_eot_program->dev_addr.addr,
-@@ -667,8 +720,10 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
+@@ -667,8 +719,10 @@ static VkResult pvr_sub_cmd_gfx_per_job_fragment_programs_create_and_upload(
     return result;
  
  err_free_usc_pixel_program:
@@ -173,7 +172,7 @@ index a029859e4a9..6db8a0689a4 100644
  
     return result;
  }
-@@ -5048,7 +5103,8 @@ void PVR_PER_ARCH(CmdBeginRendering)(VkCommandBuffer commandBuffer,
+@@ -5048,7 +5102,8 @@ void PVR_PER_ARCH(CmdBeginRendering)(VkCommandBuffer commandBuffer,
                                          NULL,
                                          state->render_pass_info.rstate,
                                          1,

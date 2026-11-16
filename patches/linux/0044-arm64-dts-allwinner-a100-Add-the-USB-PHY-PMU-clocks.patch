@@ -1,4 +1,4 @@
-From bae6e467e92ec7d052bb503233e26881ef4cd739 Mon Sep 17 00:00:00 2001
+From 664c716ef133b341c1afee644012fbbea00e2e81 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:09 +0100
 Subject: [PATCH 044/106] arm64: dts: allwinner: a100: Add the USB PHY PMU
@@ -14,7 +14,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 7b07bf602..586949ed5 100644
+index fc4dd8273..3d92e7bbe 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -533,9 +533,13 @@ usbphy: phy@5100400 {

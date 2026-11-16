@@ -1,4 +1,4 @@
-From c31a375a28b9e1b0c0faf735d40744d0db79ea34 Mon Sep 17 00:00:00 2001
+From 4d42292f985e7eacc243c351f5afc21580181ba1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
 Subject: [PATCH 052/106] arm64: dts: allwinner: trimui-smart-pro: Enable the
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 20 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 8259ceb56..ac78a9eaa 100644
+index 1198fd10a..27fa60c16 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -120,6 +120,15 @@ backlight: backlight {

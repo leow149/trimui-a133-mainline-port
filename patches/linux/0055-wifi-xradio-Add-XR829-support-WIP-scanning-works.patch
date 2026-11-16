@@ -1,4 +1,4 @@
-From 80b96ac95874c5439cc461ac6ee922c4047d2e22 Mon Sep 17 00:00:00 2001
+From a33c074617c9b897a73a43da66864db9261d2df3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
 Subject: [PATCH 055/106] wifi: xradio: Add XR829 support (WIP: scanning works)
@@ -40,7 +40,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  10 files changed, 224 insertions(+), 52 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
-index e38fee542..a344b1b1d 100644
+index 65fed6d79..e72fb7f61 100644
 --- a/drivers/net/wireless/xradio/bh.c
 +++ b/drivers/net/wireless/xradio/bh.c
 @@ -309,43 +309,37 @@ static inline int xradio_put_resv_skb(struct xradio_common *hw_priv,
@@ -106,7 +106,7 @@ index e38fee542..a344b1b1d 100644
  
  static int xradio_bh_read_ctrl_reg(struct xradio_common *hw_priv,
 diff --git a/drivers/net/wireless/xradio/fwio.c b/drivers/net/wireless/xradio/fwio.c
-index 91958dd90..9b1d54a8c 100644
+index 9272ee44e..409a321ed 100644
 --- a/drivers/net/wireless/xradio/fwio.c
 +++ b/drivers/net/wireless/xradio/fwio.c
 @@ -15,6 +15,8 @@
@@ -251,7 +251,7 @@ index b5efeb15d..d24c12e39 100644
  #define SDD_REFERENCE_FREQUENCY_ELT_ID 0xC5
  #define FIELD_OFFSET(type, field) ((u8 *)&((type *)0)->field - (u8 *)0)
 diff --git a/drivers/net/wireless/xradio/hwio.h b/drivers/net/wireless/xradio/hwio.h
-index 531c2b8c8..2f00cfacf 100644
+index 0297ace4f..1e00cb075 100644
 --- a/drivers/net/wireless/xradio/hwio.h
 +++ b/drivers/net/wireless/xradio/hwio.h
 @@ -87,6 +87,15 @@ struct download_cntl_t {
@@ -285,7 +285,7 @@ index 531c2b8c8..2f00cfacf 100644
 +
  #endif /* XRADIO_HWIO_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
-index 09c17db5f..8f0fd284f 100644
+index 1a7ba06e5..782a00d72 100644
 --- a/drivers/net/wireless/xradio/main.c
 +++ b/drivers/net/wireless/xradio/main.c
 @@ -452,10 +452,6 @@ static void xradio_free_common(struct ieee80211_hw *dev)
@@ -300,12 +300,12 @@ index 09c17db5f..8f0fd284f 100644
  	for (i = 0; i < 4; ++i)
  		xradio_queue_deinit(&hw_priv->tx_queue[i]);
 diff --git a/drivers/net/wireless/xradio/rx.c b/drivers/net/wireless/xradio/rx.c
-index 24be4f321..77fd37e62 100644
+index a3b50bce2..eaaa471cd 100644
 --- a/drivers/net/wireless/xradio/rx.c
 +++ b/drivers/net/wireless/xradio/rx.c
 @@ -216,8 +216,13 @@ void xradio_rx_cb(struct xradio_vif *priv,
  #endif
-        
+ 
  	if (arg->rxedRate >= 14) {
 -		hdr->flag |= RX_ENC_HT;
 +		hdr->encoding = RX_ENC_HT;
@@ -343,7 +343,7 @@ index cdc3ae09d..587c59416 100644
  };
  
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
-index ea737709e..66ab0ad66 100644
+index 7c8bb9d9b..2672c2caf 100644
 --- a/drivers/net/wireless/xradio/wsm.c
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -433,6 +433,40 @@ static int wsm_write_mib_confirm(struct xradio_common *hw_priv,
@@ -428,7 +428,7 @@ index ea737709e..66ab0ad66 100644
  		rx.flags = WSM_GET32(buf);
  
 diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
-index cec208271..42b57b750 100644
+index a781e731a..aa272f91b 100644
 --- a/drivers/net/wireless/xradio/wsm.h
 +++ b/drivers/net/wireless/xradio/wsm.h
 @@ -13,6 +13,7 @@
@@ -496,7 +496,7 @@ index cec208271..42b57b750 100644
  struct wsm_protected_mgmt_policy {
  	bool protectedMgmtEnable;
 diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
-index 34143f8a0..631456ce1 100644
+index 1b07aa971..100c3f667 100644
 --- a/drivers/net/wireless/xradio/xradio.h
 +++ b/drivers/net/wireless/xradio/xradio.h
 @@ -232,7 +232,6 @@ struct xradio_common {

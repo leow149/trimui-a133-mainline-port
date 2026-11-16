@@ -1,4 +1,4 @@
-From c16abc1e471c1f49d223fef3ce908e28c0d07039 Mon Sep 17 00:00:00 2001
+From 877d9d1ae55eae66d069a7ffae25cc28f534928c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:36:10 +0100
 Subject: [PATCH 085/106] usb: musb: sunxi: Preserve the session across system

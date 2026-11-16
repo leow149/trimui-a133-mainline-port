@@ -1,4 +1,4 @@
-From eea3a200497fc564b864783b9242bbe58b34aad7 Mon Sep 17 00:00:00 2001
+From e24ad24ea89ec1d20a15c0fd6339ed29dbb4c94c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 005/106] dt-bindings: display: sun4i: Add A133 TCON LCD, TCON

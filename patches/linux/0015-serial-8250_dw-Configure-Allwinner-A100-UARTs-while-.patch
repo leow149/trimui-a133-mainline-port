@@ -1,4 +1,4 @@
-From 6e0f61eac0f9cb1973d5ffe8a8a22808d75c4b65 Mon Sep 17 00:00:00 2001
+From a62dd2a3ea455688f4e8714505f1bb049050c961 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
 Subject: [PATCH 015/106] serial: 8250_dw: Configure Allwinner A100 UARTs while
@@ -12,19 +12,20 @@ with DLAB set and the IER write landing in DLH, and never receives anything.
 
 Allwinner's UART_HALT register has a documented way out: with CHCFG_AT_BUSY set
 the configuration registers accept writes while busy, and CHANGE_UPDATE applies
-them. Use it for the new "allwinner,sun50i-a100-uart" compatible.
-
-The wait for CHANGE_UPDATE to clear runs under the port lock, so it is
-bounded (1 ms) and a timeout is reported.
+them. Use it for the new "allwinner,sun50i-a100-uart" compatible. The divisor
+is changed with the sequence of the vendor driver: hold TX (HALT_TX), set DLAB
+and the divisor, apply, clear DLAB, apply again, release TX; it does not rely
+on reading back LCR. The wait for CHANGE_UPDATE runs under the port lock, so it
+is bounded (1 ms) and a timeout is reported.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/tty/serial/8250/8250_dw.c | 55 +++++++++++++++++++++++++++++++
- 1 file changed, 55 insertions(+)
+ drivers/tty/serial/8250/8250_dw.c | 93 +++++++++++++++++++++++++++++++
+ 1 file changed, 93 insertions(+)
 
 diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
-index 5fba913f3..066148b63 100644
+index 51d026f20..c573b56cf 100644
 --- a/drivers/tty/serial/8250/8250_dw.c
 +++ b/drivers/tty/serial/8250/8250_dw.c
 @@ -16,6 +16,7 @@
@@ -43,53 +44,87 @@ index 5fba913f3..066148b63 100644
  
  /*
   * Number of consecutive IIR_NO_INT interrupts required to trigger interrupt
-@@ -99,6 +101,40 @@ static inline u32 dw8250_modify_msr(struct uart_port *p, unsigned int offset, u3
+@@ -99,6 +101,73 @@ static inline u32 dw8250_modify_msr(struct uart_port *p, unsigned int offset, u3
  	return value;
  }
  
 +/*
 + * Allwinner UARTs can take LCR/DLL/DLH writes while busy once CHCFG_AT_BUSY is
-+ * set; CHANGE_UPDATE then applies them and self-clears. Loopback does not
-+ * stop BUSY on these, so it is the only way to configure them while the line
-+ * is active.
++ * set in UART_HALT; CHANGE_UPDATE then applies them and self-clears. HALT_TX
++ * holds the transmitter meanwhile. Loopback does not stop BUSY on these, so
++ * this is the only way to configure them while the line is active.
 + */
 +#define SUNXI_UART_HALT			0xa4
++#define SUNXI_UART_HALT_TX		BIT(0)
 +#define SUNXI_UART_HALT_CHCFG_AT_BUSY	BIT(1)
 +#define SUNXI_UART_HALT_CHANGE_UPDATE	BIT(2)
++#define SUNXI_UART_HALT_CFG		(SUNXI_UART_HALT_TX | \
++					 SUNXI_UART_HALT_CHCFG_AT_BUSY)
 +
 +static bool dw8250_has_chcfg_at_busy(struct dw8250_data *d)
 +{
 +	return d->pdata && d->pdata->quirks & DW_UART_QUIRK_CHCFG_AT_BUSY;
 +}
 +
++static void dw8250_chcfg_begin(struct uart_port *p)
++{
++	serial_port_out(p, SUNXI_UART_HALT,
++			serial_port_in(p, SUNXI_UART_HALT) | SUNXI_UART_HALT_CFG);
++}
++
 +/*
-+ * Called with the port lock held, so the wait is bounded (1 ms). If the
-+ * update does not complete, the new line settings may not have been applied.
++ * Apply the configuration registers written since dw8250_chcfg_begin().
++ * Called with the port lock held, so the wait is bounded (1 ms).
 + */
 +static void dw8250_chcfg_update(struct uart_port *p)
 +{
-+	u32 halt = serial_port_in(p, SUNXI_UART_HALT);
 +	u32 val;
-+	int ret;
 +
-+	serial_port_out(p, SUNXI_UART_HALT, halt | SUNXI_UART_HALT_CHANGE_UPDATE);
-+	ret = read_poll_timeout_atomic(serial_port_in, val,
-+				       !(val & SUNXI_UART_HALT_CHANGE_UPDATE),
-+				       1, 1000, false, p, SUNXI_UART_HALT);
-+	serial_port_out(p, SUNXI_UART_HALT, halt & ~SUNXI_UART_HALT_CHCFG_AT_BUSY);
-+	if (ret)
++	serial_port_out(p, SUNXI_UART_HALT,
++			serial_port_in(p, SUNXI_UART_HALT) |
++			SUNXI_UART_HALT_CHANGE_UPDATE);
++	if (read_poll_timeout_atomic(serial_port_in, val,
++				     !(val & SUNXI_UART_HALT_CHANGE_UPDATE),
++				     1, 1000, false, p, SUNXI_UART_HALT))
 +		dev_warn_ratelimited(p->dev, "line settings update timed out\n");
++}
++
++static void dw8250_chcfg_end(struct uart_port *p)
++{
++	serial_port_out(p, SUNXI_UART_HALT,
++			serial_port_in(p, SUNXI_UART_HALT) & ~SUNXI_UART_HALT_CFG);
++}
++
++/*
++ * The sequence of the Allwinner BSP driver: hold TX, set DLAB and the
++ * divisor, apply, clear DLAB, apply again, release TX.
++ */
++static void dw8250_chcfg_set_divisor(struct uart_port *p, unsigned int quot)
++{
++	struct dw8250_data *d = to_dw8250_data(p->private_data);
++	struct uart_8250_port *up = up_to_u8250p(p);
++
++	d->in_idle = 1;		/* no LCR read-back check in serial_out() */
++	dw8250_chcfg_begin(p);
++	serial_port_out(p, UART_LCR, up->lcr | UART_LCR_DLAB);
++	serial_dl_write(up, quot);
++	dw8250_chcfg_update(p);
++	serial_port_out(p, UART_LCR, up->lcr);
++	dw8250_chcfg_update(p);
++	dw8250_chcfg_end(p);
++	d->in_idle = 0;
 +}
 +
  static void dw8250_idle_exit(struct uart_port *p)
  {
  	struct dw8250_data *d = to_dw8250_data(p->private_data);
-@@ -107,6 +143,12 @@ static void dw8250_idle_exit(struct uart_port *p)
+@@ -107,6 +176,13 @@ static void dw8250_idle_exit(struct uart_port *p)
  	if (d->uart_16550_compatible)
  		return;
  
 +	if (dw8250_has_chcfg_at_busy(d)) {
 +		dw8250_chcfg_update(p);
++		dw8250_chcfg_end(p);
 +		d->in_idle = 0;
 +		return;
 +	}
@@ -97,21 +132,35 @@ index 5fba913f3..066148b63 100644
  	if (up->capabilities & UART_CAP_FIFO)
  		serial_port_out(p, UART_FCR, up->fcr);
  	serial_port_out(p, UART_MCR, up->mcr);
-@@ -141,6 +183,13 @@ static int dw8250_idle_enter(struct uart_port *p)
+@@ -141,6 +217,11 @@ static int dw8250_idle_enter(struct uart_port *p)
  
  	d->in_idle = 1;
  
 +	if (dw8250_has_chcfg_at_busy(d)) {
-+		serial_port_out(p, SUNXI_UART_HALT,
-+				serial_port_in(p, SUNXI_UART_HALT) |
-+				SUNXI_UART_HALT_CHCFG_AT_BUSY);
++		dw8250_chcfg_begin(p);
 +		return 0;
 +	}
 +
  	/* Prevent triggering interrupt from RBR filling */
  	serial_port_out(p, UART_IER, 0);
  
-@@ -845,6 +894,11 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
+@@ -188,9 +269,15 @@ static int dw8250_idle_enter(struct uart_port *p)
+ static void dw8250_set_divisor(struct uart_port *p, unsigned int baud,
+ 			       unsigned int quot, unsigned int quot_frac)
+ {
++	struct dw8250_data *d = to_dw8250_data(p->private_data);
+ 	struct uart_8250_port *up = up_to_u8250p(p);
+ 	int ret;
+ 
++	if (!d->uart_16550_compatible && dw8250_has_chcfg_at_busy(d)) {
++		dw8250_chcfg_set_divisor(p, quot);
++		return;
++	}
++
+ 	ret = dw8250_idle_enter(p);
+ 	if (ret < 0)
+ 		return;
+@@ -845,6 +932,11 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
  	.usr_reg = DW_UART_USR,
  };
  
@@ -123,7 +172,7 @@ index 5fba913f3..066148b63 100644
  static const struct dw8250_platform_data dw8250_octeon_3860_data = {
  	.usr_reg = OCTEON_UART_USR,
  	.quirks = DW_UART_QUIRK_OCTEON,
-@@ -890,6 +944,7 @@ static const struct dw8250_platform_data dw8250_ultrarisc_dp1000_data = {
+@@ -890,6 +982,7 @@ static const struct dw8250_platform_data dw8250_ultrarisc_dp1000_data = {
  
  static const struct of_device_id dw8250_of_match[] = {
  	{ .compatible = "snps,dw-apb-uart", .data = &dw8250_dw_apb },

@@ -1,4 +1,4 @@
-From 90655917688335f8cd1839cf883e9f76d819dd7b Mon Sep 17 00:00:00 2001
+From 39afec6be48ac3a0b48b542628bf80ca3fccfb71 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:38 +0100
 Subject: [PATCH 036/106] leds: sun50i-a100: Allow a per-LED channel order

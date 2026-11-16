@@ -1,4 +1,4 @@
-From 474a657205e0b6e58478d94a440d8571d0c77e50 Mon Sep 17 00:00:00 2001
+From bffbae39749cc6f534d016ebbca30921f328e7a5 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:30 +0100
 Subject: [PATCH 019/106] arm64: dts: allwinner: a100: Add the SRAM C section

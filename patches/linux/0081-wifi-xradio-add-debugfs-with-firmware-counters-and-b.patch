@@ -1,4 +1,4 @@
-From 85e237fdd2b977b7780607b2034fc6d71986bd5f Mon Sep 17 00:00:00 2001
+From 73fae47f2ed212b660aa90e7b42e46832386a674 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:19:46 +0100
 Subject: [PATCH 081/106] wifi: xradio: add debugfs with firmware counters and
@@ -261,7 +261,7 @@ index 000000000..a7aadfef2
 +void xradio_debugfs_exit(struct xradio_common *hw_priv);
 +#endif
 diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
-index 8f0fd284f..e6ddea2fe 100644
+index 782a00d72..9fd9c3b21 100644
 --- a/drivers/net/wireless/xradio/main.c
 +++ b/drivers/net/wireless/xradio/main.c
 @@ -19,6 +19,7 @@
@@ -289,7 +289,7 @@ index 8f0fd284f..e6ddea2fe 100644
  		xradio_dev_deinit(hw_priv);
  		xradio_unregister_bh(hw_priv);
 diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
-index bff5debcc..72888fc4a 100644
+index 31d185f17..11a714dfc 100644
 --- a/drivers/net/wireless/xradio/xradio.h
 +++ b/drivers/net/wireless/xradio/xradio.h
 @@ -222,6 +222,7 @@ struct xradio_common {

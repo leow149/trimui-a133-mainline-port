@@ -1,4 +1,4 @@
-From ac646cb87d90406619d039303c11923b01d297ec Mon Sep 17 00:00:00 2001
+From e59c99346c12960540dd0c4c846c1c2d625d2580 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:08 +0100
 Subject: [PATCH 041/106] phy: sun4i-usb: Allow any PHY to be the SIDDQ helper

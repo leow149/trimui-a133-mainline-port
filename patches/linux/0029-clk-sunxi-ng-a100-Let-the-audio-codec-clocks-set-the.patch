@@ -1,4 +1,4 @@
-From f00e5857bdeffeee7ea9197c2be4eb98cfbf9f5c Mon Sep 17 00:00:00 2001
+From d0a01840c492d16286768b3d725274f444e0702c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:51 +0100
 Subject: [PATCH 029/106] clk: sunxi-ng: a100: Let the audio codec clocks set

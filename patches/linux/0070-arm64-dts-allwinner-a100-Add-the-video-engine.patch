@@ -1,4 +1,4 @@
-From 7116f4aa81373ddf8bb0916340e800d075f1506a Mon Sep 17 00:00:00 2001
+From bfd4cf2d5098ad6ce0764936d0ffdd7ca32b28c6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
 Subject: [PATCH 070/106] arm64: dts: allwinner: a100: Add the video engine
@@ -18,7 +18,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 27 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 28c85d30c..7e3030269 100644
+index 12cd9319d..02db50b22 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -140,6 +140,21 @@ sram_a2: sram@100000 {

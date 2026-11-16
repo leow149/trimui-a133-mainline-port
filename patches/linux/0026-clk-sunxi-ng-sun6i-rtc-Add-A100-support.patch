@@ -1,4 +1,4 @@
-From 26aed8cd4a397b31f1e6b6d562f2f0aed911f77e Mon Sep 17 00:00:00 2001
+From e01a0562610c8104bf05af526dea6bbda9c469fc Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:22 +0100
 Subject: [PATCH 026/106] clk: sunxi-ng: sun6i-rtc: Add A100 support
@@ -14,10 +14,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c b/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
-index f6bfeba00..e5b12e996 100644
+index 98ae10307..b5db6ff39 100644
 --- a/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
 +++ b/drivers/clk/sunxi-ng/ccu-sun6i-rtc.c
-@@ -333,6 +333,11 @@ static const struct sun6i_rtc_match_data sun55i_a523_rtc_ccu_data = {
+@@ -391,6 +391,11 @@ static const struct sun6i_rtc_match_data sun60i_a733_rtc_ccu_data = {
  };
  
  static const struct of_device_id sun6i_rtc_ccu_match[] = {

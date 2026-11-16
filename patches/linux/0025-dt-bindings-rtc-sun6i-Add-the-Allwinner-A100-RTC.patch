@@ -1,4 +1,4 @@
-From fa6fbc0f5d9ef588524a450267fa27ca549ae9f3 Mon Sep 17 00:00:00 2001
+From 5817e5a984caedc8e91109ea2082b40882ed4ff4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:29 +0100
 Subject: [PATCH 025/106] dt-bindings: rtc: sun6i: Add the Allwinner A100 RTC
@@ -12,7 +12,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 30 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/rtc/allwinner,sun6i-a31-rtc.yaml b/Documentation/devicetree/bindings/rtc/allwinner,sun6i-a31-rtc.yaml
-index 9df5cdb6f..f5d9dba73 100644
+index f2b91186e..0ff9e9530 100644
 --- a/Documentation/devicetree/bindings/rtc/allwinner,sun6i-a31-rtc.yaml
 +++ b/Documentation/devicetree/bindings/rtc/allwinner,sun6i-a31-rtc.yaml
 @@ -32,6 +32,7 @@ properties:
@@ -21,9 +21,9 @@ index 9df5cdb6f..f5d9dba73 100644
                - allwinner,sun20i-d1-rtc
 +              - allwinner,sun50i-a100-rtc
                - allwinner,sun55i-a523-rtc
+               - allwinner,sun60i-a733-rtc
            - const: allwinner,sun50i-r329-rtc
- 
-@@ -128,11 +129,40 @@ allOf:
+@@ -129,11 +130,40 @@ allOf:
          - clocks
          - clock-names
  

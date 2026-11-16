@@ -1,4 +1,4 @@
-From f22637e1a733e1b4f6f4c928e36270efca647558 Mon Sep 17 00:00:00 2001
+From 2283c14c7140c6c70cad0b954ada357940994e1a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 014/106] dt-bindings: serial: snps-dw-apb-uart: Add Allwinner
@@ -13,7 +13,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 1 insertion(+)
 
 diff --git a/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml b/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
-index 49f51b002..0b8e308e5 100644
+index 664305de4..537311f8c 100644
 --- a/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
 +++ b/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
 @@ -51,6 +51,7 @@ properties:

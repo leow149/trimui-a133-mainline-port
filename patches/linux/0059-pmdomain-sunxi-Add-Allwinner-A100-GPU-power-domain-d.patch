@@ -1,4 +1,4 @@
-From 0dc60bceadd45db8a4edce8a22d3815802a9741e Mon Sep 17 00:00:00 2001
+From d31116af647107431111dd2994cfcf58b7d00d5a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 19:17:48 +0100
 Subject: [PATCH 059/106] pmdomain: sunxi: Add Allwinner A100 GPU power domain

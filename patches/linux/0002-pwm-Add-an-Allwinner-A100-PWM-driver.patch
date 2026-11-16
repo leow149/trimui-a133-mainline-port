@@ -1,0 +1,355 @@
+From cf2243a8fc73fab0f3e0fa84ea4b86503bfa6a3a Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:24 +0100
+Subject: [PATCH 002/106] pwm: Add an Allwinner A100 PWM driver
+
+Add a driver for the PWM controller of the Allwinner A100/A133: plain PWM
+output (cycle mode) on its 4 channels, clocked from the 24 MHz oscillator,
+whose rate comes from the "hosc" clock.
+
+The block has the register layout of the D1/T113 PWM, for which no driver is
+in mainline, and not the one of the H616 PWM (pwm-sun8i, proposed upstream),
+so neither can be reused. Periods and duty cycles are rounded down as the PWM
+core expects (get_state() rounds up), the channel count comes from the match
+data, and the channel clock is only set up when the channel is off, so
+changing the duty cycle of a running channel does not glitch the output.
+
+Tested on the TrimUI Smart Pro (A133): the pwm-backlight on channel 0.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/pwm/Kconfig           |  12 ++
+ drivers/pwm/Makefile          |   1 +
+ drivers/pwm/pwm-sun50i-a100.c | 287 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 300 insertions(+)
+ create mode 100644 drivers/pwm/pwm-sun50i-a100.c
+
+diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index 729776086..4d4c457fe 100644
+--- a/drivers/pwm/Kconfig
++++ b/drivers/pwm/Kconfig
+@@ -748,6 +748,18 @@ config PWM_SUN4I
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called pwm-sun4i.
+ 
++config PWM_SUN50I_A100
++	tristate "Allwinner A100/A133 PWM support"
++	depends on ARCH_SUNXI || COMPILE_TEST
++	depends on HAS_IOMEM
++	depends on COMMON_CLK
++	help
++	  PWM driver for the Allwinner A100/A133 (sun50iw10) PWM controller,
++	  4 channels in 2 pairs. Only plain PWM output is supported.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called pwm-sun50i-a100.
++
+ config PWM_SUNPLUS
+ 	tristate "Sunplus PWM support"
+ 	depends on ARCH_SUNPLUS || COMPILE_TEST
+diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index 5630a521a..0222ad7dc 100644
+--- a/drivers/pwm/Makefile
++++ b/drivers/pwm/Makefile
+@@ -68,6 +68,7 @@ obj-$(CONFIG_PWM_STM32)		+= pwm-stm32.o
+ obj-$(CONFIG_PWM_STM32_LP)	+= pwm-stm32-lp.o
+ obj-$(CONFIG_PWM_STMPE)		+= pwm-stmpe.o
+ obj-$(CONFIG_PWM_SUN4I)		+= pwm-sun4i.o
++obj-$(CONFIG_PWM_SUN50I_A100)	+= pwm-sun50i-a100.o
+ obj-$(CONFIG_PWM_SUNPLUS)	+= pwm-sunplus.o
+ obj-$(CONFIG_PWM_TEGRA)		+= pwm-tegra.o
+ obj-$(CONFIG_PWM_TH1520)	+= pwm_th1520.o
+diff --git a/drivers/pwm/pwm-sun50i-a100.c b/drivers/pwm/pwm-sun50i-a100.c
+new file mode 100644
+index 000000000..608f3c4bd
+--- /dev/null
++++ b/drivers/pwm/pwm-sun50i-a100.c
+@@ -0,0 +1,287 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Driver for the Allwinner A100/A133 (sun50iw10) PWM controller
++ *
++ * Register layout from the A133 User Manual (chapter 10.11, base 0x0300a000):
++ * 4 channels in 2 pairs, with per-pair clock source and dead-zone control,
++ * group sync, capture, and period/duty registers that are loaded at the end
++ * of the running period. It is the layout of the D1/T113 PWM, not the one of
++ * drivers/pwm/pwm-sun4i.c (nor of the H616 PWM).
++ *
++ * Only plain PWM output (cycle mode) is supported, clocked from the 24 MHz
++ * oscillator ("hosc", the reset default of the per-pair clock source).
++ *
++ * Limitations:
++ * - The period and duty registers take effect at the end of the running
++ *   period. A new prescaler takes effect immediately, so a change of the
++ *   prescaler can make one period glitch.
++ * - When disabled, the output goes to its inactive level at once.
++ */
++
++#include <linux/bitfield.h>
++#include <linux/bits.h>
++#include <linux/clk.h>
++#include <linux/io.h>
++#include <linux/math64.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/platform_device.h>
++#include <linux/property.h>
++#include <linux/pwm.h>
++#include <linux/reset.h>
++
++#define A100_PWM_PCCR(ch)		(0x0020 + 4 * ((ch) / 2))
++#define A100_PWM_PCCR_CLK_SRC		GENMASK(8, 7)
++#define A100_PWM_PCCR_CLK_SRC_HOSC	0
++
++#define A100_PWM_PCGR			0x0040
++#define A100_PWM_PCGR_BYPASS(ch)	BIT(16 + (ch))
++#define A100_PWM_PCGR_GATING(ch)	BIT(ch)
++
++#define A100_PWM_PER			0x0080
++#define A100_PWM_PER_EN(ch)		BIT(ch)
++
++#define A100_PWM_PCR(ch)		(0x0100 + 0x20 * (ch))
++#define A100_PWM_PCR_MODE_PULSE		BIT(9)
++#define A100_PWM_PCR_ACT_STA_HIGH	BIT(8)
++#define A100_PWM_PCR_PRESCAL_K		GENMASK(7, 0)
++
++#define A100_PWM_PPR(ch)		(0x0104 + 0x20 * (ch))
++#define A100_PWM_PPR_ENTIRE_CYCLE	GENMASK(31, 16)
++#define A100_PWM_PPR_ACT_CYCLE		GENMASK(15, 0)
++
++#define A100_PWM_PRESCALE_MAX		256
++#define A100_PWM_CYCLE_MAX		65536
++
++struct a100_pwm_data {
++	unsigned int npwm;
++};
++
++struct a100_pwm {
++	void __iomem *base;
++	unsigned long clk_rate;
++	/*
++	 * Serialises the read-modify-write of the registers shared by all
++	 * channels (PCGR, PER) or by a pair (PCCR): the PWM core only
++	 * serialises the calls for one channel.
++	 */
++	struct mutex lock;
++};
++
++static struct a100_pwm *to_a100_pwm(struct pwm_chip *chip)
++{
++	return pwmchip_get_drvdata(chip);
++}
++
++/* Rounds down, as the PWM core expects; -EINVAL if the period is too short. */
++static int a100_pwm_calc(unsigned long rate, u64 period_ns, u64 duty_ns,
++			 u32 *entire_cycle, u32 *act_cycle, u32 *prescale_k)
++{
++	u64 period_cycles, duty_cycles, prescale;
++
++	period_cycles = mul_u64_u32_div(period_ns, rate, NSEC_PER_SEC);
++	duty_cycles = mul_u64_u32_div(duty_ns, rate, NSEC_PER_SEC);
++
++	/* The smallest prescaler that fits the period, for the best resolution */
++	prescale = max(DIV_ROUND_UP_ULL(period_cycles, A100_PWM_CYCLE_MAX), 1ULL);
++	if (prescale > A100_PWM_PRESCALE_MAX) {
++		prescale = A100_PWM_PRESCALE_MAX;
++		period_cycles = A100_PWM_CYCLE_MAX * prescale;
++	}
++
++	period_cycles = div64_u64(period_cycles, prescale);
++	duty_cycles = div64_u64(duty_cycles, prescale);
++	if (!period_cycles)
++		return -EINVAL;
++
++	/*
++	 * The duty field is 16 bits wide: with the longest period (65536
++	 * cycles), 100% duty can only be approximated by 65535 cycles.
++	 */
++	duty_cycles = min3(duty_cycles, period_cycles, A100_PWM_CYCLE_MAX - 1ULL);
++
++	*prescale_k = prescale - 1;
++	*entire_cycle = period_cycles - 1;
++	*act_cycle = duty_cycles;
++
++	return 0;
++}
++
++static void a100_pwm_disable(struct a100_pwm *pc, unsigned int ch)
++{
++	u32 val;
++
++	val = readl(pc->base + A100_PWM_PER);
++	writel(val & ~A100_PWM_PER_EN(ch), pc->base + A100_PWM_PER);
++
++	val = readl(pc->base + A100_PWM_PCGR);
++	writel(val & ~A100_PWM_PCGR_GATING(ch), pc->base + A100_PWM_PCGR);
++}
++
++static int a100_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
++			  const struct pwm_state *state)
++{
++	struct a100_pwm *pc = to_a100_pwm(chip);
++	unsigned int ch = pwm->hwpwm;
++	u32 entire_cycle, act_cycle, prescale_k, val, pcgr;
++	int ret;
++
++	if (!state->enabled) {
++		guard(mutex)(&pc->lock);
++		a100_pwm_disable(pc, ch);
++		return 0;
++	}
++
++	ret = a100_pwm_calc(pc->clk_rate, state->period, state->duty_cycle,
++			    &entire_cycle, &act_cycle, &prescale_k);
++	if (ret)
++		return ret;
++
++	guard(mutex)(&pc->lock);
++
++	/*
++	 * Only set up the clock when the channel is off: the period and duty
++	 * of a running channel are updated without stopping its clock, so the
++	 * output does not glitch (they are loaded at the end of the period).
++	 */
++	pcgr = readl(pc->base + A100_PWM_PCGR);
++	if (!(pcgr & A100_PWM_PCGR_GATING(ch))) {
++		val = readl(pc->base + A100_PWM_PCCR(ch));
++		val &= ~A100_PWM_PCCR_CLK_SRC;
++		val |= FIELD_PREP(A100_PWM_PCCR_CLK_SRC, A100_PWM_PCCR_CLK_SRC_HOSC);
++		writel(val, pc->base + A100_PWM_PCCR(ch));
++	}
++
++	/* Cycle mode (A100_PWM_PCR_MODE_PULSE clear) */
++	val = FIELD_PREP(A100_PWM_PCR_PRESCAL_K, prescale_k);
++	if (state->polarity == PWM_POLARITY_NORMAL)
++		val |= A100_PWM_PCR_ACT_STA_HIGH;
++	writel(val, pc->base + A100_PWM_PCR(ch));
++
++	writel(FIELD_PREP(A100_PWM_PPR_ENTIRE_CYCLE, entire_cycle) |
++	       FIELD_PREP(A100_PWM_PPR_ACT_CYCLE, act_cycle),
++	       pc->base + A100_PWM_PPR(ch));
++
++	if ((pcgr & (A100_PWM_PCGR_GATING(ch) | A100_PWM_PCGR_BYPASS(ch))) !=
++	    A100_PWM_PCGR_GATING(ch)) {
++		pcgr &= ~A100_PWM_PCGR_BYPASS(ch);
++		pcgr |= A100_PWM_PCGR_GATING(ch);
++		writel(pcgr, pc->base + A100_PWM_PCGR);
++	}
++
++	val = readl(pc->base + A100_PWM_PER);
++	if (!(val & A100_PWM_PER_EN(ch)))
++		writel(val | A100_PWM_PER_EN(ch), pc->base + A100_PWM_PER);
++
++	return 0;
++}
++
++static int a100_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
++			      struct pwm_state *state)
++{
++	struct a100_pwm *pc = to_a100_pwm(chip);
++	unsigned int ch = pwm->hwpwm;
++	u32 pcr, ppr, entire_cycle, act_cycle, prescale;
++
++	/* PER and PCGR use the same bit per channel */
++	state->enabled = readl(pc->base + A100_PWM_PER) &
++			 readl(pc->base + A100_PWM_PCGR) & A100_PWM_PER_EN(ch);
++
++	pcr = readl(pc->base + A100_PWM_PCR(ch));
++	ppr = readl(pc->base + A100_PWM_PPR(ch));
++
++	state->polarity = (pcr & A100_PWM_PCR_ACT_STA_HIGH) ?
++			  PWM_POLARITY_NORMAL : PWM_POLARITY_INVERSED;
++
++	prescale = FIELD_GET(A100_PWM_PCR_PRESCAL_K, pcr) + 1;
++	entire_cycle = FIELD_GET(A100_PWM_PPR_ENTIRE_CYCLE, ppr) + 1;
++	act_cycle = FIELD_GET(A100_PWM_PPR_ACT_CYCLE, ppr);
++
++	/* Round up, so that applying the result gives the same settings */
++	state->period = DIV_ROUND_UP_ULL((u64)entire_cycle * prescale * NSEC_PER_SEC,
++					 pc->clk_rate);
++	state->duty_cycle = DIV_ROUND_UP_ULL((u64)act_cycle * prescale * NSEC_PER_SEC,
++					     pc->clk_rate);
++
++	return 0;
++}
++
++static const struct pwm_ops a100_pwm_ops = {
++	.apply = a100_pwm_apply,
++	.get_state = a100_pwm_get_state,
++};
++
++static int a100_pwm_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	const struct a100_pwm_data *data;
++	struct reset_control *rst;
++	struct pwm_chip *chip;
++	struct a100_pwm *pc;
++	struct clk *clk;
++	int ret;
++
++	data = device_get_match_data(dev);
++	if (!data)
++		return -ENODEV;
++
++	chip = devm_pwmchip_alloc(dev, data->npwm, sizeof(*pc));
++	if (IS_ERR(chip))
++		return PTR_ERR(chip);
++	pc = to_a100_pwm(chip);
++
++	ret = devm_mutex_init(dev, &pc->lock);
++	if (ret)
++		return ret;
++
++	pc->base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(pc->base))
++		return PTR_ERR(pc->base);
++
++	clk = devm_clk_get_enabled(dev, "bus");
++	if (IS_ERR(clk))
++		return dev_err_probe(dev, PTR_ERR(clk), "cannot get bus clock\n");
++
++	clk = devm_clk_get_enabled(dev, "hosc");
++	if (IS_ERR(clk))
++		return dev_err_probe(dev, PTR_ERR(clk), "cannot get hosc clock\n");
++
++	pc->clk_rate = clk_get_rate(clk);
++	if (!pc->clk_rate || pc->clk_rate > NSEC_PER_SEC)
++		return dev_err_probe(dev, -EINVAL, "invalid hosc rate\n");
++
++	rst = devm_reset_control_get_exclusive_deasserted(dev, NULL);
++	if (IS_ERR(rst))
++		return dev_err_probe(dev, PTR_ERR(rst), "cannot get reset\n");
++
++	chip->ops = &a100_pwm_ops;
++
++	ret = devm_pwmchip_add(dev, chip);
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot add PWM chip\n");
++
++	return 0;
++}
++
++static const struct a100_pwm_data sun50i_a100_pwm_data = {
++	.npwm = 4,
++};
++
++static const struct of_device_id a100_pwm_of_match[] = {
++	{ .compatible = "allwinner,sun50i-a100-pwm", .data = &sun50i_a100_pwm_data },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, a100_pwm_of_match);
++
++static struct platform_driver a100_pwm_driver = {
++	.driver = {
++		.name = "sun50i-a100-pwm",
++		.of_match_table = a100_pwm_of_match,
++	},
++	.probe = a100_pwm_probe,
++};
++module_platform_driver(a100_pwm_driver);
++
++MODULE_DESCRIPTION("Allwinner A100/A133 PWM driver");
++MODULE_LICENSE("GPL");

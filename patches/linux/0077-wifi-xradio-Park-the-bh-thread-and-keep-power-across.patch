@@ -1,4 +1,4 @@
-From 50d7d39daba11820a8b1159bbf258db756d4d3a0 Mon Sep 17 00:00:00 2001
+From 4222b7d3cca89329f9a58226f7d491f79993d64f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:56 +0100
 Subject: [PATCH 077/106] wifi: xradio: Park the bh thread and keep power
@@ -29,17 +29,22 @@ itself and its resume releases it, so the SDIO callbacks only undo what
 they did (bh_parked_by_sdio); before, sdio_resume() released it and
 xradio_wow_resume() then hit WARN_ON(xradio_bh_resume()).
 
+When a park times out, the bh thread may never have seen the request: it
+now takes a resume request it finds while running as "nothing to undo"
+and reports itself running again, instead of parking for good or leaving
+the state at "resume" (which made every later suspend skip the park).
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/net/wireless/xradio/bh.c     |  7 -----
+ drivers/net/wireless/xradio/bh.c     | 18 +++++++-----
  drivers/net/wireless/xradio/bh.h     |  8 +++++
  drivers/net/wireless/xradio/sdio.c   | 44 ++++++++++++++++++++++++----
  drivers/net/wireless/xradio/xradio.h |  1 +
- 4 files changed, 48 insertions(+), 12 deletions(-)
+ 4 files changed, 58 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
-index a344b1b1d..30c37d0c5 100644
+index e72fb7f61..dbc14b4e9 100644
 --- a/drivers/net/wireless/xradio/bh.c
 +++ b/drivers/net/wireless/xradio/bh.c
 @@ -26,13 +26,6 @@
@@ -56,6 +61,24 @@ index a344b1b1d..30c37d0c5 100644
  typedef int (*xradio_wsm_handler)(struct xradio_common *hw_priv, u8 *data, size_t size);
  
  #ifdef MCAST_FWDING
+@@ -790,7 +783,16 @@ static int xradio_bh(void *arg)
+ 			  //}
+ 			  //continue;
+ 			  //}
+-		} else if (suspend) {
++		} else if (suspend == XRADIO_BH_RESUME) {
++			/*
++			 * Resume requested before this thread parked (the park
++			 * timed out): there is nothing to undo, just report
++			 * that the thread runs, or later parks would be skipped.
++			 */
++			atomic_cmpxchg(&hw_priv->bh_suspend, XRADIO_BH_RESUME,
++				       XRADIO_BH_RESUMED);
++			wake_up(&hw_priv->bh_evt_wq);
++		} else if (suspend == XRADIO_BH_SUSPEND) {
+ 			dev_dbg(hw_priv->pdev, "Host suspend request.\n");
+ 			/* Check powersave setting again. */
+ 			if (hw_priv->powersave_enabled) {
 diff --git a/drivers/net/wireless/xradio/bh.h b/drivers/net/wireless/xradio/bh.h
 index ca9187e24..c9e016f43 100644
 --- a/drivers/net/wireless/xradio/bh.h
@@ -145,7 +168,7 @@ index 587c59416..4ed262ad4 100644
  }
  
 diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
-index 631456ce1..bff5debcc 100644
+index 100c3f667..31d185f17 100644
 --- a/drivers/net/wireless/xradio/xradio.h
 +++ b/drivers/net/wireless/xradio/xradio.h
 @@ -220,6 +220,7 @@ struct xradio_common {

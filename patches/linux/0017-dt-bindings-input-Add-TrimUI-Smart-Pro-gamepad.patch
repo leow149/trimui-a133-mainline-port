@@ -1,4 +1,4 @@
-From dad5b74f1400aa7ed0ddbc0a964712f2476ae81e Mon Sep 17 00:00:00 2001
+From fa588d71409d85d3e01b627cf54227d828313f12 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 017/106] dt-bindings: input: Add TrimUI Smart Pro gamepad

@@ -1,4 +1,4 @@
-From 728a8afd6763a05f335cf2832dce86c7f4d76b2e Mon Sep 17 00:00:00 2001
+From d821fac8f625525ec18f8e076331fa947f5f17d0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 21:32:09 +0100
 Subject: [PATCH 079/106] arm64: dts: allwinner: trimui-smart-pro: Add thermal
@@ -32,7 +32,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 78 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 6c66fb780..4d2c0d3ce 100644
+index ab329b73d..79e79b645 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -131,6 +131,84 @@ wifi_pwrseq: pwrseq {

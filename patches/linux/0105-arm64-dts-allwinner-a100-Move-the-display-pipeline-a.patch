@@ -1,4 +1,4 @@
-From b71362e00420d9e7c79e421144735d56b96c47fa Mon Sep 17 00:00:00 2001
+From 2a4ac3f2e72f8f473ac96ed78c5ae9178cac595e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:29:22 +0100
 Subject: [PATCH 105/106] arm64: dts: allwinner: a100: Move the display
@@ -25,7 +25,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  2 files changed, 222 insertions(+), 215 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 1a08364ec..cd8739e77 100644
+index 52a0b7762..df8adc64d 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -7,8 +7,11 @@
@@ -59,10 +59,10 @@ index 1a08364ec..cd8739e77 100644
  		};
  
 +		pwm: pwm@300a000 {
-+			compatible = "allwinner,sun50i-a133-pwm";
++			compatible = "allwinner,sun50i-a100-pwm";
 +			reg = <0x0300a000 0x400>;
-+			clocks = <&ccu CLK_BUS_PWM>;
-+			clock-names = "bus";
++			clocks = <&ccu CLK_BUS_PWM>, <&dcxo24M>;
++			clock-names = "bus", "hosc";
 +			resets = <&ccu RST_BUS_PWM>;
 +			#pwm-cells = <3>;
 +			status = "disabled";
@@ -84,7 +84,7 @@ index 1a08364ec..cd8739e77 100644
  			/omit-if-no-ref/
  			uart1_pg_pins: uart1-pg-pins {
  				pins = "PG6", "PG7", "PG8", "PG9";
-@@ -664,6 +690,157 @@ ohci1: usb@5200400 {
+@@ -662,6 +688,157 @@ ohci1: usb@5200400 {
  			status = "disabled";
  		};
  
@@ -243,7 +243,7 @@ index 1a08364ec..cd8739e77 100644
  			compatible = "allwinner,sun50i-a100-rtc",
  				     "allwinner,sun50i-r329-rtc";
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index c3a40d9fb..d8a83c925 100644
+index af5f04b3f..b9cffa14a 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -5,8 +5,6 @@
@@ -397,8 +397,8 @@ index c3a40d9fb..d8a83c925 100644
 -
  /* Buttons and sticks: one microcontroller per side, each on its own UART. */
  &uart3 {
- 	compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
-@@ -738,190 +748,10 @@ &ohci1 {
+ 	pinctrl-names = "default";
+@@ -736,190 +746,10 @@ &ohci1 {
  	status = "okay";
  };
  
@@ -570,10 +570,10 @@ index c3a40d9fb..d8a83c925 100644
 -	};
 -
 -	pwm: pwm@300a000 {
--		compatible = "allwinner,sun50i-a133-pwm";
+-		compatible = "allwinner,sun50i-a100-pwm";
 -		reg = <0x0300a000 0x400>;
--		clocks = <&ccu CLK_BUS_PWM>;
--		clock-names = "bus";
+-		clocks = <&ccu CLK_BUS_PWM>, <&dcxo24M>;
+-		clock-names = "bus", "hosc";
 -		resets = <&ccu RST_BUS_PWM>;
 -		pinctrl-names = "default";
 -		pinctrl-0 = <&pwm0_pins>;

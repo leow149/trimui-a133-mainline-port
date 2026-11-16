@@ -1,4 +1,4 @@
-From 03bfe2b4f2e3dc0b7bf9247910e845b09981dd7a Mon Sep 17 00:00:00 2001
+From a2b39d385d0d6f713e9d9f808965eb73d4dc5ceb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:20:21 +0100
 Subject: [PATCH 090/106] wifi: xradio: start AP with the current channel width
@@ -18,7 +18,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
-index 347b6d938..9a3266abd 100644
+index 8adae886e..af6e1eb53 100644
 --- a/drivers/net/wireless/xradio/wsm.c
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -1011,7 +1011,7 @@ int wsm_start(struct xradio_common *hw_priv, const struct wsm_start *arg,

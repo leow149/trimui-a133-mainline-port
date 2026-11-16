@@ -1,4 +1,4 @@
-From 684c501ed73cb448698f1356006247e14dc42e97 Mon Sep 17 00:00:00 2001
+From c08a8760145e279b8cbd72d48025fd317b5e7a7b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:26:41 +0100
 Subject: [PATCH 057/106] wifi: xradio: XR829: connect and pass traffic
@@ -23,14 +23,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/net/wireless/xradio/ap.c   |   9 ++
  drivers/net/wireless/xradio/scan.c |   9 +-
- drivers/net/wireless/xradio/sta.c  |  21 +++--
+ drivers/net/wireless/xradio/sta.c  |  19 +++--
  drivers/net/wireless/xradio/tx.c   |  66 +++++++++++++++
  drivers/net/wireless/xradio/wsm.c  | 129 ++++++++++++++++++++++++-----
  drivers/net/wireless/xradio/wsm.h  |  64 ++++++++++++--
- 6 files changed, 261 insertions(+), 37 deletions(-)
+ 6 files changed, 260 insertions(+), 36 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/ap.c b/drivers/net/wireless/xradio/ap.c
-index 30784e9af..d6355c4d5 100644
+index 8b9a1bbc0..2292c5aa5 100644
 --- a/drivers/net/wireless/xradio/ap.c
 +++ b/drivers/net/wireless/xradio/ap.c
 @@ -346,6 +346,15 @@ static int xradio_set_btcoexinfo(struct xradio_vif *priv)
@@ -47,10 +47,10 @@ index 30784e9af..d6355c4d5 100644
 +	}
 +
  	ret = WARN_ON(wsm_write_mib(xrwl_vifpriv_to_hwpriv(priv),
- 	               WSM_MIB_ID_OVERRIDE_INTERNAL_TX_RATE, 
+ 	               WSM_MIB_ID_OVERRIDE_INTERNAL_TX_RATE,
  	               &arg, sizeof(arg), priv->if_id));
 diff --git a/drivers/net/wireless/xradio/scan.c b/drivers/net/wireless/xradio/scan.c
-index e9e22eaae..1ee200f6f 100644
+index cd48c593b..a3635328a 100644
 --- a/drivers/net/wireless/xradio/scan.c
 +++ b/drivers/net/wireless/xradio/scan.c
 @@ -819,7 +819,14 @@ void xradio_probe_work(struct work_struct *work)
@@ -70,7 +70,7 @@ index e9e22eaae..1ee200f6f 100644
  	             WSM_PHY_BAND_5G : WSM_PHY_BAND_2_4G;
  	if (priv->join_status == XRADIO_JOIN_STATUS_STA) {
 diff --git a/drivers/net/wireless/xradio/sta.c b/drivers/net/wireless/xradio/sta.c
-index 62232cd4e..0bf51ffcf 100644
+index 9ce8cfe4a..483d4c469 100644
 --- a/drivers/net/wireless/xradio/sta.c
 +++ b/drivers/net/wireless/xradio/sta.c
 @@ -2094,6 +2094,7 @@ int xradio_set_arpreply(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
@@ -88,17 +88,16 @@ index 62232cd4e..0bf51ffcf 100644
 -	dot11hdr = (struct ieee80211_hdr_3addr *)&template_frame[4];
 +	tmpl_hdr_len = xradio_ht40_api(hw_priv) ? 8 : 4;
 +	dot11hdr = (struct ieee80211_hdr_3addr *)&template_frame[tmpl_hdr_len];
- 	
+ 
  	framehdrlen = sizeof(*dot11hdr);
  	if ((priv->vif->type == NL80211_IFTYPE_AP) && priv->vif->p2p)
 @@ -2196,12 +2198,19 @@ int xradio_set_arpreply(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
  	framebdylen += encrypttailsize;
- 	
+ 
  	/* Filling the Template Frame Hdr */
 -	template_frame[0] = WSM_FRAME_TYPE_ARP_REPLY; /* Template frame type */
 -	template_frame[1] = 0xFF; /* Rate to be fixed */
 -	((u16 *)&template_frame[2])[0] = framehdrlen + framebdylen;
--	
 +	if (xradio_ht40_api(hw_priv)) {
 +		/* u16 type, u16 rate entry (firmware default), u32 length */
 +		put_unaligned_le16(WSM_FRAME_TYPE_ARP_REPLY, &template_frame[0]);
@@ -109,15 +108,15 @@ index 62232cd4e..0bf51ffcf 100644
 +		template_frame[1] = 0xFF; /* Rate to be fixed */
 +		((u16 *)&template_frame[2])[0] = framehdrlen + framebdylen;
 +	}
-+
+ 
  	ret = WARN_ON(wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, \
--	                              template_frame, (framehdrlen+framebdylen+4), 
-+	                              template_frame, (framehdrlen+framebdylen+tmpl_hdr_len), 
+-	                              template_frame, (framehdrlen+framebdylen+4),
++	                              template_frame, (framehdrlen+framebdylen+tmpl_hdr_len),
  	                              priv->if_id));
  	kfree(template_frame);
  exit_p:
 diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
-index fd31541ee..a070b6aa9 100644
+index fbda430b9..4ad5e1118 100644
 --- a/drivers/net/wireless/xradio/tx.c
 +++ b/drivers/net/wireless/xradio/tx.c
 @@ -133,6 +133,40 @@ static void tx_policy_build(const struct xradio_common *hw_priv,
@@ -208,7 +207,7 @@ index fd31541ee..a070b6aa9 100644
  	sta = rcu_dereference(control->sta);
  
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
-index 66ab0ad66..7b867f74b 100644
+index 2672c2caf..a61f8db5e 100644
 --- a/drivers/net/wireless/xradio/wsm.c
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -433,6 +433,48 @@ static int wsm_write_mib_confirm(struct xradio_common *hw_priv,
@@ -379,7 +378,7 @@ index 66ab0ad66..7b867f74b 100644
  			rx.rxedRateEntry = 0;
  			rx.rxedRate = WSM_GET8(buf);
 diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
-index 42b57b750..0d3abc5f1 100644
+index aa272f91b..8980d668a 100644
 --- a/drivers/net/wireless/xradio/wsm.h
 +++ b/drivers/net/wireless/xradio/wsm.h
 @@ -891,6 +891,47 @@ struct wsm_tx {

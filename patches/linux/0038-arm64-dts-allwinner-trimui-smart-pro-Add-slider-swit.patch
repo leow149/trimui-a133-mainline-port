@@ -1,4 +1,4 @@
-From 0197754647dcc0769135676561b96015323d4db3 Mon Sep 17 00:00:00 2001
+From 5291ab023fef2e5e4f5d405af82ffa3feae0f0d7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
 Subject: [PATCH 038/106] arm64: dts: allwinner: trimui-smart-pro: Add slider
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 207 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 509ad6461..ee678ca42 100644
+index 51a60a7ac..d9a1bbc2a 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -73,6 +73,18 @@ reg_vcc5v: regulator-vcc5v {

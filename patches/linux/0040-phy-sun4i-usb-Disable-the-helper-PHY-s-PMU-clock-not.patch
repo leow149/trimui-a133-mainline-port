@@ -1,4 +1,4 @@
-From 86f9e792b4e13e00da4c2cd6d94f63be5232f692 Mon Sep 17 00:00:00 2001
+From e58d7198b77e3f3449c689f28f32eda57b9deb3d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:07 +0100
 Subject: [PATCH 040/106] phy: sun4i-usb: Disable the helper PHY's PMU clock,

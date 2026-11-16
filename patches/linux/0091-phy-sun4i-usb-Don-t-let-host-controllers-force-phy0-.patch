@@ -1,4 +1,4 @@
-From 0dab38c9203aa9e3ee60fda90a660714655d1458 Mon Sep 17 00:00:00 2001
+From 808f11b815c90a85b0b52af45ae82c51769eb2fd Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:10 +0100
 Subject: [PATCH 091/106] phy: sun4i-usb: Don't let host controllers force phy0

@@ -1,0 +1,94 @@
+From 55375f56b49a950581e5506c0e01d0b480b2d3e8 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:31 +0100
+Subject: [PATCH 020/106] arm64: dts: allwinner: a100: Add UART3/UART4 PD pins
+ and the A100 UART compatible
+
+Pin groups for UART3 on PD14/PD15 and UART4 on PD18/PD19.
+
+All UARTs get the "allwinner,sun50i-a100-uart" compatible (with the
+"snps,dw-apb-uart" fallback), so the driver can change their line
+settings while the line is busy, e.g. the Bluetooth UART switching baud
+rate while the XR829 talks.
+
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 22 ++++++++++++++-----
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 9298216b7..5d5135e03 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -268,6 +268,16 @@ uart0_pb_pins: uart0-pb-pins {
+ 				pins = "PB9", "PB10";
+ 				function = "uart0";
+ 			};
++
++			uart3_pd_pins: uart3-pd-pins {
++				pins = "PD14", "PD15";
++				function = "uart3";
++			};
++
++			uart4_pd_pins: uart4-pd-pins {
++				pins = "PD18", "PD19";
++				function = "uart4";
++			};
+ 		};
+ 
+ 		mmc0: mmc@4020000 {
+@@ -319,7 +329,7 @@ mmc2: mmc@4022000 {
+ 		};
+ 
+ 		uart0: serial@5000000 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x05000000 0x400>;
+ 			interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;
+@@ -330,7 +340,7 @@ uart0: serial@5000000 {
+ 		};
+ 
+ 		uart1: serial@5000400 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x05000400 0x400>;
+ 			interrupts = <GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;
+@@ -341,7 +351,7 @@ uart1: serial@5000400 {
+ 		};
+ 
+ 		uart2: serial@5000800 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x05000800 0x400>;
+ 			interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;
+@@ -352,7 +362,7 @@ uart2: serial@5000800 {
+ 		};
+ 
+ 		uart3: serial@5000c00 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x05000c00 0x400>;
+ 			interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;
+@@ -363,7 +373,7 @@ uart3: serial@5000c00 {
+ 		};
+ 
+ 		uart4: serial@5001000 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x05001000 0x400>;
+ 			interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;
+@@ -622,7 +632,7 @@ r_i2c1_pins: r-i2c1-pins {
+ 		};
+ 
+ 		r_uart: serial@7080000 {
+-			compatible = "snps,dw-apb-uart";
++			compatible = "allwinner,sun50i-a100-uart", "snps,dw-apb-uart";
+ 			reg = <0x07080000 0x400>;
+ 			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+ 			reg-shift = <2>;

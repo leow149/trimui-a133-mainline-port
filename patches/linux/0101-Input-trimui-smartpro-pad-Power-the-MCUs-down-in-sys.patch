@@ -1,4 +1,4 @@
-From 73a4a442138b09da98a5e3ffa9df6b0ee8028797 Mon Sep 17 00:00:00 2001
+From 5aec75f77ea7303d31865f69af815bd07ba2e025 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 101/106] Input: trimui-smartpro-pad: Power the MCUs down in
@@ -12,14 +12,18 @@ The driver tracks whether it holds its regulator reference, so a resume
 that failed to switch the power back on does not lead to an unbalanced
 disable on the next suspend or on unbind.
 
+Resume does not set up the UART again: the serial core restores its
+settings, and the A100 UART takes them even while the unpowered MCU
+holds RX low.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/input/joystick/trimui-smartpro-pad.c | 70 ++++++++++++++++++--
- 1 file changed, 66 insertions(+), 4 deletions(-)
+ drivers/input/joystick/trimui-smartpro-pad.c | 73 ++++++++++++++++++--
+ 1 file changed, 69 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
-index f29ec9bda..97359e084 100644
+index f29ec9bda..ab65d2e95 100644
 --- a/drivers/input/joystick/trimui-smartpro-pad.c
 +++ b/drivers/input/joystick/trimui-smartpro-pad.c
 @@ -84,7 +84,9 @@ struct tsp_pad_axis_cal {
@@ -54,7 +58,7 @@ index f29ec9bda..97359e084 100644
  static int tsp_pad_probe(struct serdev_device *serdev)
  {
  	struct device *dev = &serdev->dev;
-@@ -315,20 +332,64 @@ static int tsp_pad_probe(struct serdev_device *serdev)
+@@ -315,20 +332,67 @@ static int tsp_pad_probe(struct serdev_device *serdev)
  			return ret;
  	}
  
@@ -112,10 +116,13 @@ index f29ec9bda..97359e084 100644
 +	if (ret)
 +		return ret;
 +	half->powered = true;
-+	msleep(TSP_PAD_POWER_UP_MS);
 +
-+	/* The UART ignored its line settings while the unpowered MCU held RX low. */
-+	return tsp_pad_setup_uart(half->serdev);
++	/*
++	 * The UART keeps its line settings: the serial core restored them on
++	 * resume, and the A100 UART accepts them even while the unpowered MCU
++	 * holds RX low (see 8250_dw). The MCU streams again once it is up.
++	 */
++	return 0;
 +}
 +
 +static DEFINE_SIMPLE_DEV_PM_OPS(tsp_pad_pm, tsp_pad_suspend, tsp_pad_resume);
@@ -123,7 +130,7 @@ index f29ec9bda..97359e084 100644
  static const struct of_device_id tsp_pad_of_match[] = {
  	{ .compatible = "trimui,smart-pro-pad-left", .data = &tsp_pad_left },
  	{ .compatible = "trimui,smart-pro-pad-right", .data = &tsp_pad_right },
-@@ -340,6 +401,7 @@ static struct serdev_device_driver tsp_pad_driver = {
+@@ -340,6 +404,7 @@ static struct serdev_device_driver tsp_pad_driver = {
  	.driver = {
  		.name = "trimui-smartpro-pad",
  		.of_match_table = tsp_pad_of_match,

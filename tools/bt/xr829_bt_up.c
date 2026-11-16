@@ -5,6 +5,9 @@
  *   xr829_bt_up [-d /dev/ttyS1] [-f fw.bin] [-a aa:bb:cc:dd:ee:ff] [-p]   (-p = probe only)
  *               [-g chiplabel:line | -g none]   (BT_WAKE GPIO, default 7022000.pinctrl:4 = PL4)
  *               [-n]   (stay in the foreground once attached, for a Type=exec service)
+ *               [-k rfkill-name]   (default rfkill-xr829-bt)  [-F 1]   (RTS/CTS flow control; off
+ *               by default: CTS (PG9) floats on the TrimUI Smart Pro and would stall TX)
+ *               [-i 115200|921600|1500000] [-B 115200|1500000]
  *
  * Keeps the tty open for the whole sequence, then attaches it as an HCI H4 line discipline
  * and stays resident (the hci0 device lives as long as this fd is open). The bring-up is
@@ -30,6 +33,7 @@
 #define N_HCI 15
 #define HCIUARTSETPROTO _IOW('U', 200, int)
 #define HCIUARTGETPROTO _IOR('U', 201, int)
+#define HCIUARTGETDEVICE _IOR('U', 202, int)
 #define HCI_UART_H4 0
 
 static int fd = -1, verbose = 1;
@@ -53,25 +57,57 @@ static int write_file(const char *path, const char *s)
 	return r < 0 ? -1 : 0;
 }
 
-static char rfkill_state[300];
+/* The rfkill switch of the XR829 Bluetooth (rfkill-gpio on BT_RST_N), by label. */
+static const char *rfkill_name = "rfkill-xr829-bt";
+static char rfkill_dir[300];
+
 static int find_rfkill(void)
 {
 	DIR *d = opendir("/sys/class/rfkill");
 	struct dirent *e;
-	if (!d) return -1;
+
+	if (!d)
+		return -1;
 	while ((e = readdir(d))) {
-		char p[300], t[32] = "";
-		snprintf(p, sizeof p, "/sys/class/rfkill/%s/type", e->d_name);
-		FILE *f = fopen(p, "r");
-		if (!f) continue;
-		if (fgets(t, sizeof t, f) && !strncmp(t, "bluetooth", 9)) {
-			snprintf(rfkill_state, sizeof rfkill_state, "/sys/class/rfkill/%s/state", e->d_name);
-			fclose(f); closedir(d); return 0;
+		char p[300], name[64] = "";
+		FILE *f;
+
+		snprintf(p, sizeof p, "/sys/class/rfkill/%s/name", e->d_name);
+		f = fopen(p, "r");
+		if (!f)
+			continue;
+		if (fgets(name, sizeof name, f) && !strncmp(name, rfkill_name, strlen(rfkill_name)) &&
+		    (name[strlen(rfkill_name)] == '\n' || !name[strlen(rfkill_name)])) {
+			snprintf(rfkill_dir, sizeof rfkill_dir, "/sys/class/rfkill/%s", e->d_name);
+			fclose(f);
+			closedir(d);
+			return 0;
 		}
 		fclose(f);
 	}
 	closedir(d);
 	return -1;
+}
+
+/* Value of a 0/1 rfkill attribute ("soft", "hard"), -1 on error. */
+static int rfkill_attr(const char *attr)
+{
+	char p[320], v[8] = "";
+	FILE *f;
+
+	snprintf(p, sizeof p, "%s/%s", rfkill_dir, attr);
+	f = fopen(p, "r");
+	if (!f)
+		return -1;
+	if (!fgets(v, sizeof v, f))
+		v[0] = 0;
+	fclose(f);
+	return v[0] == '1' ? 1 : v[0] == '0' ? 0 : -1;
+}
+
+static int rfkill_blocked(void)
+{
+	return rfkill_attr("soft") != 0 || rfkill_attr("hard") != 0;
 }
 
 /*
@@ -126,11 +162,15 @@ static int bt_wake_request(const char *spec)
 	return -1;
 }
 
+/* Reset pulse on BT_RST_N through the (unblocked) rfkill switch. */
 static void power_cycle(int low_ms)
 {
-	write_file(rfkill_state, "0");
+	char p[320];
+
+	snprintf(p, sizeof p, "%s/state", rfkill_dir);
+	write_file(p, "0");
 	msleep(low_ms);
-	write_file(rfkill_state, "1");
+	write_file(p, "1");
 }
 
 static int set_baud(speed_t sp, int crtscts)
@@ -148,18 +188,48 @@ static int set_baud(speed_t sp, int crtscts)
 	return 0;
 }
 
-/* read exactly n bytes within timeout ms total; returns bytes read */
+static long now_ms(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec * 1000L + ts.tv_nsec / 1000000;
+}
+
+/* Read up to n bytes, waiting at most to_ms in total; returns the bytes read. */
 static int rd(uint8_t *b, int n, int to_ms)
 {
+	long end = now_ms() + to_ms;
 	int got = 0;
+
 	while (got < n) {
 		struct pollfd p = { fd, POLLIN, 0 };
-		int r = poll(&p, 1, to_ms);
-		if (r <= 0) break;
+		long left = end - now_ms();
+		int r;
+
+		if (left < 0)
+			left = 0;
+		r = poll(&p, 1, left);
+		if (r <= 0)
+			break;
 		r = read(fd, b + got, n - got);
-		if (r > 0) got += r;
+		if (r > 0)
+			got += r;
+		else if (r == 0 || errno != EAGAIN)
+			break;
 	}
 	return got;
+}
+
+/* termios speed for the supported rates, B0 for anything else */
+static speed_t baud_speed(int rate)
+{
+	switch (rate) {
+	case 115200: return B115200;
+	case 921600: return B921600;
+	case 1500000: return B1500000;
+	default: return B0;
+	}
 }
 
 static int wr(const void *b, int n)
@@ -252,7 +322,9 @@ static int hci_cmd(const uint8_t *cmd, int n, const char *what)
 		if (len > 4) rd(r + 7, len - 4 > 50 ? 50 : len - 4, 200);
 	}
 	hexdump(what, r, got);
-	return (got >= 7 && r[0] == 4 && r[1] == 0x0e && r[6] == 0) ? 0 : -1;
+	/* Command Complete for this opcode (cmd[1..2]) with status 0 */
+	return (got >= 7 && r[0] == 4 && r[1] == 0x0e && r[4] == cmd[1] &&
+		r[5] == cmd[2] && r[6] == 0) ? 0 : -1;
 }
 
 int main(int argc, char **argv)
@@ -260,19 +332,20 @@ int main(int argc, char **argv)
 	const char *dev = "/dev/ttyS1", *fw = "/lib/firmware/xr829/fw_xr829_bt.bin";
 	const char *wake_gpio = "7022000.pinctrl:4";
 	int wake_fd = -1, nofork = 0;
-	uint8_t bd[6] = { 0 }; int have_bd = 0, probe = 0, fast = 1500000, flow = 1, postb = 115200, wake = 1, rstlow = 20, ibaud = 115200;
+	uint8_t bd[6] = { 0 }; int have_bd = 0, probe = 0, fast = 1500000, flow = 0, postb = 115200, wake = 1, rstlow = 20, ibaud = 115200;
 	int o;
-	while ((o = getopt(argc, argv, "d:f:a:pqw:r:i:F:B:g:n")) != -1) {
+	while ((o = getopt(argc, argv, "d:f:a:pqw:r:i:F:B:g:nk:")) != -1) {
 		switch (o) {
 		case 'd': dev = optarg; break;
 		case 'f': fw = optarg; break;
 		case 'p': probe = 1; break;
 		case 'q': verbose = 0; break;
 		case 'F': flow = atoi(optarg); break;
-		case 'B': postb = atoi(optarg); break;
+		case 'B': postb = atoi(optarg); if (postb != 115200 && postb != 1500000) return 2; break;
 		case 'w': wake = atoi(optarg); break;
 		case 'r': rstlow = atoi(optarg); break;
-		case 'i': ibaud = atoi(optarg); break;
+		case 'i': ibaud = atoi(optarg); if (baud_speed(ibaud) == B0) return 2; break;
+		case 'k': rfkill_name = optarg; break;
 		case 'g': wake_gpio = optarg; break;
 		case 'n': nofork = 1; break;
 		case 'a': {
@@ -283,11 +356,17 @@ int main(int argc, char **argv)
 		default: return 2;
 		}
 	}
+	if (find_rfkill()) { fprintf(stderr, "no rfkill named %s\n", rfkill_name); return 1; }
+	/* Respect a block by the user or systemd-rfkill: wait for the unblock. */
+	if (rfkill_blocked()) {
+		fprintf(stderr, "%s is blocked, waiting\n", rfkill_name);
+		while (rfkill_blocked())
+			sleep(2);
+	}
 	alarm(40);	/* SIGALRM ends a wedged bring-up */
-	if (find_rfkill()) { fprintf(stderr, "no bluetooth rfkill\n"); return 1; }
 	fd = open(dev, O_RDWR | O_NOCTTY | O_NONBLOCK);
 	if (fd < 0) { perror(dev); return 1; }
-	if (set_baud(ibaud == 115200 ? B115200 : ibaud == 921600 ? B921600 : ibaud == 1500000 ? B1500000 : B9600, 0)) { perror("termios"); return 1; }
+	if (set_baud(baud_speed(ibaud), 0)) { perror("termios"); return 1; }
 
 	/* BT_WAKE high (unless -w 0 or -g none), then a reset pulse */
 	if (wake && strcmp(wake_gpio, "none")) {
@@ -384,15 +463,30 @@ int main(int argc, char **argv)
 	int fl = fcntl(fd, F_GETFL); fcntl(fd, F_SETFL, fl & ~O_NONBLOCK);
 	if (ioctl(fd, TIOCSETD, &ld)) { perror("TIOCSETD"); return 1; }
 	if (ioctl(fd, HCIUARTSETPROTO, (long)proto)) { perror("HCIUARTSETPROTO"); return 1; }
-	fprintf(stderr, "attached as H4; staying resident\n");
+	int hci = -1;
+	ioctl(fd, HCIUARTGETDEVICE, &hci);
+	fprintf(stderr, "attached as H4 (hci%d); staying resident\n", hci);
 	alarm(0);
-	if (nofork) {
-		for (;;) pause();
-	}
-	if (!fork()) {	/* child keeps the tty (and the BT_WAKE line) open */
+	if (!nofork && fork())
+		return 0;
+	if (!nofork) {	/* child keeps the tty (and the BT_WAKE line) open */
 		setsid();
 		int nul = open("/dev/null", O_RDWR); dup2(nul, 0); dup2(nul, 1); dup2(nul, 2);
-		for (;;) pause();
 	}
-	return 0;
+	/*
+	 * Stay until the controller goes away: a block on the rfkill switch
+	 * resets it, and the HCI device is gone if the line discipline was
+	 * dropped. Exit with an error then, so the service restarts and loads
+	 * the firmware again once it is unblocked.
+	 */
+	for (;;) {
+		char p[64];
+
+		sleep(1);
+		snprintf(p, sizeof p, "/sys/class/bluetooth/hci%d", hci);
+		if (rfkill_blocked() || (hci >= 0 && access(p, F_OK))) {
+			fprintf(stderr, "controller blocked or gone, exiting\n");
+			return 1;
+		}
+	}
 }

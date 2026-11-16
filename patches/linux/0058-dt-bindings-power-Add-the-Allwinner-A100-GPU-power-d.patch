@@ -1,4 +1,4 @@
-From e0068265b612ee6c0f96dea809983d138c581129 Mon Sep 17 00:00:00 2001
+From 3e237d86fb73f3a97e354c29a22a71d3aa698bad Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:28 +0100
 Subject: [PATCH 058/106] dt-bindings: power: Add the Allwinner A100 GPU power

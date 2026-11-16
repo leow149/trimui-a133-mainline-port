@@ -1,4 +1,4 @@
-From bfa7b7b8a72c8e58cb08317c6f909c651d7d1ea9 Mon Sep 17 00:00:00 2001
+From 288c91b41123b7f9ac8b2a11406bb14a02ce497c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:52 +0100
 Subject: [PATCH 033/106] arm64: dts: allwinner: trimui-smart-pro: Enable audio
@@ -13,7 +13,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 4ff7f1e92..509ad6461 100644
+index 6a904c3d4..51a60a7ac 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -99,6 +99,17 @@ backlight: backlight {

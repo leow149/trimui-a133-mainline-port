@@ -1,4 +1,4 @@
-From b6bad05f8933f9f20da792c3db1bd41b17930ed6 Mon Sep 17 00:00:00 2001
+From cd936e80f9f982fcb5f5609faaeb3c05fa56a06d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:38 +0100
 Subject: [PATCH 08/10] pvr/pco: Fix fragment throughput on GE8300 (HSR, null
@@ -38,9 +38,15 @@ pco_nir_lower_null_descriptor_ubo option is gone.
 VK_EXT_color_write_enable is only hidden on the GE8300 (22.102.54.38);
 other cores keep exposing it.
 
+The zero BO that null UBOs point at is at least maxUniformBufferRange
+large (PVR_MAX_UNIFORM_BUFFER_RANGE), so unchecked loads at any in-range
+offset stay inside it; out-of-range offsets are as undefined as with a
+real buffer.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
+ src/imagination/common/pvr_limits.h           |  2 +
  src/imagination/pco/pco_data.h                |  9 +++-
  src/imagination/pco/pco_internal.h            |  4 +-
  src/imagination/pco/pco_nir.c                 |  7 ++-
@@ -50,12 +56,25 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  src/imagination/pco/pco_trans_nir.c           | 31 ++++++++++++
  src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  7 +++
  .../vulkan/pvr_arch_descriptor_set.c          | 45 +++++++++++++++++-
- src/imagination/vulkan/pvr_arch_device.c      | 21 +++++++++
+ src/imagination/vulkan/pvr_arch_device.c      | 29 +++++++++++-
  src/imagination/vulkan/pvr_arch_pipeline.c    | 17 +++++++
  src/imagination/vulkan/pvr_device.h           |  4 ++
- src/imagination/vulkan/pvr_physical_device.c  | 18 ++++++-
- 13 files changed, 254 insertions(+), 35 deletions(-)
+ src/imagination/vulkan/pvr_physical_device.c  | 20 ++++++--
+ 14 files changed, 264 insertions(+), 37 deletions(-)
 
+diff --git a/src/imagination/common/pvr_limits.h b/src/imagination/common/pvr_limits.h
+index 1b07522eed8..c81645562a1 100644
+--- a/src/imagination/common/pvr_limits.h
++++ b/src/imagination/common/pvr_limits.h
+@@ -32,6 +32,8 @@
+ #include "pvr_device_info.h"
+ #include "util/u_math.h"
+ 
++/* maxUniformBufferRange; null UBOs read the zero BO, which is this large. */
++#define PVR_MAX_UNIFORM_BUFFER_RANGE (16U * 1024U)
+ #define PVR_MAX_COLOR_ATTACHMENTS PVR_NUM_PBE_EMIT_REGS
+ #define PVR_MAX_QUEUES 2U
+ #define PVR_MAX_VIEWPORTS 1U
 diff --git a/src/imagination/pco/pco_data.h b/src/imagination/pco/pco_data.h
 index ab4129b6a9e..661dc80e0a1 100644
 --- a/src/imagination/pco/pco_data.h
@@ -403,10 +422,10 @@ index e78c438c8f9..931fc7acbf1 100644
     for (unsigned u = 0; u < num_dwords; ++u) {
        pco_ref dword_is_zero =
 diff --git a/src/imagination/vulkan/pvr_arch_cmd_buffer.c b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-index 6db8a0689a4..d560d34f44b 100644
+index 984699d1497..abb25b85417 100644
 --- a/src/imagination/vulkan/pvr_arch_cmd_buffer.c
 +++ b/src/imagination/vulkan/pvr_arch_cmd_buffer.c
-@@ -3267,6 +3267,13 @@ void PVR_PER_ARCH(CmdBindDescriptorSets2KHR)(VkCommandBuffer commandBuffer,
+@@ -3266,6 +3266,13 @@ void PVR_PER_ARCH(CmdBindDescriptorSets2KHR)(VkCommandBuffer commandBuffer,
           set->dynamic_buffers[u].offset =
              has_dyn_offs ? pBindDescriptorSetsInfo->pDynamicOffsets[dyn_off++]
                           : 0;
@@ -498,10 +517,25 @@ index 48c09d91092..04704fa6bc3 100644
        image_view->image_state[PVR_TEXTURE_STATE_SAMPLE];
  
 diff --git a/src/imagination/vulkan/pvr_arch_device.c b/src/imagination/vulkan/pvr_arch_device.c
-index 319cafb7a1d..525db10742a 100644
+index 319cafb7a1d..f8e84dd889f 100644
 --- a/src/imagination/vulkan/pvr_arch_device.c
 +++ b/src/imagination/vulkan/pvr_arch_device.c
-@@ -720,6 +720,27 @@ static VkResult pvr_init_null_pages(struct pvr_device *device)
+@@ -693,7 +693,13 @@ static VkResult pvr_init_null_pages(struct pvr_device *device)
+ 
+    /* zero/null pages should be (at least) 4096 dwords. */
+    os_get_page_size(&page_size);
+-   uint64_t size = ALIGN_POT(4096 * sizeof(uint32_t), page_size);
++   /* At least maxUniformBufferRange: null UBO descriptors point here and
++    * their loads are not checked (see write_buffer()), so any in-range offset
++    * stays inside this BO.
++    */
++   uint64_t size = ALIGN_POT(MAX2(4096 * sizeof(uint32_t),
++                                  PVR_MAX_UNIFORM_BUFFER_RANGE),
++                             page_size);
+ 
+    /* Create a zero page for reads. */
+    /* TODO: make this read-only if we have a debug build so that we fault and
+@@ -720,6 +726,27 @@ static VkResult pvr_init_null_pages(struct pvr_device *device)
     if (result != VK_SUCCESS)
        goto err_free_zero_buffer;
  
@@ -573,7 +607,7 @@ index f153bbe18d5..800c63a9879 100644
  
     struct pvr_border_color_table *border_color_table;
 diff --git a/src/imagination/vulkan/pvr_physical_device.c b/src/imagination/vulkan/pvr_physical_device.c
-index ad6625a07bf..b8c3dba42c5 100644
+index ad6625a07bf..f87f6cda2ee 100644
 --- a/src/imagination/vulkan/pvr_physical_device.c
 +++ b/src/imagination/vulkan/pvr_physical_device.c
 @@ -241,6 +241,18 @@ static void pvr_physical_device_get_supported_extensions(
@@ -606,6 +640,15 @@ index ad6625a07bf..b8c3dba42c5 100644
  
        /* Vulkan 1.3 / VK_EXT_extended_dynamic_state */
        .extendedDynamicState = true,
+@@ -676,7 +688,7 @@ static bool pvr_physical_device_get_properties(
+       .maxImageDimensionCube = 4096U,
+       .maxImageArrayLayers = rogue_get_render_size_max_z(dev_info),
+       .maxTexelBufferElements = 64U * 1024U,
+-      .maxUniformBufferRange = 16U * 1024U,
++      .maxUniformBufferRange = PVR_MAX_UNIFORM_BUFFER_RANGE,
+       .maxStorageBufferRange = 128U * 1024U * 1024U,
+       .maxPushConstantsSize = 128U,
+       .maxMemoryAllocationCount = 4096U,
 @@ -1263,6 +1275,8 @@ VkResult pvr_physical_device_init(struct pvr_physical_device *pdevice,
     pdevice->memory.memoryTypes[0].heapIndex = 0;
  

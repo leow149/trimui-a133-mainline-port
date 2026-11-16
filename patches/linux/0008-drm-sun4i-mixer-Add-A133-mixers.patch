@@ -1,4 +1,4 @@
-From 0c737850a5194130ff7c727cb843b69440c9a973 Mon Sep 17 00:00:00 2001
+From 8afca0b3abe2cd0a408df4fb42bce460f07b9da5 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
 Subject: [PATCH 008/106] drm/sun4i: mixer: Add A133 mixers

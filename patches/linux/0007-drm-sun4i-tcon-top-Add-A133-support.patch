@@ -1,4 +1,4 @@
-From 42160d37c653dfb51b61654dbeaf6cf6fcefd245 Mon Sep 17 00:00:00 2001
+From 61350161890f19d7c543e4bdd45be4ebb2d9a497 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 007/106] drm/sun4i: tcon-top: Add A133 support

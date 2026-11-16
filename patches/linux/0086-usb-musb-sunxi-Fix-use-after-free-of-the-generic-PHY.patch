@@ -1,4 +1,4 @@
-From df50d7b2526335e4522ff31dfc3c8928cd5358d8 Mon Sep 17 00:00:00 2001
+From 5b49cc3617a399d6c1704fc5b00de4f12b15dcd1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:43:16 +0100
 Subject: [PATCH 086/106] usb: musb: sunxi: Fix use-after-free of the generic

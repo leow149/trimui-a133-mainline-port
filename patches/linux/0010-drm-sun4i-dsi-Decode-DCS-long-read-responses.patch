@@ -1,4 +1,4 @@
-From 4b59a965ca651d4912f8955be300824942bcbeac Mon Sep 17 00:00:00 2001
+From 10fdbe4d2aec31cdf9efd907c14352c3213a10eb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:28 +0100
 Subject: [PATCH 010/106] drm/sun4i: dsi: Decode DCS long read responses

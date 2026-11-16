@@ -1,4 +1,4 @@
-From 10f08649d1d78dc32c6869689d9d62c32154bc2c Mon Sep 17 00:00:00 2001
+From 7b10fa8c0435661f20764220ac799c7789a7cee2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:30 +0100
 Subject: [PATCH 030/106] dt-bindings: sound: sun4i-codec: Add the Allwinner

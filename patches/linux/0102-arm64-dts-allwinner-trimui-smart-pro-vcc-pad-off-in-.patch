@@ -1,4 +1,4 @@
-From 93472414dc02394f9a0b0ee508010f1cd3a6c73f Mon Sep 17 00:00:00 2001
+From fab32fb7309fa74e831e6c41314e29d639b4ef61 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 102/106] arm64: dts: allwinner: trimui-smart-pro: vcc-pad off
@@ -13,7 +13,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 5 insertions(+), 6 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index e85d1db62..c3a40d9fb 100644
+index 3f2200c23..af5f04b3f 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -109,7 +109,6 @@ reg_vcc_pad: regulator-vcc-pad {
@@ -38,7 +38,7 @@ index e85d1db62..c3a40d9fb 100644
  	allwinner,t0h-ns = <400>;
  	allwinner,t0l-ns = <850>;
  	allwinner,t1h-ns = <800>;
-@@ -680,7 +680,7 @@ &uart3 {
+@@ -679,7 +679,7 @@ &uart3 {
  	pinctrl-0 = <&uart3_pd_pins>;
  	status = "okay";
  
@@ -47,7 +47,7 @@ index e85d1db62..c3a40d9fb 100644
  		compatible = "trimui,smart-pro-pad-right";
  		power-supply = <&reg_vcc_pad>;
  	};
-@@ -692,7 +692,7 @@ &uart4 {
+@@ -690,7 +690,7 @@ &uart4 {
  	pinctrl-0 = <&uart4_pd_pins>;
  	status = "okay";
  
@@ -56,7 +56,7 @@ index e85d1db62..c3a40d9fb 100644
  		compatible = "trimui,smart-pro-pad-left";
  		power-supply = <&reg_vcc_pad>;
  		trimui,right-pad = <&pad_right>;
-@@ -702,8 +702,7 @@ gamepad {
+@@ -700,8 +700,7 @@ gamepad {
  /*
   * Charging/data USB-C port, OTG: the ID pin is PH8 (pulled up on the board,
   * low when an OTG adapter is plugged in) and VBUS presence comes from the

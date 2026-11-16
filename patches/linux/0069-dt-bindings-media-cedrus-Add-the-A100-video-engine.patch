@@ -1,4 +1,4 @@
-From 5bbd6df446107b4041fb1fc3df3d90c52e995ef8 Mon Sep 17 00:00:00 2001
+From 44ecf7929d7794f4a2e4d5bb59cec30c04cb0b3a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
 Subject: [PATCH 069/106] dt-bindings: media: cedrus: Add the A100 video engine

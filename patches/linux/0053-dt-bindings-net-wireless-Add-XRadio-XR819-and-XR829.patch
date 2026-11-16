@@ -1,4 +1,4 @@
-From 37f6b84a07d68579c11f6eb28a2c7e9c6c7b9a5c Mon Sep 17 00:00:00 2001
+From 7529cb86f59d01ba287eba05f7d81e9dbde4a1b2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:28 +0100
 Subject: [PATCH 053/106] dt-bindings: net: wireless: Add XRadio XR819 and
@@ -82,10 +82,10 @@ index 000000000..284222f0f
 +        };
 +    };
 diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-index 3e3893f1f..f32ffae10 100644
+index a5e32e4bf..4933dd7e7 100644
 --- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
 +++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-@@ -1935,6 +1935,8 @@ patternProperties:
+@@ -1939,6 +1939,8 @@ patternProperties:
      description: Xilinx
    "^xnano,.*":
      description: Xnano

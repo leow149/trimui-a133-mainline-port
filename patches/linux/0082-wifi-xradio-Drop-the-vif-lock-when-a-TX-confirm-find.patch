@@ -1,4 +1,4 @@
-From c784edefa5c54a1e072c6984e0dc8ce73cecbf53 Mon Sep 17 00:00:00 2001
+From 3940c1410c48cd832124f1e2620905333442c1a1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:32:30 +0100
 Subject: [PATCH 082/106] wifi: xradio: Drop the vif lock when a TX confirm
@@ -30,7 +30,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  2 files changed, 13 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/queue.c b/drivers/net/wireless/xradio/queue.c
-index afbe60523..4dfd5c600 100644
+index 53b72f804..51420f089 100644
 --- a/drivers/net/wireless/xradio/queue.c
 +++ b/drivers/net/wireless/xradio/queue.c
 @@ -671,7 +671,7 @@ int xradio_queue_get_skb(struct xradio_queue *queue, u32 packetID,
@@ -43,7 +43,7 @@ index afbe60523..4dfd5c600 100644
  	} else {
  		*skb = item->skb;
 diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
-index a070b6aa9..74927b244 100644
+index 4ad5e1118..60478bf73 100644
 --- a/drivers/net/wireless/xradio/tx.c
 +++ b/drivers/net/wireless/xradio/tx.c
 @@ -1153,8 +1153,7 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
@@ -57,7 +57,7 @@ index a070b6aa9..74927b244 100644
  		struct ieee80211_hdr *frame = (struct ieee80211_hdr *)&skb->data[txpriv->offset];
  		int tx_count = arg->ackFailures;
 @@ -1286,6 +1285,17 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
- 		
+ 
  
  		xradio_queue_remove(queue, arg->packetID);
 +	} else {

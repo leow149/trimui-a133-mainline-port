@@ -1,29 +1,34 @@
-From 461fd526596052a520d6f6d3bc3b9c43844e93a7 Mon Sep 17 00:00:00 2001
+From 0925ba96f5b70267702b48c0c28ed8a2ba7c24f9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:11:57 +0100
 Subject: [PATCH 096/106] phy: sun4i-usb: Give a USB-C source time to switch
  VBUS on before driving it
 
-On the TrimUI Smart Pro the board's CC/ID circuit pulls the ID pin low
-(host) for any USB-C partner, a charger included. A USB-C source only
-switches VBUS on after tCCDebounce plus tVBUSON (up to ~475 ms), so phy0
-saw "host, no external VBUS" and enabled the AXP717 boost at once. The
-TrimUI then back-fed 5.1 V into the charger's port, and the charger,
-which must not switch on while VBUS is already present, never did: the
-battery discharged while plugged in.
+On the TrimUI Smart Pro the ID pin is driven from the USB-C CC lines by a
+circuit we have not identified. It reads low (host) with an OTG adapter, and
+also with a USB-C charger on a C-to-C cable; with a C-to-A cable to a PC it
+stays high (see "phy: sun4i-usb: Only drive phy0 VBUS while the ID pin says
+host"). A USB-C source only switches VBUS on after tCCDebounce plus tVBUSON
+(up to ~475 ms), so phy0 saw "host, no external VBUS" and enabled the AXP717
+boost at once. The TrimUI then back-fed 5.1 V into the charger's port, and
+the charger, which must not switch on while VBUS is already present, never
+did: the battery discharged while plugged in.
 
-Only drive VBUS once the ID has said host for one second and no
-external VBUS has shown up by then.
+Only drive VBUS once the ID has said host for one second and no external
+VBUS has shown up by then. The delay is a per-SoC setting
+(host_vbus_delay_ms), only set for the A100/A133; other SoCs keep driving
+VBUS as soon as the ID says host. phy_power_on() calls inside the delay
+window reschedule the detect work, so VBUS still comes on once the delay is
+over.
 
-Tested: on a 140 W USB-C charger (C-to-C) the boost stays off at boot
-and across an unplug/replug, VBUS comes from the charger and the battery
-charges.
+This is a heuristic: a source that takes longer than a second to switch its
+VBUS on still gets back-fed. A PC on a C-to-C cable (ID presumably low, then
+external VBUS) was not tested and would end up in host role without VBUS
+rather than as a gadget.
 
-The delay is a per-SoC setting (host_vbus_delay_ms), only set for the
-A100/A133 whose boards derive the ID pin from the USB-C CC lines; other
-SoCs keep driving VBUS as soon as the ID says host. phy_power_on() calls
-inside the delay window reschedule the detect work, so VBUS still comes
-on once the delay is over.
+Tested: on a 140 W USB-C charger (C-to-C) the boost stays off at boot and
+across an unplug/replug, VBUS comes from the charger and the battery charges.
+An OTG adapter with a bus-powered hub still gets VBUS.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
@@ -32,7 +37,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 45 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/phy/allwinner/phy-sun4i-usb.c b/drivers/phy/allwinner/phy-sun4i-usb.c
-index 24bcab055..fcec1d77b 100644
+index 24bcab055..2d90af9a3 100644
 --- a/drivers/phy/allwinner/phy-sun4i-usb.c
 +++ b/drivers/phy/allwinner/phy-sun4i-usb.c
 @@ -110,6 +110,12 @@ struct sun4i_usb_phy_cfg {
@@ -135,9 +140,9 @@ index 24bcab055..fcec1d77b 100644
  	.tune_siddq_in_base = true,
  	.phy0_rx_reset_pulse = true,
 +	/*
-+	 * Boards with this SoC (TrimUI Smart Pro) derive the ID pin from the
-+	 * USB-C CC lines, so it reports host as soon as anything is attached.
-+	 * A USB-C source (charger) only switches its VBUS on after
++	 * On the TrimUI Smart Pro the ID pin comes from an unknown circuit on
++	 * the USB-C CC lines: it goes low (host) for an OTG adapter, but also
++	 * for a USB-C charger. A USB-C source only switches its VBUS on after
 +	 * tCCDebounce (up to 200 ms) plus tVBUSON (up to 275 ms): give it a
 +	 * second before driving VBUS ourselves, else we back-feed the
 +	 * charger, which then never switches its own VBUS on.

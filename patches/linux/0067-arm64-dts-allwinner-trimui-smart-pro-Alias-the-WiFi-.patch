@@ -1,4 +1,4 @@
-From ceb018646f4d4f544f64ae2ca2a41147c1fe218d Mon Sep 17 00:00:00 2001
+From a2334dbecda7f85708523de80d4630a555bb386c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:44:53 +0100
 Subject: [PATCH 067/106] arm64: dts: allwinner: trimui-smart-pro: Alias the
@@ -14,7 +14,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 3538be1a1..4fdb5b3a3 100644
+index aa26e9338..1bedbaec0 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -27,6 +27,7 @@ / {

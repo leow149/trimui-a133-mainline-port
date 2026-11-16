@@ -1,4 +1,4 @@
-From efe5bc6505c918b35ce7dd3770c078d7b56d1816 Mon Sep 17 00:00:00 2001
+From 94138f64f01853e584a3c60448ccb434c132fd22 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:31 +0100
 Subject: [PATCH 021/106] arm64: dts: allwinner: a100: Add CPU thermal trips
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 31 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
-index 59f700e6e..2c21b533a 100644
+index 5d5135e03..758f1d3f5 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
 @@ -8,6 +8,7 @@

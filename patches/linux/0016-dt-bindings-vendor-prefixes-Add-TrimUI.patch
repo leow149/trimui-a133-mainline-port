@@ -1,4 +1,4 @@
-From a7a616dd80486a9124068b74caf2db79cb4f95a8 Mon Sep 17 00:00:00 2001
+From 8a1c202b5608674863127969a20b065e65210d27 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:36 +0100
 Subject: [PATCH 016/106] dt-bindings: vendor-prefixes: Add TrimUI
@@ -12,10 +12,10 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 2 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-index 6780b651a..3e3893f1f 100644
+index ba2002969..a5e32e4bf 100644
 --- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
 +++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-@@ -1755,6 +1755,8 @@ patternProperties:
+@@ -1759,6 +1759,8 @@ patternProperties:
      description: Transpeed
    "^traverse,.*":
      description: Traverse Technologies Australia Pty Ltd

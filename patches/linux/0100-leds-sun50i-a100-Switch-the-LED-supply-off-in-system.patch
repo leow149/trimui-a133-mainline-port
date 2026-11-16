@@ -1,4 +1,4 @@
-From d6916f2d77d965362db27a9e3768ad1069f09869 Mon Sep 17 00:00:00 2001
+From 828d17d51ad426014537678cefabf1d2d21a9f05 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 100/106] leds: sun50i-a100: Switch the LED supply off in
@@ -8,14 +8,18 @@ Take an optional vled-supply. Turn it off in system sleep and on again on resume
 
 Tested on the TrimUI Smart Pro: the 23 LEDs go dark in s2idle and come back with their colours.
 
+The driver tracks whether it holds its vled reference, so a resume that
+failed to switch the supply back on does not lead to an unbalanced
+disable later.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/leds/leds-sun50i-a100.c | 80 ++++++++++++++++++++++++++++++++-
- 1 file changed, 78 insertions(+), 2 deletions(-)
+ drivers/leds/leds-sun50i-a100.c | 90 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 88 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/leds/leds-sun50i-a100.c b/drivers/leds/leds-sun50i-a100.c
-index 7bd99a444..8924c8793 100644
+index 7bd99a444..4d56a2293 100644
 --- a/drivers/leds/leds-sun50i-a100.c
 +++ b/drivers/leds/leds-sun50i-a100.c
 @@ -19,6 +19,7 @@
@@ -26,28 +30,32 @@ index 7bd99a444..8924c8793 100644
  #include <linux/reset.h>
  #include <linux/spinlock.h>
  
-@@ -89,6 +90,8 @@ struct sun50i_a100_ledc {
+@@ -89,6 +90,9 @@ struct sun50i_a100_ledc {
  	u32 format;
  	struct sun50i_a100_ledc_timing timing;
  
 +	struct regulator *vled;
++	bool vled_on;		/* our reference on vled is held */
 +
  	u32 max_addr;
  	u32 num_leds;
  	struct sun50i_a100_ledc_led leds[] __counted_by(num_leds);
-@@ -384,6 +387,11 @@ static void sun50i_a100_ledc_dma_cleanup(void *data)
+@@ -384,6 +388,14 @@ static void sun50i_a100_ledc_dma_cleanup(void *data)
  	dma_release_channel(priv->dma_chan);
  }
  
 +static void sun50i_a100_ledc_disable_vled(void *data)
 +{
-+	regulator_disable(data);
++	struct sun50i_a100_ledc *priv = data;
++
++	if (priv->vled_on)
++		regulator_disable(priv->vled);
 +}
 +
  static int sun50i_a100_ledc_probe(struct platform_device *pdev)
  {
  	struct dma_slave_config dma_cfg = {};
-@@ -491,6 +499,22 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+@@ -491,6 +503,23 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
  	if (ret)
  		return ret;
  
@@ -61,8 +69,9 @@ index 7bd99a444..8924c8793 100644
 +		ret = regulator_enable(priv->vled);
 +		if (ret)
 +			return ret;
++		priv->vled_on = true;
 +		ret = devm_add_action_or_reset(dev, sun50i_a100_ledc_disable_vled,
-+					       priv->vled);
++					       priv);
 +		if (ret)
 +			return ret;
 +	}
@@ -70,7 +79,7 @@ index 7bd99a444..8924c8793 100644
  	ret = sun50i_a100_ledc_resume(dev);
  	if (ret)
  		return ret;
-@@ -574,6 +598,58 @@ static void sun50i_a100_ledc_remove(struct platform_device *pdev)
+@@ -574,6 +603,63 @@ static void sun50i_a100_ledc_remove(struct platform_device *pdev)
  	sun50i_a100_ledc_suspend(&pdev->dev);
  }
  
@@ -84,10 +93,14 @@ index 7bd99a444..8924c8793 100644
 +	int ret;
 +
 +	ret = sun50i_a100_ledc_suspend(dev);
-+	if (ret || !priv->vled)
++	/* Not held if the last resume could not switch it back on */
++	if (ret || !priv->vled_on)
 +		return ret;
 +
-+	return regulator_disable(priv->vled);
++	ret = regulator_disable(priv->vled);
++	if (!ret)
++		priv->vled_on = false;
++	return ret;
 +}
 +
 +static int sun50i_a100_ledc_pm_resume(struct device *dev)
@@ -101,6 +114,7 @@ index 7bd99a444..8924c8793 100644
 +		ret = regulator_enable(priv->vled);
 +		if (ret)
 +			return ret;
++		priv->vled_on = true;
 +		/* Let the LEDs' own controllers power up. */
 +		usleep_range(1000, 2000);
 +	}
@@ -129,7 +143,7 @@ index 7bd99a444..8924c8793 100644
  static const struct of_device_id sun50i_a100_ledc_of_match[] = {
  	{ .compatible = "allwinner,sun50i-a100-ledc" },
  	{}
-@@ -581,8 +657,8 @@ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
+@@ -581,8 +667,8 @@ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
  MODULE_DEVICE_TABLE(of, sun50i_a100_ledc_of_match);
  
  static DEFINE_SIMPLE_DEV_PM_OPS(sun50i_a100_ledc_pm,

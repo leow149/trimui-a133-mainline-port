@@ -1,4 +1,4 @@
-From 668f532401cd655f4988843256ed7107b5948710 Mon Sep 17 00:00:00 2001
+From 88b6872e6315a03d2e7f8decb14722ca643c66e3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:22 +0100
 Subject: [PATCH 094/106] arm64: dts: allwinner: trimui-smart-pro: USB OTG host
@@ -21,7 +21,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 26 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 24d780cdb..9fe3e352a 100644
+index f5e0692b8..57c99854a 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -527,6 +527,19 @@ usb_power: usb-power {
@@ -44,7 +44,7 @@ index 24d780cdb..9fe3e352a 100644
  			reg_dcdc1: dcdc1 {
  				regulator-always-on;
  				regulator-min-microvolt = <810000>;
-@@ -693,10 +706,23 @@ &usb_otg {
+@@ -691,10 +704,23 @@ &usb_otg {
  &usbphy {
  	usb0_id_det-gpios = <&pio 7 8 GPIO_ACTIVE_HIGH>; /* PH8 */
  	usb0_vbus_power-supply = <&usb_power>;

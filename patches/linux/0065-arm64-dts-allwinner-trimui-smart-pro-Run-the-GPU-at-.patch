@@ -1,4 +1,4 @@
-From b57b6a6371f7c970c7bbbc4e5e775e983f8fd59b Mon Sep 17 00:00:00 2001
+From 89aab8faf958e2612369f2b3300a9f5ef8b24d10 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:05:59 +0100
 Subject: [PATCH 065/106] arm64: dts: allwinner: trimui-smart-pro: Run the GPU
@@ -15,7 +15,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
  1 file changed, 6 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index de812388b..3538be1a1 100644
+index c659b13db..aa26e9338 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -366,6 +366,12 @@ button-879 {

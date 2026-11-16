@@ -1,4 +1,4 @@
-From 1e229c68a09f4492f57407b07396893fd040bdcf Mon Sep 17 00:00:00 2001
+From fafd015fb24e30b00a5a1725e2a8850ab6e59857 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
 Subject: [PATCH 054/106] net: wireless: Import the xradio XR819 driver
@@ -212,7 +212,7 @@ index 000000000..aa17dd4fc
 +obj-$(CONFIG_XRADIO) += xradio_wlan.o
 diff --git a/drivers/net/wireless/xradio/ap.c b/drivers/net/wireless/xradio/ap.c
 new file mode 100644
-index 000000000..30784e9af
+index 000000000..8b9a1bbc0
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/ap.c
 @@ -0,0 +1,1613 @@
@@ -428,7 +428,7 @@ index 000000000..30784e9af
 +	};
 +	u16 tim_offset, tim_length;
 +	ap_printk(XRADIO_DBG_TRC,"%s\n", __FUNCTION__);
-+	ap_printk(XRADIO_DBG_MSG, "%s mcast: %s.\n", __func__, 
++	ap_printk(XRADIO_DBG_MSG, "%s mcast: %s.\n", __func__,
 +	          aid0_bit_set ? "ena" : "dis");
 +
 +#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
@@ -459,8 +459,8 @@ index 000000000..30784e9af
 +	if(memcmp(priv->last_tim, update_ie.ies, tim_length)) {
 +		WARN_ON(wsm_update_ie(hw_priv, &update_ie, priv->if_id));
 +		memcpy(priv->last_tim, update_ie.ies, tim_length);
-+		ap_printk(XRADIO_DBG_MSG,"%02x %02x %02x %02x %02x %02x\n", 
-+		          update_ie.ies[0], update_ie.ies[1], update_ie.ies[2], 
++		ap_printk(XRADIO_DBG_MSG,"%02x %02x %02x %02x %02x %02x\n",
++		          update_ie.ies[0], update_ie.ies[1], update_ie.ies[2],
 +		          update_ie.ies[3], update_ie.ies[4], update_ie.ies[5]);
 +	}
 +
@@ -565,7 +565,7 @@ index 000000000..30784e9af
 +	          arg.nonErpInternalTxRate);
 +
 +	ret = WARN_ON(wsm_write_mib(xrwl_vifpriv_to_hwpriv(priv),
-+	               WSM_MIB_ID_OVERRIDE_INTERNAL_TX_RATE, 
++	               WSM_MIB_ID_OVERRIDE_INTERNAL_TX_RATE,
 +	               &arg, sizeof(arg), priv->if_id));
 +
 +	return ret;
@@ -675,7 +675,7 @@ index 000000000..30784e9af
 +		priv->cqm_tx_failure_count = 0;
 +	}
 +
-+	if (changed & 
++	if (changed &
 +	    (BSS_CHANGED_ASSOC        |
 +	     BSS_CHANGED_BASIC_RATES  |
 +	     BSS_CHANGED_ERP_PREAMBLE |
@@ -729,7 +729,7 @@ index 000000000..30784e9af
 +			if (is_combo > 1) {
 +				hw_priv->vif0_throttle = XRWL_HOST_VIF0_11BG_THROTTLE;
 +				hw_priv->vif1_throttle = XRWL_HOST_VIF1_11BG_THROTTLE;
-+				ap_printk(XRADIO_DBG_WARN, "%sASSOC is_combo %d\n", 
++				ap_printk(XRADIO_DBG_WARN, "%sASSOC is_combo %d\n",
 +				         (priv->join_status == XRADIO_JOIN_STATUS_STA)?"[STA] ":"",
 +				          hw_priv->vif0_throttle);
 +			} else if ((priv->join_status == XRADIO_JOIN_STATUS_STA) && priv->htcap) {
@@ -863,7 +863,7 @@ index 000000000..30784e9af
 +	}
 +	if (changed & (BSS_CHANGED_ASSOC | BSS_CHANGED_ERP_CTS_PROT)) {
 +		u32 prev_erp_info = priv->erp_info;
-+		priv->erp_info = (priv->erp_info & ~WLAN_ERP_USE_PROTECTION) 
++		priv->erp_info = (priv->erp_info & ~WLAN_ERP_USE_PROTECTION)
 +						| (info->use_cts_prot ? WLAN_ERP_USE_PROTECTION : 0);
 +		if (prev_erp_info != priv->erp_info)
 +			queue_delayed_work(hw_priv->workqueue, &priv->set_cts_work, 0*HZ);
@@ -961,21 +961,21 @@ index 000000000..30784e9af
 +		else
 +			priv->powersave_mode.fastPsmIdlePeriod = dev->conf.dynamic_ps_timeout << 1;
 +
-+		ap_printk(XRADIO_DBG_NIY, "CHANGED_PS fastPsmIdle=%d, apPsmChange=%d\n", 
-+		          priv->powersave_mode.fastPsmIdlePeriod, 
++		ap_printk(XRADIO_DBG_NIY, "CHANGED_PS fastPsmIdle=%d, apPsmChange=%d\n",
++		          priv->powersave_mode.fastPsmIdlePeriod,
 +		          priv->powersave_mode.apPsmChangePeriod);
 +
 +		xradio_set_pm(priv, &priv->powersave_mode);
 +	}
 +#if 0
 +	if (changed & BSS_CHANGED_RETRY_LIMITS) {
-+		ap_printk(XRADIO_DBG_NIY, "Retry limits: %d (long), %d (short).\n", 
++		ap_printk(XRADIO_DBG_NIY, "Retry limits: %d (long), %d (short).\n",
 +		          info->retry_long, info->retry_short);
 +		spin_lock_bh(&hw_priv->tx_policy_cache.lock);
 +		/*TODO:COMBO: for now it's still handled per hw and kept
 +		 * in xradio_common */
 +		hw_priv->long_frame_max_tx_count  = info->retry_long;
-+		hw_priv->short_frame_max_tx_count = 
++		hw_priv->short_frame_max_tx_count =
 +		  (info->retry_short < 0x0F ? info->retry_short : 0x0F);
 +		hw_priv->hw->max_rate_tries = hw_priv->short_frame_max_tx_count;
 +		spin_unlock_bh(&hw_priv->tx_policy_cache.lock);
@@ -1146,7 +1146,7 @@ index 000000000..30784e9af
 +	struct xradio_common *hw_priv = xrwl_vifpriv_to_hwpriv(priv);
 +
 +#if 0
-+	ap_printk(XRADIO_DBG_MSG, "[AP] %s: %s\n", 
++	ap_printk(XRADIO_DBG_MSG, "[AP] %s: %s\n",
 +	          arg->stop ? "stop" : "start",
 +	          arg->multicast ? "broadcast" : "unicast");
 +#endif
@@ -1386,7 +1386,7 @@ index 000000000..30784e9af
 +		.frame_type = WSM_FRAME_TYPE_QOS_NULL,
 +		.rate = 0xFF,
 +	};
-+	if (!hw_priv) 
++	if (!hw_priv)
 +		ap_printk(XRADIO_DBG_ERROR,"%s: Cannot find xradio_common pointer!\n",__FUNCTION__);
 +	/*set qos template*/
 +	skb = dev_alloc_skb(hw_priv->hw->extra_tx_headroom + sizeof(struct ieee80211_qos_hdr));
@@ -1515,7 +1515,7 @@ index 000000000..30784e9af
 +	ap_printk(XRADIO_DBG_NIY, "[AP] ch: %d(%d), bcn: %d(%d),"
 +	          "bss_rate: 0x%.8X, ssid: %.*s.\n",
 +	          start.channelNumber,  start.band,
-+	          start.beaconInterval, start.DTIMPeriod, 
++	          start.beaconInterval, start.DTIMPeriod,
 +	          start.basicRateSet, start.ssidLength, start.ssid);
 +	ret = WARN_ON(wsm_start(hw_priv, &start, priv->if_id));
 +
@@ -1674,7 +1674,7 @@ index 000000000..30784e9af
 +		need_reset = false;
 +		mask = BIT(i + 1);
 +		if (priv->link_id_db[i].status == XRADIO_LINK_RESERVE ||
-+			  (priv->link_id_db[i].status == XRADIO_LINK_HARD && 
++			  (priv->link_id_db[i].status == XRADIO_LINK_HARD &&
 +			   !(priv->link_id_map & mask))) {
 +			if (priv->link_id_map & mask) {
 +				priv->sta_asleep_mask &= ~mask;
@@ -1911,7 +1911,7 @@ index 000000000..5b0c2468b
 +#endif
 diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
 new file mode 100644
-index 000000000..e38fee542
+index 000000000..65fed6d79
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/bh.c
 @@ -0,0 +1,829 @@
@@ -2016,9 +2016,9 @@ index 000000000..e38fee542
 +	}
 +
 +#ifdef MCAST_FWDING
-+ 	xradio_for_each_vif(hw_priv, priv, i) {
++	xradio_for_each_vif(hw_priv, priv, i) {
 +		if (!priv)
-+			continue;	
++			continue;
 +		if ( (priv->multicast_filter.enable)
 +			&& (priv->join_status == XRADIO_JOIN_STATUS_AP) ) {
 +			wsm_release_buffer_to_fw(priv,
@@ -2030,7 +2030,7 @@ index 000000000..e38fee542
 +
 +	atomic_set(&hw_priv->bh_suspend, XRADIO_BH_SUSPEND);
 +	wake_up(&hw_priv->bh_wq);
-+	return wait_event_timeout(hw_priv->bh_evt_wq, (hw_priv->bh_error || 
++	return wait_event_timeout(hw_priv->bh_evt_wq, (hw_priv->bh_error ||
 +	                          XRADIO_BH_SUSPENDED == atomic_read(&hw_priv->bh_suspend)),
 +	                          1 * HZ)?  0 : -ETIMEDOUT;
 +}
@@ -2039,7 +2039,7 @@ index 000000000..e38fee542
 +{
 +#ifdef MCAST_FWDING
 +	int ret;
-+	int i =0; 
++	int i =0;
 +	struct xradio_vif *priv =NULL;
 +#endif
 +
@@ -2059,7 +2059,7 @@ index 000000000..e38fee542
 +	xradio_for_each_vif(hw_priv, priv, i) {
 +		if (!priv)
 +			continue;
-+		if ((priv->join_status == XRADIO_JOIN_STATUS_AP) && 
++		if ((priv->join_status == XRADIO_JOIN_STATUS_AP) &&
 +			  (priv->multicast_filter.enable)) {
 +			u8 count = 0;
 +			WARN_ON(wsm_request_buffer_request(priv, &count));
@@ -2923,7 +2923,7 @@ index 000000000..90fc3b309
 +#endif /* XRADIO_DEBUG_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/fwio.c b/drivers/net/wireless/xradio/fwio.c
 new file mode 100644
-index 000000000..91958dd90
+index 000000000..9272ee44e
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/fwio.c
 @@ -0,0 +1,560 @@
@@ -3090,7 +3090,7 @@ index 000000000..91958dd90
 +				break;
 +			default:
 +				*dpll = DPLL_INIT_VAL_XRADIO;
-+				xradio_dbg(XRADIO_DBG_WARN, "Unknown Reference clock frequency." 
++				xradio_dbg(XRADIO_DBG_WARN, "Unknown Reference clock frequency."
 +				           "Use default DPLL value=0x%08x.", DPLL_INIT_VAL_XRADIO);
 +				break;
 +			}
@@ -3100,7 +3100,7 @@ index 000000000..91958dd90
 +		parsedLength += (FIELD_OFFSET(struct xradio_sdd, data) + pElement->length);
 +		pElement = FIND_NEXT_ELT(pElement);
 +	}
-+	
++
 +	dev_dbg(hw_priv->pdev, "sdd size=%zu parse len=%d.\n",
 +	           hw_priv->sdd->size, parsedLength);
 +
@@ -3221,7 +3221,7 @@ index 000000000..91958dd90
 +		}
 +
 +		/* send the block to sram */
-+		ret = xradio_apb_write(hw_priv, APB_ADDR(DOWNLOAD_FIFO_OFFSET + (put & (DOWNLOAD_FIFO_SIZE - 1))), 
++		ret = xradio_apb_write(hw_priv, APB_ADDR(DOWNLOAD_FIFO_OFFSET + (put & (DOWNLOAD_FIFO_SIZE - 1))),
 +		                       buf, tx_size);
 +		if (ret < 0) {
 +			dev_err(hw_priv->pdev, "%s: can't write block at line %d.\n", __func__, __LINE__);
@@ -3288,7 +3288,7 @@ index 000000000..91958dd90
 +	if(bootloader) {
 +		release_firmware(bootloader);
 +	}
-+	return ret;  
++	return ret;
 +}
 +
 +bool test_retry = false;
@@ -3328,7 +3328,7 @@ index 000000000..91958dd90
 +				major_revision);
 +		return -ENOTSUPP;
 +	}
-+	
++
 +	//load sdd file, and get config from it.
 +	ret = xradio_parse_sdd(hw_priv, &dpll);
 +	if (ret < 0) {
@@ -3441,7 +3441,7 @@ index 000000000..91958dd90
 +			           "control register.\n");
 +			goto unsubscribe;
 +		}
-+		ret = xradio_reg_write_16(hw_priv, HIF_CONFIG_REG_ID, 
++		ret = xradio_reg_write_16(hw_priv, HIF_CONFIG_REG_ID,
 +		                          val16 | HIF_CTRL_IRQ_RDY_ENABLE);
 +		if (ret < 0) {
 +			dev_dbg(hw_priv->pdev, "enable_irq: can't write " \
@@ -3671,7 +3671,7 @@ index 000000000..346b425b4
 +#endif /* XRADIO_HT_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/hwio.c b/drivers/net/wireless/xradio/hwio.c
 new file mode 100644
-index 000000000..b8133339e
+index 000000000..589422b7a
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/hwio.c
 @@ -0,0 +1,280 @@
@@ -3761,7 +3761,7 @@ index 000000000..b8133339e
 +	return __xradio_write(hw_priv, addr, &val, sizeof(val), 0);
 +}
 +
-+int xradio_reg_read(struct xradio_common *hw_priv, u16 addr, 
++int xradio_reg_read(struct xradio_common *hw_priv, u16 addr,
 +                    void *buf, size_t buf_len)
 +{
 +	int ret;
@@ -3771,7 +3771,7 @@ index 000000000..b8133339e
 +	return ret;
 +}
 +
-+int xradio_reg_write(struct xradio_common *hw_priv, u16 addr, 
++int xradio_reg_write(struct xradio_common *hw_priv, u16 addr,
 +                     const void *buf, size_t buf_len)
 +{
 +	int ret;
@@ -3936,7 +3936,7 @@ index 000000000..b8133339e
 +	}
 +
 +	sdio_lock(hw_priv);
-+	
++
 +	/* Write address */
 +	ret = __xradio_write_reg32(hw_priv, HIF_SRAM_BASE_ADDR_REG_ID, addr);
 +	if (ret < 0) {
@@ -3957,7 +3957,7 @@ index 000000000..b8133339e
 +}
 diff --git a/drivers/net/wireless/xradio/hwio.h b/drivers/net/wireless/xradio/hwio.h
 new file mode 100644
-index 000000000..531c2b8c8
+index 000000000..0297ace4f
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/hwio.h
 @@ -0,0 +1,229 @@
@@ -4026,7 +4026,7 @@ index 000000000..531c2b8c8
 +	(DOWNLOAD_CTRL_OFFSET + offsetof(struct download_cntl_t, Status))
 +#define DOWNLOAD_DEBUG_DATA_REG		\
 +	(DOWNLOAD_CTRL_OFFSET + offsetof(struct download_cntl_t, DebugData))
-+	
++
 +#define DOWNLOAD_DEBUG_DATA_LEN   (108)
 +#define DOWNLOAD_BLOCK_SIZE       (1024)
 +
@@ -4116,7 +4116,7 @@ index 000000000..531c2b8c8
 +int xradio_data_write(struct xradio_common *hw_priv, const void *buf, size_t buf_len);
 +int xradio_reg_read(struct xradio_common *hw_priv, u16 addr, void *buf, size_t buf_len);
 +int xradio_reg_write(struct xradio_common *hw_priv, u16 addr, const void *buf, size_t buf_len);
-+int xradio_indirect_read(struct xradio_common *hw_priv, u32 addr, void *buf, 
++int xradio_indirect_read(struct xradio_common *hw_priv, u32 addr, void *buf,
 +                         size_t buf_len, u32 prefetch, u16 port_addr);
 +int xradio_apb_write(struct xradio_common *hw_priv, u32 addr, const void *buf, size_t buf_len);
 +int xradio_ahb_write(struct xradio_common *hw_priv, u32 addr, const void *buf, size_t buf_len);
@@ -4154,14 +4154,14 @@ index 000000000..531c2b8c8
 +static inline int xradio_apb_read(struct xradio_common *hw_priv, u32 addr,
 +                                  void *buf, size_t buf_len)
 +{
-+	return xradio_indirect_read(hw_priv, addr, buf, buf_len, HIF_CONFIG_PFETCH_BIT, 
++	return xradio_indirect_read(hw_priv, addr, buf, buf_len, HIF_CONFIG_PFETCH_BIT,
 +	                            HIF_SRAM_DPORT_REG_ID);
 +}
 +
 +static inline int xradio_ahb_read(struct xradio_common *hw_priv, u32 addr,
 +                                  void *buf, size_t buf_len)
 +{
-+	return xradio_indirect_read(hw_priv, addr, buf, buf_len, HIF_CONFIG_AHB_PFETCH_BIT, 
++	return xradio_indirect_read(hw_priv, addr, buf, buf_len, HIF_CONFIG_AHB_PFETCH_BIT,
 +	                            HIF_AHB_DPORT_REG_ID);
 +}
 +
@@ -4192,7 +4192,7 @@ index 000000000..531c2b8c8
 +#endif /* XRADIO_HWIO_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/keys.c b/drivers/net/wireless/xradio/keys.c
 new file mode 100644
-index 000000000..eef9c64e1
+index 000000000..a39a1bbc1
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/keys.c
 @@ -0,0 +1,195 @@
@@ -4256,7 +4256,7 @@ index 000000000..eef9c64e1
 +	struct xradio_vif *priv = xrwl_get_vif_from_ieee80211(vif);
 +
 +	wiphy_dbg(dev->wiphy, "vif %d: set_key cmd %d\n", priv->if_id, (int) cmd);
-+	
++
 +	mutex_lock(&hw_priv->conf_mutex);
 +
 +	if (cmd == SET_KEY) {
@@ -4367,7 +4367,7 @@ index 000000000..eef9c64e1
 +		else
 +			xradio_free_key(hw_priv, idx);
 +
-+		if (!ret && (pairwise || wsm_key->type == WSM_KEY_TYPE_WEP_DEFAULT) && 
++		if (!ret && (pairwise || wsm_key->type == WSM_KEY_TYPE_WEP_DEFAULT) &&
 +		    (priv->filter4.enable & 0x2))
 +			xradio_set_arpreply(dev, vif);
 +	} else if (cmd == DISABLE_KEY) {
@@ -4412,7 +4412,7 @@ index 000000000..23c5880ef
 \ No newline at end of file
 diff --git a/drivers/net/wireless/xradio/main.c b/drivers/net/wireless/xradio/main.c
 new file mode 100644
-index 000000000..09c17db5f
+index 000000000..1a7ba06e5
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/main.c
 @@ -0,0 +1,643 @@
@@ -4658,7 +4658,7 @@ index 000000000..09c17db5f
 +	hw_priv->roc_if_id = -1;
 +	atomic_set(&hw_priv->num_vifs, 0);
 +	/* initial rates and channels TODO: fetch from FW */
-+	hw_priv->rates = xradio_rates;    
++	hw_priv->rates = xradio_rates;
 +	hw_priv->mcs_rates = xradio_n_rates;
 +#ifdef ROAM_OFFLOAD
 +	hw_priv->auto_scanning = 0;
@@ -4754,7 +4754,7 @@ index 000000000..09c17db5f
 +			continue;
 +		if(!hw_priv->channel){
 +			hw_priv->channel = &sband->channels[2];
-+		}	
++		}
 +	}
 +	hw->wiphy->max_scan_ssids = WSM_SCAN_MAX_NUM_OF_SSIDS;
 +	hw->wiphy->max_scan_ie_len = IEEE80211_MAX_DATA_LEN;
@@ -5190,7 +5190,7 @@ index 000000000..d86686b49
 +#endif
 diff --git a/drivers/net/wireless/xradio/pm.c b/drivers/net/wireless/xradio/pm.c
 new file mode 100644
-index 000000000..5aa252843
+index 000000000..0f4f573a8
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/pm.c
 @@ -0,0 +1,805 @@
@@ -5204,7 +5204,7 @@ index 000000000..5aa252843
 + * it under the terms of the GNU General Public License version 2 as
 + * published by the Free Software Foundation.
 + */
-+ 
++
 +#include <linux/platform_device.h>
 +#include <linux/if_ether.h>
 +#include "xradio.h"
@@ -5478,7 +5478,7 @@ index 000000000..5aa252843
 +		pm->stay_awake.data = (unsigned long)pm;
 +		pm->stay_awake.function = xradio_pm_stay_awake_tmo;
 +#endif
-+	} else 
++	} else
 +		pm_printk(XRADIO_DBG_ERROR,"xradio_pm_init_common failed!\n");
 +	return ret;
 +}
@@ -5604,7 +5604,7 @@ index 000000000..5aa252843
 +#endif /*ROAM_OFFLOAD*/
 +
 +	/* Do not suspend when datapath is not idle */
-+	if (hw_priv->tx_queue_stats.num_queued[0] + 
++	if (hw_priv->tx_queue_stats.num_queued[0] +
 +		  hw_priv->tx_queue_stats.num_queued[1]) {
 +		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
 +		           "because of tx_queue is not empty.\n");
@@ -5644,20 +5644,20 @@ index 000000000..5aa252843
 +
 +	/* Wait to avoid possible race with bh code.
 +	 * But do not wait too long... */
-+	if (wait_event_timeout(hw_priv->bh_evt_wq, 
++	if (wait_event_timeout(hw_priv->bh_evt_wq,
 +	                       !hw_priv->hw_bufs_used, HZ / 10) <= 0) {
 +		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
 +		           "because of there are frames not confirm.\n");
 +		goto revert3;
 +	}
-+		
++
 +#ifdef XRADIO_SUSPEND_POWER_OFF
 +//	if (STANDBY_WITH_POWER_OFF == standby_level) {
 +	if (1) {
 +		return xradio_poweroff_suspend(hw_priv);
 +	}
 +#endif
-+	
++
 +	xradio_for_each_vif(hw_priv, priv, i) {
 +		if (!priv)
 +			continue;
@@ -5743,7 +5743,7 @@ index 000000000..5aa252843
 +
 +	/* Set IP multicast filter */
 +    wsm_set_host_sleep(hw_priv, 1, priv->if_id);
-+    
++
 +	if (priv->join_status == XRADIO_JOIN_STATUS_AP)
 +		WARN_ON(wsm_set_keepalive_filter(priv, true));
 +
@@ -5781,7 +5781,7 @@ index 000000000..5aa252843
 +	state->link_id_gc = xradio_suspend_work(&priv->link_id_gc_work);
 +
 +	/* Enable beacon skipping */
-+	if (priv->join_status == XRADIO_JOIN_STATUS_STA && 
++	if (priv->join_status == XRADIO_JOIN_STATUS_STA &&
 +		  priv->join_dtim_period &&  !priv->has_multicast_subscription) {
 +		state->beacon_skipping = true;
 +		wsm_set_beacon_wakeup_period(hw_priv, priv->join_dtim_period * XRADIO_BEACON_SKIPPING_MULTIPLIER, 0, priv->if_id);
@@ -5801,7 +5801,7 @@ index 000000000..5aa252843
 +
 +revert3:
 +	xradio_resume_work(hw_priv, &priv->bss_loss_work, state->bss_loss_tmo);
-+	xradio_resume_work(hw_priv, &priv->connection_loss_work, 
++	xradio_resume_work(hw_priv, &priv->connection_loss_work,
 +	                   state->connection_loss_tmo);
 +	xradio_resume_work(hw_priv, &priv->join_timeout, state->join_tmo);
 +	xradio_resume_work(hw_priv, &priv->link_id_gc_work, state->link_id_gc);
@@ -5830,7 +5830,7 @@ index 000000000..5aa252843
 +#endif
 +
 +#ifdef MCAST_FWDING
-+	fwdoffload.flags = 0x0;	
++	fwdoffload.flags = 0x0;
 +	if (priv->join_status == XRADIO_JOIN_STATUS_AP)
 +		WARN_ON(wsm_set_forwarding_offlad(hw_priv, &fwdoffload,priv->if_id));
 +#endif
@@ -5957,7 +5957,7 @@ index 000000000..5aa252843
 +
 +	/* Remove ethernet frame type filter */
 +	wsm_set_ether_type_filter(hw_priv, &xradio_ether_type_filter_off, priv->if_id);
-+	
++
 +	/* Remove IP multicast filter */
 +    wsm_set_host_sleep(hw_priv, 0, priv->if_id);
 +	/* Free memory */
@@ -6001,7 +6001,7 @@ index 000000000..5aa252843
 +#endif
 diff --git a/drivers/net/wireless/xradio/pm.h b/drivers/net/wireless/xradio/pm.h
 new file mode 100644
-index 000000000..18186f63a
+index 000000000..bc3352007
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/pm.h
 @@ -0,0 +1,64 @@
@@ -6032,7 +6032,7 @@ index 000000000..18186f63a
 +#define XRADIO_PM_DEVICE   "xradio_pm"
 +#define XRADIO_WAKE_LOCK   "xradio_wlan"
 +
-+/* extern */   struct xradio_common; 
++/* extern */   struct xradio_common;
 + /* private */ struct xradio_suspend_state;
 +
 +struct xradio_pm_state {
@@ -6071,7 +6071,7 @@ index 000000000..18186f63a
 +#endif
 diff --git a/drivers/net/wireless/xradio/queue.c b/drivers/net/wireless/xradio/queue.c
 new file mode 100644
-index 000000000..afbe60523
+index 000000000..53b72f804
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/queue.c
 @@ -0,0 +1,831 @@
@@ -6215,7 +6215,7 @@ index 000000000..afbe60523
 +
 +	if (wakeup_stats)
 +		wake_up(&stats->wait_link_id_empty);
-+	
++
 +	//modified by yangfh for test WFD
 +	if (queue->overfull) {
 +		if (queue->num_queued <= ((stats->hw_priv->vif0_throttle +
@@ -6891,11 +6891,11 @@ index 000000000..afbe60523
 +		spin_unlock_bh(&old_queue->lock);
 +		/* Dump Info of stuck frames. */
 +		if (frame) {
-+			txrx_printk(XRADIO_DBG_ERROR, "TX confirm timeout(%ds).\n", 
++			txrx_printk(XRADIO_DBG_ERROR, "TX confirm timeout(%ds).\n",
 +			            WSM_CMD_LAST_CHANCE_TIMEOUT/HZ);
 +			txrx_printk(XRADIO_DBG_ERROR, "if=%d, linkid=%d, tid=%d, " \
-+			            "old_packetID=0x%08x, fctl=0x%04x, len=%d, wr=%d\n", 
-+			            if_id, link_id, tid,  hw_priv->query_packetID, fctl, len, 
++			            "old_packetID=0x%08x, fctl=0x%04x, len=%d, wr=%d\n",
++			            if_id, link_id, tid,  hw_priv->query_packetID, fctl, len,
 +			            pack_stk_wr);
 +		}
 +		/* Return half of timeout for query packet. */
@@ -7054,7 +7054,7 @@ index 000000000..2106cde15
 +#endif /* XRADIO_QUEUE_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/rx.c b/drivers/net/wireless/xradio/rx.c
 new file mode 100644
-index 000000000..24be4f321
+index 000000000..a3b50bce2
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/rx.c
 @@ -0,0 +1,411 @@
@@ -7184,7 +7184,7 @@ index 000000000..24be4f321
 +		/* STA is stopped. */
 +		goto drop;
 +	}
-+	
++
 +#ifdef TES_P2P_0002_ROC_RESTART
 +	xradio_frame_monitor(hw_priv,skb,false);
 +#endif
@@ -7274,7 +7274,7 @@ index 000000000..24be4f321
 +			goto drop;
 +	}
 +#endif
-+       
++
 +	if (arg->rxedRate >= 14) {
 +		hdr->flag |= RX_ENC_HT;
 +		hdr->rate_idx = arg->rxedRate - 14;
@@ -7338,7 +7338,7 @@ index 000000000..24be4f321
 +		if (WSM_RX_STATUS_ENCRYPTION(arg->flags) ==
 +		    WSM_RX_STATUS_TKIP) {
 +			/* Remove TKIP MIC 8 bytes*/
-+			memmove(skb->data + skb->len-icv_len, 
++			memmove(skb->data + skb->len-icv_len,
 +			        skb->data + skb->len-icv_len+8, 4);
 +			skb_trim(skb, skb->len - 8);
 +			hdr->flag |= RX_FLAG_MMIC_STRIPPED;
@@ -7402,7 +7402,7 @@ index 000000000..24be4f321
 +#endif
 +
 +#ifdef AP_HT_COMPAT_FIX
-+	if (ieee80211_is_mgmt(frame->frame_control) && 
++	if (ieee80211_is_mgmt(frame->frame_control) &&
 +		priv->if_id == 0 && !(priv->ht_compat_det & 0x10)) {
 +		xradio_remove_ht_ie(priv, skb);
 +	}
@@ -7485,7 +7485,7 @@ index 000000000..0c02b23d0
 +#endif
 diff --git a/drivers/net/wireless/xradio/scan.c b/drivers/net/wireless/xradio/scan.c
 new file mode 100644
-index 000000000..e9e22eaae
+index 000000000..cd48c593b
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/scan.c
 @@ -0,0 +1,899 @@
@@ -7522,13 +7522,13 @@ index 000000000..e9e22eaae
 +	while (ies_len >= 6) {
 +		ie_len = ies[1] + 2;
 +		ies_len -= ie_len;
-+		if ((ies[0] == WLAN_EID_VENDOR_SPECIFIC) && 
-+			  (ies[2] == 0x00 && ies[3] == 0x50 && 
++		if ((ies[0] == WLAN_EID_VENDOR_SPECIFIC) &&
++			  (ies[2] == 0x00 && ies[3] == 0x50 &&
 +			   ies[4] == 0xf2 && ies[5] == 0x04)) {
 +			wps_ie_len = ie_len;
 +			memmove(ies, ies + ie_len, ies_len);
 +		} else if ((ies[0] == WLAN_EID_VENDOR_SPECIFIC) &&
-+		           (ies[2] == 0x50 && ies[3] == 0x6f && 
++		           (ies[2] == 0x50 && ies[3] == 0x6f &&
 +		            ies[4] == 0x9a && ies[5] == 0x09)) {
 +			p2p_ie_len = ie_len;
 +			memmove(ies, ies + ie_len, ies_len);
@@ -7621,14 +7621,14 @@ index 000000000..e9e22eaae
 +		req->n_ssids = 0;
 +
 +	scan_printk(XRADIO_DBG_NIY, "vif%d Scan request(%s-%dchs) for %d SSIDs.\n",
-+	            priv->if_id, (req->channels[0]->band==NL80211_BAND_2GHZ)?"2.4G":"5G", 
++	            priv->if_id, (req->channels[0]->band==NL80211_BAND_2GHZ)?"2.4G":"5G",
 +	            req->n_channels, req->n_ssids);
-+	
++
 +	/*delay multiple ssids scan of vif0 for 3s when connnetting to a node*/
 +	if(hw_priv->connet_time[0] > 0 && req->n_ssids == 0 && priv->if_id == 0) {
 +		long timeleft0 = hw_priv->connet_time[0] + SCAN_MAX_DELAY - jiffies;
 +		if(jiffies >= hw_priv->connet_time[0] && timeleft0 > 0) {
-+			scan_printk(XRADIO_DBG_NIY, "vif0 connetting, scan delay %ldms\n", 
++			scan_printk(XRADIO_DBG_NIY, "vif0 connetting, scan delay %ldms\n",
 +			            timeleft0*1000/HZ);
 +			return -EBUSY;
 +		}
@@ -7636,14 +7636,14 @@ index 000000000..e9e22eaae
 +	}
 +
 +	if (req->n_ssids > hw->wiphy->max_scan_ssids){
-+		scan_printk(XRADIO_DBG_ERROR, "%s: ssids is too much(%d)\n", 
++		scan_printk(XRADIO_DBG_ERROR, "%s: ssids is too much(%d)\n",
 +		            __func__, req->n_ssids);
 +		return -EINVAL;
 +	}
 +
 +	frame.skb = ieee80211_probereq_get(hw, vif->addr, NULL, 0, req->ie_len);
 +	if (!frame.skb) {
-+		scan_printk(XRADIO_DBG_ERROR, "%s: ieee80211_probereq_get failed!\n", 
++		scan_printk(XRADIO_DBG_ERROR, "%s: ieee80211_probereq_get failed!\n",
 +		            __func__);
 +		return -ENOMEM;
 +	}
@@ -7689,7 +7689,7 @@ index 000000000..e9e22eaae
 +	/* will be unlocked in xradio_scan_work() */
 +	down(&hw_priv->scan.lock);
 +	mutex_lock(&hw_priv->conf_mutex);
-+	
++
 +	if (priv->if_id == 0)
 +		xradio_remove_wps_p2p_ie(&frame);
 +	ret = wsm_set_template_frame(hw_priv, &frame, priv->if_id);
@@ -7745,7 +7745,7 @@ index 000000000..e9e22eaae
 +		.frame_type = WSM_FRAME_TYPE_PROBE_REQUEST,
 +	};
 +	int i;
-+	
++
 +
 +	scan_printk(XRADIO_DBG_WARN, "Scheduled scan request-->.\n");
 +	if (!priv->vif)
@@ -7757,16 +7757,16 @@ index 000000000..e9e22eaae
 +		return -EOPNOTSUPP;
 +	}
 +
-+	scan_printk(XRADIO_DBG_WARN, "Scheduled scan: n_ssids %d, ssid[0].len = %d\n", 
++	scan_printk(XRADIO_DBG_WARN, "Scheduled scan: n_ssids %d, ssid[0].len = %d\n",
 +	            req->n_ssids, req->ssids[0].ssid_len);
 +	if (req->n_ssids == 1 && !req->ssids[0].ssid_len)
 +		req->n_ssids = 0;
 +
-+	scan_printk(XRADIO_DBG_NIY, "[SCAN] Scan request for %d SSIDs.\n", 
++	scan_printk(XRADIO_DBG_NIY, "[SCAN] Scan request for %d SSIDs.\n",
 +	            req->n_ssids);
 +
 +	if (req->n_ssids > hw->wiphy->max_scan_ssids) [
-+		scan_printk(XRADIO_DBG_ERROR, "%s: ssids is too much(%d)\n", 
++		scan_printk(XRADIO_DBG_ERROR, "%s: ssids is too much(%d)\n",
 +		            __func__, req->n_ssids);
 +		return -EINVAL;
 +	}
@@ -7774,7 +7774,7 @@ index 000000000..e9e22eaae
 +	frame.skb = ieee80211_probereq_get(hw, priv->vif, NULL, 0,
 +	                                   ies->ie[0], ies->len[0]);
 +	if (!frame.skb) {
-+		scan_printk(XRADIO_DBG_ERROR, "%s: ieee80211_probereq_get failed!\n", 
++		scan_printk(XRADIO_DBG_ERROR, "%s: ieee80211_probereq_get failed!\n",
 +		            __func__);
 +		return -ENOMEM;
 +	}
@@ -7866,7 +7866,7 @@ index 000000000..e9e22eaae
 +	else
 +		scan.scanFlags &= ~WSM_FLAG_MAC_INSTANCE_1;
 +
-+	/* No need to set WSM_SCAN_FLAG_FORCE_BACKGROUND in BSS_LOSS work. 
++	/* No need to set WSM_SCAN_FLAG_FORCE_BACKGROUND in BSS_LOSS work.
 +	 * yangfh 2015-11-11 18:45:02 */
 +	//xradio_for_each_vif(hw_priv, vif, i) {
 +	//	if (!vif)
@@ -7978,12 +7978,12 @@ index 000000000..e9e22eaae
 +			scan_printk(XRADIO_DBG_ERROR, "xr_kzalloc wsm_scan_ch failed.\n");
 +			goto fail;
 +		}
-+		maxChannelTime = (scan.numOfSSIDs * scan.numOfProbeRequests *ProbeRequestTime) + 
++		maxChannelTime = (scan.numOfSSIDs * scan.numOfProbeRequests *ProbeRequestTime) +
 +		                  ChannelRemainTime;
 +		maxChannelTime = (maxChannelTime < 35) ? 35 : maxChannelTime;
 +		for (i = 0; i < scan.numOfChannels; ++i) {
 +			scan.ch[i].number = hw_priv->scan.curr[i]->hw_value;
-+			/* min: time to channel switch if no responses, 
++			/* min: time to channel switch if no responses,
 +			*  max: time to listen if transmissions are heard */
 +			if (passiveScan) {
 +				/* typical AP send beacons with 100TU = 102.4ms interval */
@@ -8141,7 +8141,7 @@ index 000000000..e9e22eaae
 +		cancel_delayed_work_sync(&priv->bss_loss_work);
 +		queue_delayed_work(hw_priv->workqueue, &priv->bss_loss_work,
 +		                   tmo * HZ / 10);
-+		
++
 +	}
 +
 +	/* FW bug: driver has to restart p2p-dev mode after scan. */
@@ -8289,7 +8289,7 @@ index 000000000..e9e22eaae
 +	if (unlikely(down_trylock(&hw_priv->scan.lock))) {
 +		/* Scan is already in progress. Requeue self. */
 +		schedule();
-+		queue_delayed_work(hw_priv->workqueue, &hw_priv->scan.probe_work, 
++		queue_delayed_work(hw_priv->workqueue, &hw_priv->scan.probe_work,
 +		                   HZ / 10);
 +		mutex_unlock(&hw_priv->conf_mutex);
 +		return;
@@ -8322,7 +8322,7 @@ index 000000000..e9e22eaae
 +			scan.scanFlags &= ~WSM_FLAG_MAC_INSTANCE_1;
 +	}
 +
-+	/* No need to set WSM_SCAN_FLAG_FORCE_BACKGROUND in BSS_LOSS work. 
++	/* No need to set WSM_SCAN_FLAG_FORCE_BACKGROUND in BSS_LOSS work.
 +	 * yangfh 2015-11-11 18:45:02 */
 +	//xradio_for_each_vif(hw_priv, vif, i) {
 +	//	if (!vif)
@@ -8330,7 +8330,7 @@ index 000000000..e9e22eaae
 +	//	if (vif->bss_loss_status > XRADIO_BSS_LOSS_NONE)
 +	//		scan.scanFlags |= WSM_SCAN_FLAG_FORCE_BACKGROUND;
 +	//}
-+	
++
 +	ch[0].number = hw_priv->channel->hw_value;
 +	skb_pull(frame.skb, txpriv->offset);
 +	ies = &frame.skb->data[sizeof(struct ieee80211_hdr_3addr)];
@@ -8755,7 +8755,7 @@ index 000000000..ea3c45a00
 +#endif
 diff --git a/drivers/net/wireless/xradio/sta.c b/drivers/net/wireless/xradio/sta.c
 new file mode 100644
-index 000000000..62232cd4e
+index 000000000..9ce8cfe4a
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/sta.c
 @@ -0,0 +1,2239 @@
@@ -8823,7 +8823,7 @@ index 000000000..62232cd4e
 +{
 +	priv->bf_table.numOfIEs = __cpu_to_le32(3);
 +	priv->bf_table.entry[0].ieId = WLAN_EID_VENDOR_SPECIFIC;
-+	priv->bf_table.entry[0].actionFlags = 
++	priv->bf_table.entry[0].actionFlags =
 +	                        WSM_BEACON_FILTER_IE_HAS_CHANGED       |
 +	                        WSM_BEACON_FILTER_IE_NO_LONGER_PRESENT |
 +	                        WSM_BEACON_FILTER_IE_HAS_APPEARED;
@@ -8833,13 +8833,13 @@ index 000000000..62232cd4e
 +	priv->bf_table.entry[0].oui[2] = 0x9A;
 +
 +	priv->bf_table.entry[1].ieId = WLAN_EID_ERP_INFO;
-+	priv->bf_table.entry[1].actionFlags = 
++	priv->bf_table.entry[1].actionFlags =
 +	                        WSM_BEACON_FILTER_IE_HAS_CHANGED       |
 +	                        WSM_BEACON_FILTER_IE_NO_LONGER_PRESENT |
 +	                        WSM_BEACON_FILTER_IE_HAS_APPEARED;
 +
 +	priv->bf_table.entry[2].ieId = WLAN_EID_HT_OPERATION;
-+	priv->bf_table.entry[2].actionFlags = 
++	priv->bf_table.entry[2].actionFlags =
 +	                        WSM_BEACON_FILTER_IE_HAS_CHANGED       |
 +	                        WSM_BEACON_FILTER_IE_NO_LONGER_PRESENT |
 +	                        WSM_BEACON_FILTER_IE_HAS_APPEARED;
@@ -9302,8 +9302,8 @@ index 000000000..62232cd4e
 +
 +void xradio_set_beacon_wakeup_period_work(struct work_struct *work)
 +{
-+	
-+	struct xradio_vif *priv = 
++
++	struct xradio_vif *priv =
 +	       container_of(work, struct xradio_vif, set_beacon_wakeup_period_work);
 +
 +
@@ -9335,7 +9335,7 @@ index 000000000..62232cd4e
 +	static u8 broadcast_ipv4[ETH_ALEN] = {
 +		0x01, 0x00, 0x5e, 0x00, 0x00, 0x01
 +	};
-+	
++
 +	int i= 0;
 +	xradio_for_each_vif(hw_priv,priv,i) {
 +		struct netdev_hw_addr *ha = NULL;
@@ -9354,7 +9354,7 @@ index 000000000..62232cd4e
 +			sta_printk(XRADIO_DBG_MSG, "multicast: %pM\n", ha->addr);
 +			memcpy(&priv->multicast_filter.macAddress[count], ha->addr, ETH_ALEN);
 +			if (memcmp(ha->addr, broadcast_ipv4, ETH_ALEN) &&
-+		    	memcmp(ha->addr, broadcast_ipv6, ETH_ALEN))
++			memcmp(ha->addr, broadcast_ipv6, ETH_ALEN))
 +				priv->has_multicast_subscription = true;
 +			count++;
 +		}
@@ -9379,44 +9379,44 @@ index 000000000..62232cd4e
 +	if (hw_priv->vif_list[0] == NULL && hw_priv->vif_list[1] == NULL)
 +
 +		*total_flags &= ~(1<<31);
-+		
++
 +	xradio_for_each_vif(hw_priv, priv, i) {
 +		if(NULL == priv)
 +			continue;
 +
 +#if 0
 +		bool listening = !!(*total_flags &
-+	                     	(FIF_PROMISC_IN_BSS      |
-+	                      	FIF_OTHER_BSS           |
-+	                      	FIF_BCN_PRBRESP_PROMISC |
-+	                      	FIF_PROBE_REQ));
++				(FIF_PROMISC_IN_BSS      |
++				FIF_OTHER_BSS           |
++				FIF_BCN_PRBRESP_PROMISC |
++				FIF_PROBE_REQ));
 +#endif
 +
 +		*total_flags &= FIF_OTHER_BSS      |
-+	                	FIF_FCSFAIL        |
-+	                	FIF_BCN_PRBRESP_PROMISC |
-+	                	FIF_PROBE_REQ;
++				FIF_FCSFAIL        |
++				FIF_BCN_PRBRESP_PROMISC |
++				FIF_PROBE_REQ;
 +
 +		down(&hw_priv->scan.lock);
 +		mutex_lock(&hw_priv->conf_mutex);
 +
 +		priv->rx_filter.promiscuous = 0;
-+		priv->rx_filter.bssid = (*total_flags & 
-+	                         	(FIF_OTHER_BSS | FIF_PROBE_REQ)) ? 1 : 0;
++		priv->rx_filter.bssid = (*total_flags &
++					(FIF_OTHER_BSS | FIF_PROBE_REQ)) ? 1 : 0;
 +		priv->rx_filter.fcs = (*total_flags & FIF_FCSFAIL) ? 1 : 0;
 +		priv->bf_control.bcn_count = (*total_flags &
-+	                              	(FIF_BCN_PRBRESP_PROMISC |
-+	                               	FIF_PROBE_REQ)) ? 1 : 0;
++					(FIF_BCN_PRBRESP_PROMISC |
++					FIF_PROBE_REQ)) ? 1 : 0;
 +
 +		/*add for handle ap FIF_PROBE_REQ message,*/
 +		priv->rx_filter.promiscuous = 0;
 +		priv->rx_filter.fcs = 0;
 +		if(NL80211_IFTYPE_AP == priv->vif->type){
 +			priv->bf_control.bcn_count = 1;
-+			priv->rx_filter.bssid = 1; 	
++			priv->rx_filter.bssid = 1;
 +		}else{
 +			priv->bf_control.bcn_count = 0;
-+			priv->rx_filter.bssid = 0; 
++			priv->rx_filter.bssid = 0;
 +		}
 +#if 0
 +		if (priv->listening ^ listening) {
@@ -9467,11 +9467,11 @@ index 000000000..62232cd4e
 +			goto out;
 +		}
 +
-+		WSM_EDCA_SET(&priv->edca, queue, params->aifs, 
-+		              params->cw_min, params->cw_max, 
++		WSM_EDCA_SET(&priv->edca, queue, params->aifs,
++		              params->cw_min, params->cw_max,
 +		              params->txop, 0xc8, params->uapsd);
-+		/* sta role is not support  the uapsd */ 
-+		if (priv->mode == NL80211_IFTYPE_STATION || 
++		/* sta role is not support  the uapsd */
++		if (priv->mode == NL80211_IFTYPE_STATION ||
 +				priv->mode == NL80211_IFTYPE_P2P_CLIENT)
 +			priv->edca.params[queue].uapsdEnable = 0;
 +
@@ -9548,7 +9548,7 @@ index 000000000..62232cd4e
 +
 +	BUG_ON(queueId >= 4);
 +
-+	sta_printk(XRADIO_DBG_MSG, "Setting default WEP key: %d\n", 
++	sta_printk(XRADIO_DBG_MSG, "Setting default WEP key: %d\n",
 +	           priv->wep_default_key_id);
 +
 +	wsm_flush_tx(hw_priv);
@@ -9710,7 +9710,7 @@ index 000000000..62232cd4e
 +		if_id = priv->if_id;
 +
 +#ifdef ROC_DEBUG
-+		sta_printk(XRADIO_DBG_WARN, "ROC IN %d ch %d\n", 
++		sta_printk(XRADIO_DBG_WARN, "ROC IN %d ch %d\n",
 +		           priv->if_id, chan->hw_value);
 +#endif
 +		/* default only p2p interface if_id can remain on */
@@ -9966,7 +9966,7 @@ index 000000000..62232cd4e
 +		spin_unlock(&priv->bss_loss_lock);
 +		//link is alive.
 +		cancel_delayed_work_sync(&priv->connection_loss_work);
-+		return; 
++		return;
 +	} else if (priv->bss_loss_status == XRADIO_BSS_LOSS_CHECKING) {
 +		/* it mean no confirming packets, just report loss. */
 +	}
@@ -9997,7 +9997,7 @@ index 000000000..62232cd4e
 +{
 +	struct xradio_vif *priv =
 +	  container_of(work, struct xradio_vif, connection_loss_work.work);
-+	sta_printk(XRADIO_DBG_ERROR, "[CQM] if%d Reporting connection loss.\n", 
++	sta_printk(XRADIO_DBG_ERROR, "[CQM] if%d Reporting connection loss.\n",
 +	           priv->if_id);
 +	ieee80211_connection_loss(priv->vif);
 +}
@@ -10095,7 +10095,7 @@ index 000000000..62232cd4e
 +		up(&hw_priv->scan.lock);
 +		ieee80211_connection_loss(priv->vif);
 +		sta_printk(XRADIO_DBG_ERROR,"lock %d\n", hw_priv->scan.lock.count);
-+		
++
 +		return;
 +	}
 +	mutex_lock(&hw_priv->conf_mutex);
@@ -10325,7 +10325,7 @@ index 000000000..62232cd4e
 +	struct xradio_vif *priv =
 +		container_of(work, struct xradio_vif, unjoin_work);
 +	struct xradio_common *hw_priv = xrwl_vifpriv_to_hwpriv(priv);
-+	
++
 +	struct wsm_reset reset = {
 +		.reset_statistics = true,
 +	};
@@ -10344,7 +10344,7 @@ index 000000000..62232cd4e
 +	mutex_lock(&hw_priv->conf_mutex);
 +	if (unlikely(atomic_read(&hw_priv->scan.in_progress))) {
 +		if (atomic_xchg(&priv->delayed_unjoin, 1)) {
-+			sta_printk(XRADIO_DBG_NIY, 
++			sta_printk(XRADIO_DBG_NIY,
 +				"%s: Delayed unjoin "
 +				"is already scheduled.\n",
 +				__func__);
@@ -10356,7 +10356,7 @@ index 000000000..62232cd4e
 +
 +	if (priv->join_status &&
 +			priv->join_status > XRADIO_JOIN_STATUS_STA) {
-+		sta_printk(XRADIO_DBG_ERROR, 
++		sta_printk(XRADIO_DBG_ERROR,
 +				"%s: Unexpected: join status: %d\n",
 +				__func__, priv->join_status);
 +		BUG_ON(1);
@@ -10663,7 +10663,7 @@ index 000000000..62232cd4e
 +				 "aifs=%u, cw_min=%u, cw_max=%u \n",
 +				priv->edca.params[2].aifns, priv->edca.params[2].cwMin,
 +				 priv->edca.params[2].cwMax);
-+#if 0					 
++#if 0
 +		}else {
 +			WSM_EDCA_SET(&priv->edca, 2, 0x0003, 0x000f, 0x03ff,
 +				0, 0xc8, false);
@@ -10867,12 +10867,12 @@ index 000000000..62232cd4e
 +		goto exit_p;
 +	}
 +	dot11hdr = (struct ieee80211_hdr_3addr *)&template_frame[4];
-+	
++
 +	framehdrlen = sizeof(*dot11hdr);
 +	if ((priv->vif->type == NL80211_IFTYPE_AP) && priv->vif->p2p)
 +	        priv->cipherType = WLAN_CIPHER_SUITE_CCMP;
 +	switch (priv->cipherType) {
-+	
++
 +	case WLAN_CIPHER_SUITE_WEP40:
 +	case WLAN_CIPHER_SUITE_WEP104:
 +		sta_printk(XRADIO_DBG_NIY, "WEP\n");
@@ -10880,29 +10880,29 @@ index 000000000..62232cd4e
 +		encrypttailsize = WEP_ENCRYPT_TAIL_SIZE;
 +		encrypt = 1;
 +		break;
-+	
-+	
++
++
 +	case WLAN_CIPHER_SUITE_TKIP:
 +		sta_printk(XRADIO_DBG_NIY, "WPA\n");
 +		encrypthdr = WPA_ENCRYPT_HDR_SIZE;
 +		encrypttailsize = WPA_ENCRYPT_TAIL_SIZE;
 +		encrypt = 1;
 +		break;
-+	
++
 +	case WLAN_CIPHER_SUITE_CCMP:
 +		sta_printk(XRADIO_DBG_NIY, "WPA2\n");
 +		encrypthdr = WPA2_ENCRYPT_HDR_SIZE;
 +		encrypttailsize = WPA2_ENCRYPT_TAIL_SIZE;
 +		encrypt = 1;
 +		break;
-+	
++
 +	case WLAN_CIPHER_SUITE_SMS4:
 +		sta_printk(XRADIO_DBG_NIY, "WAPI\n");
 +		encrypthdr = WAPI_ENCRYPT_HDR_SIZE;
 +		encrypttailsize = WAPI_ENCRYPT_TAIL_SIZE;
 +		encrypt = 1;
 +		break;
-+	
++
 +	default:
 +		encrypthdr = 0;
 +		encrypttailsize = 0;
@@ -10917,10 +10917,10 @@ index 000000000..62232cd4e
 +		dot11hdr->frame_control |= cpu_to_le16(IEEE80211_FCTL_TODS);
 +	else
 +		dot11hdr->frame_control |= cpu_to_le16(IEEE80211_FCTL_FROMDS);
-+	
++
 +	if (encrypt)
 +		dot11hdr->frame_control |= cpu_to_le16(IEEE80211_FCTL_WEP);
-+	
++
 +	if (priv->vif->bss_conf.qos) {
 +		sta_printk(XRADIO_DBG_NIY, "QOS Enabled\n");
 +		dot11hdr->frame_control |= cpu_to_le16(IEEE80211_QOS_DATAGRP);
@@ -10929,11 +10929,11 @@ index 000000000..62232cd4e
 +	} else {
 +		dot11hdr->frame_control |= cpu_to_le16(IEEE80211_STYPE_DATA);
 +	}
-+	
++
 +	memcpy(dot11hdr->addr1, priv->vif->bss_conf.bssid, ETH_ALEN);
 +	memcpy(dot11hdr->addr2, priv->vif->addr, ETH_ALEN);
 +	memcpy(dot11hdr->addr3, priv->vif->bss_conf.bssid, ETH_ALEN);
-+	
++
 +	/* Filling the LLC/SNAP Hdr */
 +	snaphdr = (struct ieee80211_snap_hdr *)((u8 *)dot11hdr + framehdrlen);
 +	memcpy(snaphdr, (struct ieee80211_snap_hdr *)rfc1042_header, \
@@ -10941,7 +10941,7 @@ index 000000000..62232cd4e
 +	*(u16 *)(++snaphdr) = cpu_to_be16(ETH_P_ARP);
 +	/* Updating the framebdylen with snaphdr and LLC hdr size */
 +	framebdylen = sizeof(*snaphdr) + 2;
-+	
++
 +	/* Filling the ARP Reply Payload */
 +	arp_hdr = (struct arphdr *)((u8 *)dot11hdr + framehdrlen + framebdylen);
 +	arp_hdr->ar_hrd = cpu_to_be16(ARPHRD_ETHER);
@@ -10949,20 +10949,20 @@ index 000000000..62232cd4e
 +	arp_hdr->ar_hln = ETH_ALEN;
 +	arp_hdr->ar_pln = 4;
 +	arp_hdr->ar_op = cpu_to_be16(ARPOP_REPLY);
-+	
++
 +	/* Updating the frmbdylen with Arp Reply Hdr and Arp payload size(20) */
 +	framebdylen += sizeof(*arp_hdr) + 20;
-+	
++
 +	/* Updating the framebdylen with Encryption Tail Size */
 +	framebdylen += encrypttailsize;
-+	
++
 +	/* Filling the Template Frame Hdr */
 +	template_frame[0] = WSM_FRAME_TYPE_ARP_REPLY; /* Template frame type */
 +	template_frame[1] = 0xFF; /* Rate to be fixed */
 +	((u16 *)&template_frame[2])[0] = framehdrlen + framebdylen;
-+	
++
 +	ret = WARN_ON(wsm_write_mib(hw_priv, WSM_MIB_ID_TEMPLATE_FRAME, \
-+	                              template_frame, (framehdrlen+framebdylen+4), 
++	                              template_frame, (framehdrlen+framebdylen+4),
 +	                              priv->if_id));
 +	kfree(template_frame);
 +exit_p:
@@ -10988,7 +10988,7 @@ index 000000000..62232cd4e
 +	struct sk_buff *skb = NULL;
 +
 +
-+	skb = cfg80211_testmode_alloc_event_skb(wiphy, 
++	skb = cfg80211_testmode_alloc_event_skb(wiphy,
 +	      nla_total_size(len+sizeof(msg_id)), gfp);
 +
 +	if (!skb)
@@ -11155,7 +11155,7 @@ index 000000000..de8f8377f
 +#endif
 diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
 new file mode 100644
-index 000000000..fd31541ee
+index 000000000..fbda430b9
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/tx.c
 @@ -0,0 +1,1321 @@
@@ -11271,7 +11271,7 @@ index 000000000..fd31541ee
 +	for (i = 0; i < count; ++i) {
 +		if(rates[i].idx>=0) {
 +			tmp_rate = xradio_get_tx_rate(hw_priv, &rates[i]);
-+			txrx_printk(XRADIO_DBG_NIY,"[TX policy] Org %d.%dMps=%d f=%d\n", 
++			txrx_printk(XRADIO_DBG_NIY,"[TX policy] Org %d.%dMps=%d f=%d\n",
 +		            tmp_rate->bitrate/10, tmp_rate->bitrate%10, rates[i].count, rates[i].flags);
 +		}
 +	}
@@ -11282,7 +11282,7 @@ index 000000000..fd31541ee
 +	//insert sort, because the table is only 4-8 elements
 +	//11n rates have need to be above 11g/n rates, but typically minstrel doesn't mix 11n and 11b/g anyway
 +	#define RATE_SORT_VALUE(rate) ((rate).idx + (((rate).flags & IEEE80211_TX_RC_MCS) << 4))
-+	
++
 +	for(i = 1; i < count; ++i) {
 +		j = i;
 +		tmp_tx_rate = rates[i];
@@ -11299,11 +11299,11 @@ index 000000000..fd31541ee
 +	 * as 4 bit uints with the rate implicit through the position in the bitfield.
 +	 * So it is not possible to put the same rate twice, (i.e. try with RTS before reducing rate).
 +	 */
-+	
++
 +	/* create policy field: 4 bit retry counter per rate */
 +	for (i = 0; i < count; ++i) {
 +		register unsigned rateid, off, shift, retries;
-+		
++
 +		tmp_rate = (struct ieee80211_rate *)xradio_get_tx_rate(hw_priv, &rates[i]);
 +		if(tmp_rate) {
 +			rateid = tmp_rate->hw_value;
@@ -11318,10 +11318,10 @@ index 000000000..fd31541ee
 +			rates[i].count = retries = 0x0F;
 +		policy->tbl[off] |= __cpu_to_le32(retries << shift);
 +		policy->retry_count += retries;
-+		txrx_printk(XRADIO_DBG_NIY,"[TX policy] %d.%dMps=%d", 
++		txrx_printk(XRADIO_DBG_NIY,"[TX policy] %d.%dMps=%d",
 +		            tmp_rate->bitrate/10, tmp_rate->bitrate%10, retries);
 +	}
-+	
++
 +	txrx_printk(XRADIO_DBG_MSG, "[TX policy] Policy (%d): " \
 +		"%d:%d (%d), %d:%d (%d), %d:%d (%d), %d:%d (%d)\n",
 +		count,
@@ -11496,7 +11496,7 @@ index 000000000..fd31541ee
 +			dst->shortRetryCount = hw_priv->short_frame_max_tx_count-1;
 +			//only RTS need use longRetryCount, should be short_frame.
 +			dst->longRetryCount = hw_priv->short_frame_max_tx_count-1;
-+			
++
 +			/* BIT(2) - Terminate retries when Tx rate retry policy
 +			 *          finishes.
 +			 * BIT(3) - Count initial frame transmission as part of
@@ -11511,7 +11511,7 @@ index 000000000..fd31541ee
 +	}
 +	spin_unlock_bh(&cache->lock);
 +	atomic_set(&hw_priv->upload_count, 0);
-+	
++
 +	txrx_printk(XRADIO_DBG_MSG, "[TX policy] Upload %d policies\n",
 +				arg.hdr.numTxRatePolicies);
 +
@@ -11547,9 +11547,9 @@ index 000000000..fd31541ee
 +{
 +	u32 ret = 0;
 +	int i;
-+	u32 n_bitrates = 
++	u32 n_bitrates =
 +	          hw_priv->hw->wiphy->bands[hw_priv->channel->band]->n_bitrates;
-+	struct ieee80211_rate * bitrates = 
++	struct ieee80211_rate * bitrates =
 +	          hw_priv->hw->wiphy->bands[hw_priv->channel->band]->bitrates;
 +
 +	for (i = 0; i < n_bitrates; ++i) {
@@ -11586,10 +11586,10 @@ index 000000000..fd31541ee
 +{
 +	s16 ret = (s16)hw_value;
 +	if(flag & IEEE80211_TX_RC_MCS) {  //11n
-+		if(hw_value <= hw_priv->mcs_rates[7].hw_value && 
++		if(hw_value <= hw_priv->mcs_rates[7].hw_value &&
 +			 hw_value >= hw_priv->mcs_rates[0].hw_value)
 +			ret -= hw_priv->mcs_rates[0].hw_value;
-+		else 
++		else
 +			ret = -1;
 +	} else {  //11b/g
 +		if(hw_value>5 && hw_value<hw_priv->mcs_rates[0].hw_value) {
@@ -12041,14 +12041,14 @@ index 000000000..fd31541ee
 +	} else if (ieee80211_is_data_present(frame->frame_control)) {
 +		/* since Umac had already alloc IV space in ccmp skb, so we need to add this iv_len as the new offset to LLC */
 +		u8* llc = NULL;
-+		if(t.tx_info->control.hw_key && 
-+		  	(t.hdr->frame_control & __cpu_to_le32(IEEE80211_FCTL_PROTECTED)) &&
-+		  		(t.tx_info->control.hw_key->cipher == WLAN_CIPHER_SUITE_CCMP))
++		if(t.tx_info->control.hw_key &&
++			(t.hdr->frame_control & __cpu_to_le32(IEEE80211_FCTL_PROTECTED)) &&
++				(t.tx_info->control.hw_key->cipher == WLAN_CIPHER_SUITE_CCMP))
 +			llc = skb->data+ieee80211_hdrlen(frame->frame_control) + t.tx_info->control.hw_key->iv_len;
 +		else
 +			llc = skb->data+ieee80211_hdrlen(frame->frame_control);
 +		if (0) { //is_dhcp(llc) || is_8021x(llc)) {
-+			t.txpriv.use_bg_rate = 
++			t.txpriv.use_bg_rate =
 +			hw_priv->hw->wiphy->bands[hw_priv->channel->band]->bitrates[0].hw_value;
 +			if (priv->vif->p2p)
 +				t.txpriv.use_bg_rate = AG_RATE_INDEX;
@@ -12063,7 +12063,7 @@ index 000000000..fd31541ee
 +	}
 +
 +#ifdef AP_HT_COMPAT_FIX
-+	if (ieee80211_is_assoc_req(frame->frame_control) && 
++	if (ieee80211_is_assoc_req(frame->frame_control) &&
 +		priv->if_id == 0 && !(priv->ht_compat_det & 0x10)) {
 +		xradio_remove_ht_ie(priv, skb);
 +	}
@@ -12073,7 +12073,7 @@ index 000000000..fd31541ee
 +	xradio_frame_monitor(hw_priv,skb,true);
 +#endif
 +
-+	if (ieee80211_is_action(frame->frame_control) && 
++	if (ieee80211_is_action(frame->frame_control) &&
 +		mgmt->u.action.category == WLAN_CATEGORY_PUBLIC) {
 +		u8 *action = (u8*)&mgmt->u.action.category;
 +		xradio_check_go_neg_conf_success(hw_priv, action);
@@ -12096,14 +12096,14 @@ index 000000000..fd31541ee
 +	//	(hw_priv->tx_queue[t.queue].num_queued_vif[0] >=
 +	//		hw_priv->vif0_throttle)) {
 +	//	spin_unlock_bh(&hw_priv->tx_queue[t.queue].lock);
-+	//	
++	//
 +	//	ret = __LINE__;
 +	//	goto drop;
 +	//} else if ((priv->if_id == 1) &&
 +	//	(hw_priv->tx_queue[t.queue].num_queued_vif[1] >=
 +	//		hw_priv->vif1_throttle)) {
 +	//	spin_unlock_bh(&hw_priv->tx_queue[t.queue].lock);
-+	//	
++	//
 +	//	ret = __LINE__;
 +	//	goto drop;
 +	//}
@@ -12311,9 +12311,9 @@ index 000000000..fd31541ee
 +		tx->status.ampdu_len = 1;
 +		tx->status.ampdu_ack_len = 1;
 +
-+		txrx_printk(XRADIO_DBG_NIY,"rate_try: %08x, %08x, %08x\n", 
++		txrx_printk(XRADIO_DBG_NIY,"rate_try: %08x, %08x, %08x\n",
 +				         arg->rate_try[2], arg->rate_try[1], arg->rate_try[0]);
-+		
++
 +		if(!arg->status) {
 +			success_idx = xradio_get_rate_idx_2g(arg->txedRate);
 +			//PERFORMANCE DEBUG
@@ -12322,7 +12322,7 @@ index 000000000..fd31541ee
 +			//		printk("SENT FRAME QUEUED FOR: %d ms\n", arg->txQueueDelay/1000);
 +			//}
 +		}
-+		
++
 +		//each nibble of rate_try contains the retries per hw_idx
 +		for(i = 2; i >= 0; i--) {
 +			u8 hw_idx, retries;
@@ -12347,15 +12347,15 @@ index 000000000..fd31541ee
 +				tx->status.rates[rate_num].flags = hw_idx >= WSM_TRANSMIT_RATE_HT_6 ? ht_flags : 0;
 +
 +				txrx_printk(XRADIO_DBG_NIY, "rate_num=%d, hw=%d, idx=%d, "
-+							"attempts=%d, flags=0x%x", rate_num, hw_idx, 
++							"attempts=%d, flags=0x%x", rate_num, hw_idx,
 +							txed_idx, retries, tx->status.rates[rate_num].flags);
-+				
++
 +				rate_num++;
 +				if(rate_num >= IEEE80211_TX_MAX_RATES)
 +					goto rate_table_full;
 +			}
 +		}
-+		
++
 +rate_table_full:
 +
 +		if(success_idx >= 0) {
@@ -12365,7 +12365,7 @@ index 000000000..fd31541ee
 +			tx->status.rates[rate_num].flags = arg->txedRate >= WSM_TRANSMIT_RATE_HT_6 ? ht_flags : 0;
 +			rate_num++;
 +		}
-+		
++
 +		for ( ; rate_num < IEEE80211_TX_MAX_RATES; ++rate_num) {
 +			tx->status.rates[rate_num].idx = -1;
 +			tx->status.rates[rate_num].count = 0;
@@ -12378,7 +12378,7 @@ index 000000000..fd31541ee
 +		tx->status.rates[1].idx, tx->status.rates[1].count, tx->status.rates[1].flags,
 +		tx->status.rates[2].idx, tx->status.rates[2].count, tx->status.rates[2].flags,
 +		tx->status.rates[3].idx, tx->status.rates[3].count, tx->status.rates[3].flags);
-+		
++
 +
 +		xradio_queue_remove(queue, arg->packetID);
 +	}
@@ -12573,7 +12573,7 @@ index 000000000..2c276b42c
 +#endif /* XRADIO_TXRX_H */
 diff --git a/drivers/net/wireless/xradio/wsm.c b/drivers/net/wireless/xradio/wsm.c
 new file mode 100644
-index 000000000..ea737709e
+index 000000000..7c8bb9d9b
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/wsm.c
 @@ -0,0 +1,3010 @@
@@ -12741,7 +12741,7 @@ index 000000000..ea737709e
 +    rrm_paras.TxPowerLevel = 0x11;
 +    rrm_paras.DurationMandatory = 0x22;
 +    rrm_paras.MeasurementRequestLength = 0x33;
-+    
++
 +    type     = (measure_type&0xf0)>>4;
 +    sub_type =  measure_type&0xf;
 +    rrm_paras.MeasurementType = type;
@@ -12766,7 +12766,7 @@ index 000000000..ea737709e
 +        rrm_req->NoisHistogramParams.MeasurementStartTimeh = 0;
 +    }
 +    ret = wsm_start_measure_requset(hw_priv, &rrm_paras, 0);
-+    
++
 +    return ret;
 +}
 +
@@ -13611,7 +13611,7 @@ index 000000000..ea737709e
 +{
 +	struct wsm_buf *buf = NULL;
 +	int i, err = 0;
-+	
++
 +	for (i = 0; i < WSM_MAX_BUF; i++) {
 +		buf = &hw_priv->wsm_release_buf[i];
 +		if(likely(buf)) {
@@ -13673,7 +13673,7 @@ index 000000000..ea737709e
 +					wsm_printk(XRADIO_DBG_MSG, "PS State NOTIFIED %d\n", ret);
 +					WARN_ON(ret);
 +				}
-+				rcu_read_unlock();			
++				rcu_read_unlock();
 +			}
 +		}
 +		/* Replace STA mask with one reported by FW */
@@ -13782,7 +13782,7 @@ index 000000000..ea737709e
 +		hw_priv->wsm_caps.firmwareBuildNumber,
 +		hw_priv->wsm_caps.firmwareApiVer,
 +		hw_priv->wsm_caps.firmwareCap);
-+	
++
 +	dev_info(hw_priv->pdev, "Firmware Label:%s\n", &hw_priv->wsm_caps.fw_label[0]);
 +
 +	hw_priv->wsm_caps.firmwareReady = 1;
@@ -13952,7 +13952,7 @@ index 000000000..ea737709e
 +		//remove wsm hdr of skb
 +		hdr_len = buf->data - buf->begin;
 +		skb_pull(*skb_p, hdr_len);
-+		
++
 +		/* FW Workaround: Drop probe resp or
 +		beacon when RSSI is 0 */
 +		hdr = (struct ieee80211_hdr *) (*skb_p)->data;
@@ -14053,7 +14053,7 @@ index 000000000..ea737709e
 +    u8 cca_chanload;
 +    u32 buf_len = 0;
 +    u32 *data;
-+	
++
 +    LMAC_MEAS_CHANNEL_LOAD_RESULTS *chanload_res;
 +    LMAC_MEAS_NOISE_HISTOGRAM_RESULTS *noise_res;
 +	WSM_GET(buf, &measure_cmpl, 12);
@@ -14077,7 +14077,7 @@ index 000000000..ea737709e
 +	}
 +	wsm_printk(XRADIO_DBG_ERROR, "[11K]buf_len = %d\n", buf_len);
 +    WSM_GET(buf, &measure_cmpl.MeasurementReport, buf_len);
-+	
++
 +	data = (u32 *)(&measure_cmpl);
 +//	wsm_printk(XRADIO_DBG_ERROR, "[***HL***]data[0]=%08x\n", data[0]);
 +//	wsm_printk(XRADIO_DBG_ERROR, "[***HL***]data[1]=%08x\n", data[1]);
@@ -14087,13 +14087,13 @@ index 000000000..ea737709e
 +//	wsm_printk(XRADIO_DBG_ERROR, "[***HL***]data[5]=%08x\n", data[5]);
 +//	wsm_printk(XRADIO_DBG_ERROR, "[***HL***]data[6]=%08x\n", data[6]);
 +	wsm_printk(XRADIO_DBG_ERROR, "[***HL***]MeasurementType=%0d\n", measure_cmpl.MeasurementType);
-+	
++
 +	if (measure_cmpl.Status == WSM_STATUS_SUCCESS){
 +	    switch (measure_cmpl.MeasurementType) {
 +	        case ChannelLoadMeasurement:
 +	            chanload_res = &measure_cmpl.MeasurementReport.ChannelLoadResults;
-+	            cca_chanload = (chanload_res->ChannelLoadCCA == MEAS_CCA) ? 
-+	                            chanload_res->CCAbusyFraction : 
++	            cca_chanload = (chanload_res->ChannelLoadCCA == MEAS_CCA) ?
++	                            chanload_res->CCAbusyFraction :
 +	                            chanload_res->ChannelLoad;
 +	            #ifdef PRINT_11K_MEASRURE
 +	                wsm_printk(XRADIO_DBG_ERROR, "[11K] ChannelLoadMeasurement Result:\n"\
@@ -14101,17 +14101,17 @@ index 000000000..ea737709e
 +	                                             "ChannelNum     = %d\n"\
 +	                                             "Duration       = %d\n"\
 +	                                             "Fraction       = %d\n", \
-+            	               chanload_res->ChannelLoadCCA,\
-+            	               chanload_res->ChannelNum,\
-+            	               chanload_res->MeasurementDuration,\
-+            	               cca_chanload
-+            	               );
++		               chanload_res->ChannelLoadCCA,\
++		               chanload_res->ChannelNum,\
++		               chanload_res->MeasurementDuration,\
++		               cca_chanload
++		               );
 +	            #endif
 +	            break;
 +	        case NoiseHistrogramMeasurement:
 +	            noise_res = &measure_cmpl.MeasurementReport.NoiseHistogramResults;
-+//	            IpiRpi = (noise_res->IpiRpi == MEAS_RPI) ? 
-+//	                            chanload_res->CCAbusyFraction : 
++//	            IpiRpi = (noise_res->IpiRpi == MEAS_RPI) ?
++//	                            chanload_res->CCAbusyFraction :
 +//	                            chanload_res->ChannelLoad;
 +	            #ifdef PRINT_11K_MEASRURE
 +	                wsm_printk(XRADIO_DBG_ERROR, "[11K] NoiseHistogramResults:\n"\
@@ -14128,20 +14128,20 @@ index 000000000..ea737709e
 +	                                             "PI_8__Density = %d\n"\
 +	                                             "PI_9__Density = %d\n"\
 +	                                             "PI_10_Density = %d\n", \
-+            	               noise_res->IpiRpi,\
-+            	               noise_res->ChannelNum,\
-+            	               noise_res->PI_0_Density,\
-+            	               noise_res->PI_1_Density,\
-+            	               noise_res->PI_2_Density,\
-+            	               noise_res->PI_3_Density,\
-+            	               noise_res->PI_4_Density,\
-+            	               noise_res->PI_5_Density,\
-+            	               noise_res->PI_6_Density,\
-+            	               noise_res->PI_7_Density,\
-+            	               noise_res->PI_8_Density,\
-+            	               noise_res->PI_9_Density,\
-+            	               noise_res->PI_10_Density
-+            	               );
++		               noise_res->IpiRpi,\
++		               noise_res->ChannelNum,\
++		               noise_res->PI_0_Density,\
++		               noise_res->PI_1_Density,\
++		               noise_res->PI_2_Density,\
++		               noise_res->PI_3_Density,\
++		               noise_res->PI_4_Density,\
++		               noise_res->PI_5_Density,\
++		               noise_res->PI_6_Density,\
++		               noise_res->PI_7_Density,\
++		               noise_res->PI_8_Density,\
++		               noise_res->PI_9_Density,\
++		               noise_res->PI_10_Density
++		               );
 +	            #endif
 +	            break;
 +	        case BeaconReport:
@@ -14318,7 +14318,7 @@ index 000000000..ea737709e
 +		/* Do not wait for timeout if BH is dead. Exit immediately. */
 +		ret = 0;
 +	} else {
-+		unsigned long wsm_cmd_max_tmo; 
++		unsigned long wsm_cmd_max_tmo;
 +
 +		/* Give start cmd a little more time */
 +		if (unlikely(tmo == WSM_CMD_START_TIMEOUT))
@@ -14337,8 +14337,8 @@ index 000000000..ea737709e
 +			ret = wait_event_timeout(hw_priv->wsm_cmd_wq, hw_priv->wsm_cmd.done, tmo);
 +
 +			/* check time since last rxed and max timeout.*/
-+		} while (!ret && 
-+		         time_before_eq(jiffies, hw_priv->rx_timestamp+tmo) && 
++		} while (!ret &&
++		         time_before_eq(jiffies, hw_priv->rx_timestamp+tmo) &&
 +		         time_before(jiffies, wsm_cmd_max_tmo));
 +
 +	}
@@ -14392,7 +14392,7 @@ index 000000000..ea737709e
 +	down(&hw_priv->tx_lock_sem);
 +	atomic_add(1, &hw_priv->tx_lock);
 +	/* always check event if wsm_vif_lock_tx.*/
-+	if (wsm_flush_tx(hw_priv)) 
++	if (wsm_flush_tx(hw_priv))
 +		wsm_printk(XRADIO_DBG_MSG, "TX is locked.\n");
 +	up(&hw_priv->tx_lock_sem);
 +}
@@ -14434,10 +14434,10 @@ index 000000000..ea737709e
 +				"will not flush TX.\n");
 +		return false;
 +	} else {
-+		/* Get "oldest" frame, if any frames stuck in firmware, 
++		/* Get "oldest" frame, if any frames stuck in firmware,
 +		   query all of them until max timeout. */
 +		int num = hw_priv->hw_bufs_used + 1;
-+		while (xradio_query_txpkt_timeout(hw_priv, XRWL_ALL_IFS, 
++		while (xradio_query_txpkt_timeout(hw_priv, XRWL_ALL_IFS,
 +		                                  0xffffffff, &timeout)) {
 +			if (timeout < 0 || !num) {
 +				/* Hmmm... Not good. Frame had stuck in firmware. */
@@ -14451,7 +14451,7 @@ index 000000000..ea737709e
 +				wake_up(&hw_priv->bh_wq);
 +#endif
 +				return false;
-+			} else if (wait_event_timeout(hw_priv->bh_evt_wq, 
++			} else if (wait_event_timeout(hw_priv->bh_evt_wq,
 +			                       !hw_priv->hw_bufs_used, timeout) > 0) {
 +				return true;
 +			}
@@ -14486,23 +14486,23 @@ index 000000000..ea737709e
 +				"will not flush TX.\n");
 +		return false;
 +	} else {
-+		/* Get "oldest" frame, if any frames stuck in firmware, 
++		/* Get "oldest" frame, if any frames stuck in firmware,
 +		   query all of them until max timeout. */
 +		int num = hw_priv->hw_bufs_used_vif[if_id] + 1;
 +		while (xradio_query_txpkt_timeout(hw_priv, if_id, 0xffffffff, &timeout)) {
 +			if (timeout < 0 || !num) {
 +				/* Hmmm... Not good. Frame had stuck in firmware. */
-+				wsm_printk(XRADIO_DBG_ERROR, "%s: if_id=%d, hw_bufs_used_vif=%d, num=%d\n", 
++				wsm_printk(XRADIO_DBG_ERROR, "%s: if_id=%d, hw_bufs_used_vif=%d, num=%d\n",
 +				           __func__, if_id, hw_priv->hw_bufs_used_vif[priv->if_id],
 +				           num);
-+				hw_priv->bh_error = 1; 
++				hw_priv->bh_error = 1;
 +	#ifdef BH_USE_SEMAPHORE
 +				up(&hw_priv->bh_sem);
 +	#else
 +				wake_up(&hw_priv->bh_wq);
 +	#endif
 +				return false;
-+			} else if (wait_event_timeout(hw_priv->bh_evt_wq, 
++			} else if (wait_event_timeout(hw_priv->bh_evt_wq,
 +			              !hw_priv->hw_bufs_used_vif[if_id], timeout) > 0) {
 +				return true;
 +			}
@@ -14596,7 +14596,7 @@ index 000000000..ea737709e
 +	i += 4;
 +	dev_err(hw_priv->pdev, "Firmware:CPSR: 0x%.8X, SPSR: 0x%.8X\n",
 +	           reg[i + 0], reg[i + 1]);
-+	
++
 +	return 0;
 +
 +underflow:
@@ -14611,14 +14611,14 @@ index 000000000..ea737709e
 +				                struct wsm_buf       *buf)
 +{
 +    //for only one debug item.
-+    u32 dbg_id, buf_data=0; 
-+    u16 dbg_buf_len; 
++    u32 dbg_id, buf_data=0;
++    u16 dbg_buf_len;
 +    u8  dbg_len;
 +    u8 *dbg_buf;
 +    dbg_id = WSM_GET32(buf);
 +
 +    dbg_buf_len = buf->end - buf->data;
-+    
++
 +    if (dbg_id == 5) {
 +	    do {
 +	        dbg_buf_len = buf->end - buf->data;
@@ -14629,17 +14629,17 @@ index 000000000..ea737709e
 +	            wsm_printk(XRADIO_DBG_ERROR, "[FW]debug ind err\n");
 +	            //ret = -EINVAL;
 +	            //return ret;
-+	            
-+	            
++
++
 +	            break;
 +	        }
-+        
++
 +        dbg_buf = buf->data;
 +        //print it;
 +        wsm_printk(XRADIO_DBG_ALWY,  "[FW-LOG] %s", dbg_buf);
 +        //
 +        buf->data += dbg_len;
-+        
++
 +    } while (buf->data < buf->end);
 +	} else {
 +		if (dbg_buf_len >= 4) {
@@ -14651,7 +14651,7 @@ index 000000000..ea737709e
 +	}
 +
 +    return 0;
-+    
++
 +underflow:
 +	WARN_ON(1);
 +	return -EINVAL;
@@ -14699,7 +14699,7 @@ index 000000000..ea737709e
 +			hw_priv->wsm_cmd.done = 1;
 +			spin_unlock(&hw_priv->wsm_cmd.lock);
 +			wake_up(&hw_priv->wsm_cmd_wq);
-+			wsm_printk(XRADIO_DBG_ALWY, "HWT TestID=0x%x Confirm ret=%d\n", 
++			wsm_printk(XRADIO_DBG_ALWY, "HWT TestID=0x%x Confirm ret=%d\n",
 +			           *(u16 *)(wsm_buf.data), hw_priv->wsm_cmd.ret);
 +		}
 +		return 0;
@@ -14727,7 +14727,7 @@ index 000000000..ea737709e
 +	if (id == 0x404) {
 +		ret = wsm_tx_confirm(hw_priv, &wsm_buf, interface_link_id);
 +#ifdef MCAST_FWDING
-+#if 1 
++#if 1
 +	} else if (id == 0x422) {
 +		ret = wsm_give_buffer_confirm(hw_priv, &wsm_buf);
 +#endif
@@ -14778,13 +14778,13 @@ index 000000000..ea737709e
 +		case 0x040B:
 +			if (likely(wsm_arg))
 +				ret = wsm_join_confirm(hw_priv, wsm_arg, &wsm_buf);
-+			if (ret) 
++			if (ret)
 +				wsm_printk(XRADIO_DBG_WARN, "Join confirm Failed!\n");
 +			break;
 +		case 0x040E: /* 11K measure*/
 +			if (likely(wsm_arg))
 +				ret = wsm_generic_confirm(hw_priv, wsm_arg, &wsm_buf);
-+			if (ret) 
++			if (ret)
 +				wsm_printk(XRADIO_DBG_ERROR, "[***HL***]11K Confirm Error\n");
 +
 +			break;
@@ -14830,9 +14830,9 @@ index 000000000..ea737709e
 +			WARN_ON(wsm_arg != NULL);
 +			ret = wsm_generic_confirm(hw_priv, wsm_arg, &wsm_buf);
 +			if (ret)
-+				wsm_printk(XRADIO_DBG_ERROR, 
++				wsm_printk(XRADIO_DBG_ERROR,
 +					"wsm_generic_confirm "
-+    					"failed for request 0x%.4X.\n",
++					"failed for request 0x%.4X.\n",
 +					id & ~0x0400);
 +			break;
 +		default:
@@ -14862,7 +14862,7 @@ index 000000000..ea737709e
 +		case 0x0807:
 +		    wsm_printk(XRADIO_DBG_ERROR, "[11K]wsm_measure_cmpl_indication\n");
 +//		    wsm_printk(XRADIO_DBG_ERROR, "[11K]wsm->len = %d\n",wsm->len);
-+			
++
 +			ret = wsm_measure_cmpl_indication(hw_priv, &wsm_buf);
 +			break;
 +		case 0x080A:
@@ -14923,7 +14923,7 @@ index 000000000..ea737709e
 +			break;
 +
 +		default:
-+			wsm_printk(XRADIO_DBG_ERROR,  "unknown Indmsg ID=0x%04x,len=%d\n", 
++			wsm_printk(XRADIO_DBG_ERROR,  "unknown Indmsg ID=0x%04x,len=%d\n",
 +			           wsm->id, wsm->len);
 +			break;
 +		}
@@ -14961,7 +14961,7 @@ index 000000000..ea737709e
 +
 +	switch (priv->mode) {
 +	case NL80211_IFTYPE_STATION:
-+		if (unlikely(priv->bss_loss_status == XRADIO_BSS_LOSS_CHECKING && 
++		if (unlikely(priv->bss_loss_status == XRADIO_BSS_LOSS_CHECKING &&
 +			         priv->join_status     == XRADIO_JOIN_STATUS_STA) &&
 +			         ieee80211_is_data(fctl)) {
 +			spin_lock(&priv->bss_loss_lock);
@@ -15005,7 +15005,7 @@ index 000000000..ea737709e
 +			action = doDrop;
 +		else if (unlikely(!(BIT(txpriv->raw_link_id) &
 +				(BIT(0) | priv->link_id_map)))) {
-+			wsm_printk(XRADIO_DBG_WARN, 
++			wsm_printk(XRADIO_DBG_WARN,
 +					"A frame with expired link id "
 +					"is dropped.\n");
 +			action = doDrop;
@@ -15017,7 +15017,7 @@ index 000000000..ea737709e
 +			 * drop and high power consumption of the driver.
 +			 * In this situation it is better just to drop
 +			 * the problematic frame. */
-+			wsm_printk(XRADIO_DBG_WARN, 
++			wsm_printk(XRADIO_DBG_WARN,
 +					"Too many attempts "
 +					"to requeue a frame. "
 +					"Frame is dropped, fctl=0x%04x.\n", fctl);
@@ -15076,12 +15076,12 @@ index 000000000..ea737709e
 +	break;
 +	case doJoin:
 +	{
-+		/* p2p should disconnect when sta try to join a different channel AP, 
++		/* p2p should disconnect when sta try to join a different channel AP,
 +		 * because no good performance in this case.
 +		 */
 +		struct xradio_vif *p2p_tmp_vif = __xrwl_hwpriv_to_vifpriv(hw_priv, 1);
 +		if (priv->if_id == 0 && p2p_tmp_vif) {
-+			if (p2p_tmp_vif->join_status >= XRADIO_JOIN_STATUS_STA && 
++			if (p2p_tmp_vif->join_status >= XRADIO_JOIN_STATUS_STA &&
 +			    hw_priv->channel_changed) {
 +				wsm_printk(XRADIO_DBG_WARN, "combo with different channels, p2p disconnect.\n");
 +				wms_send_disassoc_to_self(hw_priv, p2p_tmp_vif);
@@ -15555,7 +15555,7 @@ index 000000000..ea737709e
 +	}
 +}
 +
-+static struct xradio_vif 
++static struct xradio_vif
 +	*wsm_get_interface_for_tx(struct xradio_common *hw_priv)
 +{
 +	struct xradio_vif *priv = NULL, *i_priv;
@@ -15563,7 +15563,7 @@ index 000000000..ea737709e
 +
 +	if ( 1 /*TODO:COMBO*/) {
 +		spin_lock(&hw_priv->vif_list_lock);
-+		i_priv = hw_priv->vif_list[i] ? 
++		i_priv = hw_priv->vif_list[i] ?
 +		         xrwl_get_vif_from_ieee80211(hw_priv->vif_list[i]) : NULL;
 +		if (i_priv) {
 +			priv = i_priv;
@@ -15589,7 +15589,7 @@ index 000000000..ea737709e
 +}
 diff --git a/drivers/net/wireless/xradio/wsm.h b/drivers/net/wireless/xradio/wsm.h
 new file mode 100644
-index 000000000..cec208271
+index 000000000..a781e731a
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/wsm.h
 @@ -0,0 +1,2355 @@
@@ -15631,7 +15631,7 @@ index 000000000..cec208271
 +/* 11  Mbps            ERP-CCK (ERP-PBCC not supported) */
 +#define WSM_TRANSMIT_RATE_11		(3)
 +
-+/* Firmware will raise an exception and halt if mode 4 or 5 are used */ 
++/* Firmware will raise an exception and halt if mode 4 or 5 are used */
 +/* 22  Mbps            ERP-PBCC (Not supported) */
 +/* #define WSM_TRANSMIT_RATE_22		(4) */
 +
@@ -16419,7 +16419,7 @@ index 000000000..cec208271
 +
 +	/* WSM_TX_STATUS_... */
 +	/* [out] */ u16 flags;
-+	
++
 +	//rate feed back, add by yangfh
 +	/* [out] */ u32 rate_try[3];
 +
@@ -16953,7 +16953,7 @@ index 000000000..cec208271
 +    u32   MeasurementStartTimeh;
 +}LMAC_MEAS_NOISE_HISTOGRAM_PARAMS;
 +
-+#define LMAC_MAX_SSIDS       16 
++#define LMAC_MAX_SSIDS       16
 +#define LMAC_MAX_SSID_LENGTH 32
 +typedef struct LMAC_CHANNELS_S
 +{
@@ -17126,8 +17126,8 @@ index 000000000..cec208271
 +
 +typedef struct MEASUREMENT_COMPLETE_S
 +{
-+//    u16          RandomInterval;      
-+//    u16          Reserved0;          
++//    u16          RandomInterval;
++//    u16          Reserved0;
 +    u8           Dot11PowerMgmtMode;  // From here WSM_HI_MEASURE_CMPL_IND and MEASUREMENT_COMPLETE_S must be identical
 +    u8           MeasurementType;
 +    u16          MoreInd;   // Set to 1 if more indications are to follow for this measurement, otherwise 0;
@@ -17446,7 +17446,7 @@ index 000000000..cec208271
 +					int if_id)
 +{
 +	u32 val = arg->power_mode;
-+	
++
 +	if (arg->disableMoreFlagUsage)
 +		val |= BIT(4);
 +	if (arg->performAntDiversity)
@@ -17950,7 +17950,7 @@ index 000000000..cec208271
 +#endif /* XRADIO_HWIO_H_INCLUDED */
 diff --git a/drivers/net/wireless/xradio/xradio.h b/drivers/net/wireless/xradio/xradio.h
 new file mode 100644
-index 000000000..34143f8a0
+index 000000000..1b07aa971
 --- /dev/null
 +++ b/drivers/net/wireless/xradio/xradio.h
 @@ -0,0 +1,585 @@
@@ -18263,7 +18263,7 @@ index 000000000..34143f8a0
 +#ifdef MCAST_FWDING
 +	struct wsm_buf		wsm_release_buf[WSM_MAX_BUF];
 +	u8			buf_released;
-+#endif	
++#endif
 +#ifdef ROAM_OFFLOAD
 +	u8				auto_scanning;
 +	u8				frame_rcvd;
@@ -18436,7 +18436,7 @@ index 000000000..34143f8a0
 +#define TES_P2P_0002_STATE_GET_PKTID  0x02
 +#endif
 +
-+/* debug.h must be here because refer to struct xradio_vif and 
++/* debug.h must be here because refer to struct xradio_vif and
 +   struct xradio_common.*/
 +#include "debug.h"
 +

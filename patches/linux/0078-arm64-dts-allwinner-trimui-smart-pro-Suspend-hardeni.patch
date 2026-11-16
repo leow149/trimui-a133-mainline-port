@@ -1,4 +1,4 @@
-From 38c9dc2757b9a43cab7dd34d36762a578dc0b70a Mon Sep 17 00:00:00 2001
+From 5e7efd0708357d9d721168d004fe4ec718945c2c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:57 +0100
 Subject: [PATCH 078/106] arm64: dts: allwinner: trimui-smart-pro: Suspend
@@ -17,7 +17,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 2 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index f3499d633..6c66fb780 100644
+index a3abfa14b..ab329b73d 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -104,6 +104,7 @@ reg_vcc_pad: regulator-vcc-pad {

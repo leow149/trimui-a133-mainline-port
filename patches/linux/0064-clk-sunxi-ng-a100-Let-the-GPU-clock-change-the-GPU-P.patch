@@ -1,4 +1,4 @@
-From 7a251bd99bfa0e42b69a32683ef3727df8f1528b Mon Sep 17 00:00:00 2001
+From 1386ab10a76cc5ccc0ed60c4dff8d2620f87d230 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:05:59 +0100
 Subject: [PATCH 064/106] clk: sunxi-ng: a100: Let the GPU clock change the GPU
