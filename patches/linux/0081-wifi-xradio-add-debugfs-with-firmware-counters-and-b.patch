@@ -1,4 +1,4 @@
-From f63756b20e0a985b2db9bf88a552c94facbc38c8 Mon Sep 17 00:00:00 2001
+From f1f0542c3fbf825e894dc5fc161f6412a3c3a471 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:19:46 +0100
 Subject: [PATCH 081/106] wifi: xradio: add debugfs with firmware counters and
@@ -18,7 +18,7 @@ The directory lives under the wiphy's debugfs directory. Handlers that
 issue WSM commands take conf_mutex and refuse with -EBUSY while the bh
 thread is parked or dead; ampdu_len is written little-endian.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/Makefile  |   3 +-

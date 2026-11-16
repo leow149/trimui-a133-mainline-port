@@ -1,4 +1,4 @@
-From a6dd6174fb3e34ec6ba04a6a384decf4ecdffab2 Mon Sep 17 00:00:00 2001
+From eef2c5b2efe4a987e6c48e3089330fd50b201b9c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
 Subject: [PATCH 04/10] pvr: Make signals wait for waits not consumed by any
@@ -12,7 +12,7 @@ flipped buffers before the GPU had finished them. Also wait on the parked
 waits when processing the signals.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 ---
  src/imagination/vulkan/pvr_arch_queue.c | 28 ++++++++++++++++++-------
  1 file changed, 20 insertions(+), 8 deletions(-)

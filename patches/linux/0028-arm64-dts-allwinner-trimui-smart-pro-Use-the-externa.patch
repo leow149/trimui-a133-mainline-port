@@ -1,4 +1,4 @@
-From 407c0f7e9a1c1e1d1f45cd8034b4dce583880193 Mon Sep 17 00:00:00 2001
+From 03d99e27358ee52d47d9c606c8082236def9cd13 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:23 +0100
 Subject: [PATCH 028/106] arm64: dts: allwinner: trimui-smart-pro: Use the
@@ -7,8 +7,8 @@ Subject: [PATCH 028/106] arm64: dts: allwinner: trimui-smart-pro: Use the
 The board has a 32.768 kHz crystal on the RTC (the stock firmware runs from
 it with auto-switch on). Describe it and select it for the 32k clock.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../dts/allwinner/sun50i-a133-trimui-smartpro.dts  | 14 ++++++++++++++
  1 file changed, 14 insertions(+)

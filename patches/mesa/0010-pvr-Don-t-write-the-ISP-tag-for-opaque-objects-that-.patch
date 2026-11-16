@@ -1,4 +1,4 @@
-From fde46f762e04ba9569d26a207e85b55e85fb6b34 Mon Sep 17 00:00:00 2001
+From 0179ec1db0f1cec0980261676b3b8d502a3eaf70 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 14:24:13 +0100
 Subject: [PATCH 10/10] pvr: Don't write the ISP tag for opaque objects that
@@ -30,7 +30,7 @@ colour-mask-0 draw with depth, depth LEQUAL, stencil-only and discard
 variants): 6 of 8 cases failed before, all pass now; vkrtt, vkscissor and
 vkrenderarea still pass.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/pco/pco_data.h               |  4 ++++

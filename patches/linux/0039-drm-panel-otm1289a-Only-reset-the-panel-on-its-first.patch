@@ -1,4 +1,4 @@
-From 0ecf45a73002a046c910d64ff8fe1681581e05b8 Mon Sep 17 00:00:00 2001
+From c4afc544bd5fdd71f86775387f8d0f82e44b4441 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:06:24 +0100
 Subject: [PATCH 039/106] drm/panel: otm1289a: Only reset the panel on its
@@ -24,18 +24,18 @@ a power cycle that the board cannot do.
 For the same reason the driver can only be built in; unbinding the DSI
 host, which removes the panel device, is not supported either.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/gpu/drm/panel/Kconfig                 |  8 +-
- .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 79 +++++++++++--------
- 2 files changed, 51 insertions(+), 36 deletions(-)
+ drivers/gpu/drm/panel/Kconfig                 |  8 ++-
+ .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 71 ++++++++++---------
+ 2 files changed, 43 insertions(+), 36 deletions(-)
 
 diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
-index fab1ed5f4..03dbaeb3c 100644
+index 9f66bce56..8e5216470 100644
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -759,13 +759,17 @@ config DRM_PANEL_ORISETECH_OTM8009A
+@@ -759,9 +759,9 @@ config DRM_PANEL_ORISETECH_OTM8009A
  	  otm8009a 480x800 dsi 2dl panel.
  
  config DRM_PANEL_ORISETECH_OTM1289A
@@ -47,6 +47,9 @@ index fab1ed5f4..03dbaeb3c 100644
  	help
  	  Say Y here if you want to enable support for Orise Technology
  	  otm1289a 720x1280 dsi panel, as used on the TrimUI Smart Pro.
+@@ -769,6 +769,10 @@ config DRM_PANEL_ORISETECH_OTM1289A
+ 	  units; the driver detects it from its ID registers at power-up
+ 	  and sends the matching initialisation sequence.
  
 +	  Built-in only: the panel is reset only once, so it cannot be
 +	  brought back after the driver is unloaded or unbound, which also
@@ -56,10 +59,10 @@ index fab1ed5f4..03dbaeb3c 100644
  	tristate "OSD OSD101T2587-53TS DSI 1920x1200 video mode panel"
  	depends on OF
 diff --git a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
-index 2b3df810c..5aaf195e4 100644
+index e1733c08a..1bf774b3a 100644
 --- a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
 +++ b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
-@@ -32,7 +32,7 @@ struct otm1289a {
+@@ -43,7 +43,7 @@ struct otm1289a {
  	struct gpio_desc *reset_gpio;
  	struct regulator *supply;
  	enum drm_panel_orientation orientation;
@@ -68,7 +71,7 @@ index 2b3df810c..5aaf195e4 100644
  };
  
  /*
-@@ -277,30 +277,26 @@ static int otm1289a_disable(struct drm_panel *panel)
+@@ -306,30 +306,18 @@ static int otm1289a_disable(struct drm_panel *panel)
  	return 0;
  }
  
@@ -90,17 +93,9 @@ index 2b3df810c..5aaf195e4 100644
 -
 -static int otm1289a_prepare(struct drm_panel *panel)
 +/*
-+ * The panel is powered up and reset only once, on its first prepare, and from
-+ * then on only put into and taken out of sleep mode (disable/prepare).
-+ *
-+ * The ER68576 does not survive a second reset pulse without a power cycle in
-+ * between: it still answers DCS commands and takes the whole init sequence,
-+ * but stays dark, whatever the delay after the reset. The stock boot loader
-+ * power-cycles the panel before every reset. That cannot be done here: on
-+ * the TrimUI Smart Pro the panel rails (AXP717 CLDO1/CLDO4) have to stay on
-+ * (with them switchable the panel stayed dark from boot, see the board DT),
-+ * so they never actually go off. The supply is therefore kept enabled after
-+ * the first power-up as well, matching what the hardware does.
++ * Power up and reset the panel only on the first prepare; later prepares
++ * just take it out of sleep mode. The ER68576 stays dark after a second
++ * reset without a power cycle, and the board cannot switch the rails off.
 + */
 +static int otm1289a_power_up(struct otm1289a *ctx)
  {
@@ -114,7 +109,7 @@ index 2b3df810c..5aaf195e4 100644
  		return ret;
  	}
  
-@@ -312,21 +308,26 @@ static int otm1289a_prepare(struct drm_panel *panel)
+@@ -341,21 +329,26 @@ static int otm1289a_prepare(struct drm_panel *panel)
  		msleep(100);
  	}
  
@@ -146,13 +141,13 @@ index 2b3df810c..5aaf195e4 100644
 +
 +	ret = otm1289a_init_sequence_send(ctx);
 +	if (ret)
-+		dev_err(panel->dev, "init sequence failed: %d\n", ret);
++		dev_err(ctx->dev, "init sequence failed: %d\n", ret);
 +
 +	return ret;
  }
  
  static int otm1289a_get_modes(struct drm_panel *panel,
-@@ -363,9 +364,7 @@ static enum drm_panel_orientation otm1289a_get_orientation(struct drm_panel *pan
+@@ -393,9 +386,7 @@ static enum drm_panel_orientation otm1289a_get_orientation(struct drm_panel *pan
  
  static const struct drm_panel_funcs otm1289a_drm_funcs = {
  	.disable   = otm1289a_disable,
@@ -162,7 +157,7 @@ index 2b3df810c..5aaf195e4 100644
  	.get_modes = otm1289a_get_modes,
  	.get_orientation = otm1289a_get_orientation,
  };
-@@ -403,7 +402,7 @@ static int otm1289a_probe(struct mipi_dsi_device *dsi)
+@@ -429,7 +420,7 @@ static int otm1289a_probe(struct mipi_dsi_device *dsi)
  	mipi_dsi_set_drvdata(dsi, ctx);
  	ctx->dev = dev;
  
@@ -170,8 +165,8 @@ index 2b3df810c..5aaf195e4 100644
 +	/* PWM backlight, switched by drm_panel_enable()/drm_panel_disable(). */
  	ret = drm_panel_of_backlight(&ctx->panel);
  	if (ret)
- 		return ret;
-@@ -431,6 +430,9 @@ static void otm1289a_remove(struct mipi_dsi_device *dsi)
+ 		return dev_err_probe(dev, ret, "failed to get backlight\n");
+@@ -456,6 +447,9 @@ static void otm1289a_remove(struct mipi_dsi_device *dsi)
  
  	mipi_dsi_detach(dsi);
  	drm_panel_remove(&ctx->panel);
@@ -181,7 +176,7 @@ index 2b3df810c..5aaf195e4 100644
  }
  
  static const struct of_device_id orisetech_otm1289a_of_match[] = {
-@@ -445,6 +447,15 @@ static struct mipi_dsi_driver orisetech_otm1289a_driver = {
+@@ -470,6 +464,15 @@ static struct mipi_dsi_driver orisetech_otm1289a_driver = {
  	.driver = {
  		.name = "panel-orisetech-otm1289a",
  		.of_match_table = orisetech_otm1289a_of_match,

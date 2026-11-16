@@ -1,4 +1,4 @@
-From c9300ea1da6e59a5cb2762027bb0fcde2c3f3148 Mon Sep 17 00:00:00 2001
+From d89e7ddad286ca838694371085ab8ba41d3a111a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 14:30:00 +0100
 Subject: [PATCH 07/10] pvr: Advertise linear filtering for linear (strided) 2D
@@ -14,7 +14,7 @@ table empty).
 Tested: cage starts with WLR_RENDERER=vulkan; RetroArch (now using its
 linear streamed-texture path) shows the game correctly.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/vulkan/pvr_formats.c | 10 +++++++++-

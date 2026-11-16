@@ -1,10 +1,13 @@
-From 4877339509d06e1c3106bcc05c304648decc6283 Mon Sep 17 00:00:00 2001
+From 898d3a0ef959d8f39fbc7f65371fcd6d8af9c9f0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
 Subject: [PATCH 037/106] arm64: dts: allwinner: a100: Add the LEDC pin on PE5
 
+The LED controller data output is on pin PE5 (function "ledc"). Add the
+pinmux node so that boards driving an LED chain from it can refer to it.
+
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 5 +++++
  1 file changed, 5 insertions(+)

@@ -1,4 +1,4 @@
-From d9a3044ce408ae20bf8acc68b5a2869d84b0c69e Mon Sep 17 00:00:00 2001
+From 166d0a5a36add1daf60e6cf95a65564c0d49a78e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:27:26 +0100
 Subject: [PATCH 098/106] arm64: dts: allwinner: trimui-smart-pro: Faster
@@ -14,14 +14,14 @@ thermal regulation backs off under load.
 Tested with a 140 W USB-C charger: 0x62 = 0x1e after boot, input
 limit 2.5 A, input power 8.0 W at the meter (was 5.9 W).
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts   | 9 ++++++++-
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 57c99854a..3f2200c23 100644
+index f759f8af3..dc6df51db 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -61,7 +61,12 @@ ext_osc32k: ext-osc32k-clk {

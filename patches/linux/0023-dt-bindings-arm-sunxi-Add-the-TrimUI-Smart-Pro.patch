@@ -1,9 +1,11 @@
-From a850173643b81028701b235b0fe622364d3601a1 Mon Sep 17 00:00:00 2001
+From 7b76569458060ad35c7bc0a87cb676b675e29779 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:34:49 +0100
 Subject: [PATCH 023/106] dt-bindings: arm: sunxi: Add the TrimUI Smart Pro
 
-Add the TrimUI Smart Pro handheld, based on the Allwinner A133.
+Add the TrimUI Smart Pro handheld, based on the Allwinner A133. The A133
+is described by the A100 SoC compatible, which the board lists as its
+fallback.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---

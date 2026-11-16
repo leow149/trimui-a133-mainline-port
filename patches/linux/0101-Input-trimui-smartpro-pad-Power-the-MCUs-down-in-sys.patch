@@ -1,12 +1,16 @@
-From 137fd7c6f86d1f59b4d527b562fbf732075b9faa Mon Sep 17 00:00:00 2001
+From 2d2c5886649385da09c0ca91fba241e0c48e9ef4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 101/106] Input: trimui-smartpro-pad: Power the MCUs down in
  system sleep
 
-Drop the vcc-pad reference in suspend; it goes off once the LED controller drops its reference as well. On resume, power up, wait for the MCUs and set the UART up again: the DesignWare UART ignored its line settings while the unpowered MCU held RX low. None of the wake keys go through the MCUs.
+Drop the vcc-pad reference in suspend; it goes off once the LED controller
+drops its reference as well. On resume, power up, wait for the MCUs and set
+the UART up again: the DesignWare UART ignored its line settings while the
+unpowered MCU held RX low. None of the wake keys go through the MCUs.
 
-Tested: after a 10 s s2idle both MCUs stream again and a button press arrives 0.6 s after resume.
+Tested: after a 10 s s2idle both MCUs stream again and a button press
+arrives 0.6 s after resume.
 
 The driver tracks whether it holds its regulator reference, so a resume
 that failed to switch the power back on does not lead to an unbalanced
@@ -16,17 +20,17 @@ Resume does not set up the UART again: the serial core restores its
 settings, and the A100 UART takes them even while the unpowered MCU
 holds RX low.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/input/joystick/trimui-smartpro-pad.c | 73 ++++++++++++++++++--
  1 file changed, 69 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
-index f29ec9bda..ab65d2e95 100644
+index 8db6e038e..5938a7d13 100644
 --- a/drivers/input/joystick/trimui-smartpro-pad.c
 +++ b/drivers/input/joystick/trimui-smartpro-pad.c
-@@ -84,7 +84,9 @@ struct tsp_pad_axis_cal {
+@@ -87,7 +87,9 @@ struct tsp_pad_axis_cal {
  
  struct tsp_pad_half {
  	struct serdev_device *serdev;
@@ -36,7 +40,7 @@ index f29ec9bda..ab65d2e95 100644
  	spinlock_t lock;		/* protects input and owner */
  	struct input_dev *input;
  	/* The left half, which owns input; both halves report under its lock. */
-@@ -290,6 +292,21 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
+@@ -294,6 +296,21 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
  	return devm_add_action_or_reset(dev, tsp_pad_detach, right);
  }
  
@@ -58,7 +62,7 @@ index f29ec9bda..ab65d2e95 100644
  static int tsp_pad_probe(struct serdev_device *serdev)
  {
  	struct device *dev = &serdev->dev;
-@@ -315,20 +332,67 @@ static int tsp_pad_probe(struct serdev_device *serdev)
+@@ -319,20 +336,67 @@ static int tsp_pad_probe(struct serdev_device *serdev)
  			return ret;
  	}
  
@@ -83,8 +87,8 @@ index f29ec9bda..ab65d2e95 100644
 -	serdev_device_set_flow_control(serdev, false);
 -	return serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
 +	return tsp_pad_setup_uart(serdev);
- }
- 
++}
++
 +/*
 + * The pad MCUs and the LED chain share vcc-pad. The regulator core leaves
 + * supplies alone in s2idle, so drop our reference here; vcc-pad goes off once
@@ -105,8 +109,8 @@ index f29ec9bda..ab65d2e95 100644
 +		return ret;
 +	half->powered = false;
 +	return 0;
-+}
-+
+ }
+ 
 +static int tsp_pad_resume(struct device *dev)
 +{
 +	struct tsp_pad_half *half = dev_get_drvdata(dev);
@@ -130,7 +134,7 @@ index f29ec9bda..ab65d2e95 100644
  static const struct of_device_id tsp_pad_of_match[] = {
  	{ .compatible = "trimui,smart-pro-pad-left", .data = &tsp_pad_left },
  	{ .compatible = "trimui,smart-pro-pad-right", .data = &tsp_pad_right },
-@@ -340,6 +404,7 @@ static struct serdev_device_driver tsp_pad_driver = {
+@@ -344,6 +408,7 @@ static struct serdev_device_driver tsp_pad_driver = {
  	.driver = {
  		.name = "trimui-smartpro-pad",
  		.of_match_table = tsp_pad_of_match,

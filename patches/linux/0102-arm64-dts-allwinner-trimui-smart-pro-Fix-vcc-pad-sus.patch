@@ -1,19 +1,26 @@
-From df692c9e21c5cc1530dd2832838f597f851d4c39 Mon Sep 17 00:00:00 2001
+From 17d9c247054edc2d97b688d8390523c06f18ed79 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
-Subject: [PATCH 102/106] arm64: dts: allwinner: trimui-smart-pro: vcc-pad off
- in suspend, mcu node names
+Subject: [PATCH 102/106] arm64: dts: allwinner: trimui-smart-pro: Fix vcc-pad
+ suspend and MCU names
 
-Give the LED controller vcc-pad as its vled-supply, so the consumers (both pad MCUs and the LEDs) switch it off in system sleep; regulator-off-in-suspend has no effect in s2idle, drop it. Name the pad MCU nodes mcu, as serial.yaml expects, and fix a stale comment on USB host VBUS.
+Three small fixes to the board device tree:
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+- Give the LED controller vcc-pad as its vled-supply, so that its
+  consumers (both pad MCUs and the LEDs) switch it off in system sleep.
+  regulator-off-in-suspend has no effect in s2idle, so drop it.
+- Name the pad MCU nodes "mcu", as serial.yaml expects.
+- Fix a stale comment on the USB host VBUS: in host mode VBUS now comes
+  from the AXP717 boost output.
+
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- .../dts/allwinner/sun50i-a133-trimui-smartpro.dts     | 11 +++++------
- 1 file changed, 5 insertions(+), 6 deletions(-)
+ .../dts/allwinner/sun50i-a133-trimui-smartpro.dts   | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 3f2200c23..af5f04b3f 100644
+index dc6df51db..596cad009 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -109,7 +109,6 @@ reg_vcc_pad: regulator-vcc-pad {
@@ -24,12 +31,14 @@ index 3f2200c23..af5f04b3f 100644
  		vin-supply = <&reg_vcc5v>;
  	};
  
-@@ -240,11 +239,12 @@ &cpu0 {
+@@ -239,12 +238,13 @@ &cpu0 {
+ /*
   * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
-  * right one. The rings are GRB (the stock DT says "RGB", but red shows green
-  * with it), the logo LED is RGB. Timings from the stock firmware. They are
-- * powered from vcc-pad, which the gamepad driver switches on.
-+ * powered from vcc-pad, shared with the gamepad MCUs; it goes off in suspend.
+  * right one. The rings are GRB, the logo LED is RGB. Timings from the stock
+- * firmware. They are powered from vcc-pad, which the gamepad driver switches
+- * on.
++ * firmware. They are powered from vcc-pad, shared with the gamepad MCUs; it
++ * goes off in suspend.
   */
  &ledc {
  	pinctrl-names = "default";

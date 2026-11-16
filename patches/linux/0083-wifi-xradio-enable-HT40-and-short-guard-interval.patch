@@ -1,4 +1,4 @@
-From d9ca6c8796e4bb152b62bf8cb87a9199f1e4a7b8 Mon Sep 17 00:00:00 2001
+From 67a6d320925137f50b792c4f34b23a27ba449087 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 083/106] wifi: xradio: enable HT40 and short guard interval
@@ -22,7 +22,7 @@ home AP (WPA2/WPA3 mixed, 2.4 GHz, 40 MHz AP), iperf3 vs host laptop:
 TX is unchanged here because TX status still folds the rate entries
 into 20 MHz rate indices (next patch).
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/main.c   |  3 ++

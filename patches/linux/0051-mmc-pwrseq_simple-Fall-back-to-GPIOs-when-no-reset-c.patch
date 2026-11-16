@@ -1,14 +1,14 @@
-From 303482563d235288b3b5c7776afe44122d09c0e7 Mon Sep 17 00:00:00 2001
+From aa246b9d230dfebc153bf69c4fe0c8a4f0bf8a0f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
 Subject: [PATCH 051/106] mmc: pwrseq_simple: Fall back to GPIOs when no reset
  controller can be made
 
 With a single reset GPIO, pwrseq_simple asks the reset core for a reset
-controller wrapping it. The reset-gpio helper only handles #gpio-cells = <2>
-and returns -ENOENT for anything else (e.g. Allwinner, <3>), which made the
-probe fail, although the driver can drive the GPIO itself. Treat -ENOENT as
-"no reset controller" and use the GPIO path.
+controller wrapping it. The reset-gpio helper only handles #gpio-cells =
+<2> and returns -ENOENT for anything else (e.g. Allwinner, <3>), which made
+the probe fail, although the driver can drive the GPIO itself. Treat
+-ENOENT as "no reset controller" and use the GPIO path.
 
 The scope is narrow: with a single reset GPIO and CONFIG_RESET_GPIO
 enabled, -ENOENT only comes from __reset_add_reset_gpio_device()
@@ -20,8 +20,8 @@ reset-gpio to translate other specifiers (through the GPIO chip's
 of_xlate) would be the more general fix; it touches the reset core and
 is left for later.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/mmc/core/pwrseq_simple.c | 8 +++++++-
  1 file changed, 7 insertions(+), 1 deletion(-)

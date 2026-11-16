@@ -1,4 +1,4 @@
-From b0a787a0343d5db3a0589ff7537b91a3ba754978 Mon Sep 17 00:00:00 2001
+From 3eda3508c1f93f2f2c234325ee3462f7bfdce60f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:22 +0100
 Subject: [PATCH 094/106] arm64: dts: allwinner: trimui-smart-pro: USB OTG host
@@ -12,16 +12,17 @@ external VBUS is present.
 Tested: PC cable gives a gadget (NCM, 304 Mbit/s, survives suspend) with
 the boost off. An OTG hub, self-powered or bus-powered from the TrimUI,
 works in host mode: hub, USB stick (~33 MB/s) and AX88179A enumerate.
-Unplugging switches VBUS off, and re-attaching the PC gives the gadget again.
+Unplugging switches VBUS off, and re-attaching the PC gives the gadget
+again.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 26 +++++++++++++++++++
  1 file changed, 26 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index f5e0692b8..57c99854a 100644
+index 9a5badf96..f759f8af3 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -527,6 +527,19 @@ usb_power: usb-power {

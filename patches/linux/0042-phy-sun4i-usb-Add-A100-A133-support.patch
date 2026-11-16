@@ -1,20 +1,20 @@
-From f3aca78b75cecd38d68173f6835e805cdb4befb3 Mon Sep 17 00:00:00 2001
+From b28a06ca9f7ea0a6cf3528157e77f70232fa7178 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:08 +0100
 Subject: [PATCH 042/106] phy: sun4i-usb: Add A100/A133 support
 
 The A100/A133 OTG PHY needs PHY1 as SIDDQ helper, the usual analog tuning
-(45 ohm calibration, TX amplitude, disconnect threshold) although its SIDDQ is
-in the base registers, and a pulse on PHY register 0x3c (the vendor driver's
-UsbPhyEndReset). Without the pulse the host gets -EPROTO on every descriptor
-read in peripheral mode.
+(45 ohm calibration, TX amplitude, disconnect threshold) although its SIDDQ
+is in the base registers, and a pulse on PHY register 0x3c (the vendor
+driver's UsbPhyEndReset). Without the pulse the host gets -EPROTO on every
+descriptor read in peripheral mode.
 
 The tuning has to happen before PHYCTL is set up, as sun4i_usb_phy_write()
 clears PHYCTL on A33 and later PHYs, and only on PHY0, as the vendor driver
 does, so tuning another PHY later does not undo it.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 54 +++++++++++++++++++++++----
  1 file changed, 46 insertions(+), 8 deletions(-)

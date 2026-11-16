@@ -1,4 +1,4 @@
-From 53758f5ed9b2fd6e35ce8e44efb6dea25f487e1c Mon Sep 17 00:00:00 2001
+From 25312be8585cb40d772f3eb81b4e159ac31b2216 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:29 +0100
 Subject: [PATCH 060/106] dt-bindings: gpu: img,powervr-rogue: Add the

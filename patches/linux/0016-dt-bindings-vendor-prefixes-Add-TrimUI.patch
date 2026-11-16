@@ -1,11 +1,12 @@
-From 42055973f12a8c9aa5c78fa7d4c9caa98d448734 Mon Sep 17 00:00:00 2001
+From 4fee4970c4d19cdb271086195dee7cb4c0b5117d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:36 +0100
 Subject: [PATCH 016/106] dt-bindings: vendor-prefixes: Add TrimUI
 
-TrimUI makes handheld game consoles, e.g. the Smart Pro.
+TrimUI makes handheld game consoles, e.g. the Smart Pro. Add the vendor
+prefix for the board and gamepad bindings that follow.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  Documentation/devicetree/bindings/vendor-prefixes.yaml | 2 ++

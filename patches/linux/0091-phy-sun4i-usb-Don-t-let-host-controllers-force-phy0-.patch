@@ -1,4 +1,4 @@
-From eef38e65faca3d111a1c12ef1b829a42949201f7 Mon Sep 17 00:00:00 2001
+From a84c109374bbfcf95079cdcbce6c21a33f1ca0d7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:10 +0100
 Subject: [PATCH 091/106] phy: sun4i-usb: Don't let host controllers force phy0
@@ -20,7 +20,7 @@ Tested on the TrimUI Smart Pro (A133, OTG with ID on PH8 and EHCI0/OHCI0
 enabled): booting with a PC attached now comes up as a gadget, where before
 it came up stuck in host mode.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 13 +++++++++++++

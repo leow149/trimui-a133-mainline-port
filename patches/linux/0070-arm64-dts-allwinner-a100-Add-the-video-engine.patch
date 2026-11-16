@@ -1,4 +1,4 @@
-From 2e97d0b8d106faf32a226721fde3cbbce3a2d8ef Mon Sep 17 00:00:00 2001
+From 8545626b10be7bf29b3e373035e248090219e6b9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
 Subject: [PATCH 070/106] arm64: dts: allwinner: a100: Add the video engine
@@ -11,8 +11,8 @@ Tested on the A133 TrimUI Smart Pro with GStreamer v4l2codecs, 720p:
 H.264 and H.265 bit-exact to the software decoders (231 and 300 fps),
 MPEG-2 within IDCT rounding (> 69 dB PSNR).
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 27 +++++++++++++++++++
  1 file changed, 27 insertions(+)

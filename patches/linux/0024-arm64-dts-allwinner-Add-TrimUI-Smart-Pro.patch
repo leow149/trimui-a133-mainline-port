@@ -1,14 +1,14 @@
-From a1c5af8606d6535f47acecc16e0ddfbda87436a1 Mon Sep 17 00:00:00 2001
+From 9b654864284ce5ab8e2b744bb05c29f769b271cd Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:32 +0100
 Subject: [PATCH 024/106] arm64: dts: allwinner: Add TrimUI Smart Pro
 
 TrimUI Smart Pro handheld (Allwinner A133, AXP717). Working: MIPI DSI panel
-and backlight, buttons and sticks, power and volume keys, battery and charger,
-cpufreq, SD card and eMMC, UART console.
+and backlight, buttons and sticks, power and volume keys, battery and
+charger, cpufreq, SD card and eMMC, UART console.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/Makefile        |   1 +
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 500 ++++++++++++++++++

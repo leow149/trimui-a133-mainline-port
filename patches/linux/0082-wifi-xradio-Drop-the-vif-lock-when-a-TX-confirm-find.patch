@@ -1,4 +1,4 @@
-From ccc78c5b797143bc4ab3900029a4724a2494e96d Mon Sep 17 00:00:00 2001
+From 9b3f7dc4b946a476eb06c379f0c1f3ba9e684448 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:32:30 +0100
 Subject: [PATCH 082/106] wifi: xradio: Drop the vif lock when a TX confirm
@@ -22,7 +22,7 @@ Such a late confirm is a normal path, so it no longer WARNs (neither
 here nor in xradio_queue_get_skb() on a generation mismatch); it is
 logged with a rate-limited debug message.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/queue.c |  2 +-

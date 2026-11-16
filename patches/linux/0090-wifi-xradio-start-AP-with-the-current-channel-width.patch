@@ -1,4 +1,4 @@
-From 6cda158ce105e6833a63f7c126b81a71f541728f Mon Sep 17 00:00:00 2001
+From ba991c81c9a8a9a7b9020d38f66f545276731f35 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:20:21 +0100
 Subject: [PATCH 090/106] wifi: xradio: start AP with the current channel width
@@ -8,10 +8,10 @@ HT40 on the same channel, starting the AP on the second vif retuned the
 firmware to 20 MHz; the station stayed associated but stopped passing
 traffic until the AP was removed and the station reassociated.
 
-Use wsm_phy_mode_cur(), the same chandef-derived word the join uses, so both
-vifs run on the shared channel and width.
+Use wsm_phy_mode_cur(), the same chandef-derived word the join uses, so
+both vifs run on the shared channel and width.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/wsm.c | 2 +-

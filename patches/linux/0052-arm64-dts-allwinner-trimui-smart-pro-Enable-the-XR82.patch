@@ -1,21 +1,21 @@
-From d94242993c7f2902fd141fb4c664c7eee84c0921 Mon Sep 17 00:00:00 2001
+From 9a5d571ce17235dab493a6044c4f491594df9629 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
 Subject: [PATCH 052/106] arm64: dts: allwinner: trimui-smart-pro: Enable the
  XR829 WiFi SDIO bus
 
 The XR829 sits on MMC1 (PG0-PG5), powered by BLDO1 with I/O on ALDO3,
-enabled through PL5 and clocked by the RTC's 32 kHz fanout. It enumerates as
-SDIO 0a9e:2282; there is no mainline driver for it yet.
+enabled through PL5 and clocked by the RTC's 32 kHz fanout. It enumerates
+as SDIO 0a9e:2282; there is no mainline driver for it yet.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 20 +++++++++++++++++++
  1 file changed, 20 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 1198fd10a..27fa60c16 100644
+index 9f903eeae..216361840 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -120,6 +120,15 @@ backlight: backlight {

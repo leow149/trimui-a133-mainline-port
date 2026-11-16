@@ -1,4 +1,4 @@
-From 607130967d99c0a2cb5825799646016fdcf48198 Mon Sep 17 00:00:00 2001
+From 64401e85f33535d4901bb1e6597a150984c58d7b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:30 +0100
 Subject: [PATCH 019/106] arm64: dts: allwinner: a100: Add the SRAM C section
@@ -8,8 +8,8 @@ As on A64, SYS_CFG bit 24 maps SRAM C either to the CPU or to the display
 engine, and while it is mapped to the CPU the whole DE register space reads
 and writes SRAM. Describe the section so the DE2 bus driver can claim it.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 13 +++++++++++++
  1 file changed, 13 insertions(+)

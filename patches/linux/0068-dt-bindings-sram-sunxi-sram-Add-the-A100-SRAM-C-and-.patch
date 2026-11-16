@@ -1,4 +1,4 @@
-From 7d5d2148fa4ac2c9d9e8d993d235096add019eac Mon Sep 17 00:00:00 2001
+From 264e99f2c7711c9ec88cb1ae8744e265bbeaffbf Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:45 +0100
 Subject: [PATCH 068/106] dt-bindings: sram: sunxi-sram: Add the A100 SRAM C
@@ -8,8 +8,8 @@ The A100 maps its SRAM C between the CPU and the display engine like the
 A64, and its VE SRAM between the CPU and the video engine like the H616
 (SYS_CFG bit 0 cleared for the VE, as the vendor kernel does).
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../bindings/sram/allwinner,sun4i-a10-system-control.yaml     | 4 ++++
  1 file changed, 4 insertions(+)

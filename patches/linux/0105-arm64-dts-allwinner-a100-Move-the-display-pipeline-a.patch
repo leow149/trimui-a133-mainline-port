@@ -1,4 +1,4 @@
-From a4d3f390311fa2aab21dffe4c812050aa0f8101b Mon Sep 17 00:00:00 2001
+From 6fa081f2e87e06197fc6cde7a97a2797ae4f6e48 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:29:22 +0100
 Subject: [PATCH 105/106] arm64: dts: allwinner: a100: Move the display
@@ -243,7 +243,7 @@ index 52a0b7762..df8adc64d 100644
  			compatible = "allwinner,sun50i-a100-rtc",
  				     "allwinner,sun50i-r329-rtc";
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index af5f04b3f..b9cffa14a 100644
+index 596cad009..5e78072aa 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -5,8 +5,6 @@
@@ -362,7 +362,7 @@ index af5f04b3f..b9cffa14a 100644
 +
  /*
   * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
-  * right one. The rings are GRB (the stock DT says "RGB", but red shows green
+  * right one. The rings are GRB, the logo LED is RGB. Timings from the stock
 @@ -431,6 +445,10 @@ multi-led@16 {
  	};
  };

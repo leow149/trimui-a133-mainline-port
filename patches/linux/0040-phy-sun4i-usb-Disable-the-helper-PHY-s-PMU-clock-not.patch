@@ -1,4 +1,4 @@
-From 035224d86541d33ae78433eaafb6bb0f81534308 Mon Sep 17 00:00:00 2001
+From affe7c9a5af00ed5b7571d092791bc923155cea6 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:07 +0100
 Subject: [PATCH 040/106] phy: sun4i-usb: Disable the helper PHY's PMU clock,
@@ -9,9 +9,11 @@ then disabled the clock of the PHY being initialised instead. On H616 that
 clock is not described, so nothing happened; with a PMU clock on the PHY
 itself, the following write to its own REG_HCI_PHY_CTL was lost.
 
-Fixes: b45c6d80325b ("phy: sun4i-usb: Introduce port2 SIDDQ quirk")
+This fixes the SIDDQ helper PHY handling introduced by "phy: sun4i-usb:
+Introduce port2 SIDDQ quirk".
+
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

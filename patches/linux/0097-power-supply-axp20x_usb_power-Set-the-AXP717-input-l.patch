@@ -1,4 +1,4 @@
-From 40355494efde0b35beab8098e0b31980579cd123 Mon Sep 17 00:00:00 2001
+From dca5dad454c0ce0e9c35faee799f580d223a715d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:27:25 +0100
 Subject: [PATCH 097/106] power: supply: axp20x_usb_power: Set the AXP717 input
@@ -19,7 +19,7 @@ Tested on the TrimUI Smart Pro (limit 2.5 A) with a 140 W USB-C charger:
 DCP detected at boot, limit 2.5 A. At 2.5 A input and 1.92 A charge
 current the input power at the meter rises from 5.9 W to 8.0 W.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/power/supply/axp20x_usb_power.c | 59 ++++++++++++++++++++++++-

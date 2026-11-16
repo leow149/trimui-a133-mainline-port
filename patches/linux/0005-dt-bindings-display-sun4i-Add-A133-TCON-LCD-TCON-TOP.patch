@@ -1,14 +1,14 @@
-From 579e92f077ef819658954955f26ddeea74b45d90 Mon Sep 17 00:00:00 2001
+From b73a8e70fc80dd437a3ec68cef73e1133602afd0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 005/106] dt-bindings: display: sun4i: Add A133 TCON LCD, TCON
  TOP and DE2 mixers
 
-Add the A133 compatibles for the LCD TCON, the TCON TOP (no TV/HDMI path, but a
-gated MIPI DSI clock) and the two DE2 mixers.
+Add the A133 compatibles for the LCD TCON, the TCON TOP (no TV/HDMI path,
+but a gated MIPI DSI clock) and the two DE2 mixers.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../display/allwinner,sun4i-a10-tcon.yaml     |  1 +
  .../allwinner,sun8i-a83t-de2-mixer.yaml       |  2 +

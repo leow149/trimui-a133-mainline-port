@@ -1,12 +1,15 @@
-From 701f109ef0785fce44d08e2ac9d35ea3f81de840 Mon Sep 17 00:00:00 2001
+From 4c2a432a1d9840accc218b770505d2615ce2b8b0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 035/106] dt-bindings: leds: sun50i-a100-ledc: Per-LED channel
  order, LED supply
 
-A chain can mix LEDs with different channel orders (the TrimUI Smart Pro has an RGB logo LED in front of GRB stick rings): allow led@0..2 subnodes giving the colour of each channel. Also allow vled-supply, the regulator powering the LEDs.
+A chain can mix LEDs with different channel orders (the TrimUI Smart Pro
+has an RGB logo LED in front of GRB stick rings): allow led@0..2 subnodes
+giving the colour of each channel. Also allow vled-supply, the regulator
+powering the LEDs.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../leds/allwinner,sun50i-a100-ledc.yaml      | 27 +++++++++++++++++++

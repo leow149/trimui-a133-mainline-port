@@ -1,4 +1,4 @@
-From e3637fc0e84fd117474c77ed2fb899b1b60736aa Mon Sep 17 00:00:00 2001
+From e83f353958b37d70599d6447709edfaa8001a8f3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:43:16 +0100
 Subject: [PATCH 086/106] usb: musb: sunxi: Fix use-after-free of the generic
@@ -20,17 +20,17 @@ Tested on the TrimUI Smart Pro (A133): three unbind/bind cycles of
 5100000.usb with the NCM gadget re-attached each time, no oops, gadget
 throughput unchanged (310 Mbit/s).
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/usb/musb/sunxi.c | 26 ++++++++++++++++++--------
  1 file changed, 18 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
-index 7f7d27ea8..578f222b4 100644
+index 412923525..03d517ceb 100644
 --- a/drivers/usb/musb/sunxi.c
 +++ b/drivers/usb/musb/sunxi.c
-@@ -1025,6 +1025,11 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_a100 = {
+@@ -1022,6 +1022,11 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_a100 = {
  	.ram_bits	= SUNXI_MUSB_RAM_BITS,
  };
  
@@ -42,7 +42,7 @@ index 7f7d27ea8..578f222b4 100644
  static int sunxi_musb_probe(struct platform_device *pdev)
  {
  	struct musb_hdrc_platform_data	pdata;
-@@ -1120,11 +1125,22 @@ static int sunxi_musb_probe(struct platform_device *pdev)
+@@ -1117,11 +1122,22 @@ static int sunxi_musb_probe(struct platform_device *pdev)
  		return PTR_ERR(glue->usb_phy);
  	}
  
@@ -66,7 +66,7 @@ index 7f7d27ea8..578f222b4 100644
  	}
  
  	platform_set_drvdata(pdev, glue);
-@@ -1144,23 +1160,17 @@ static int sunxi_musb_probe(struct platform_device *pdev)
+@@ -1141,23 +1157,17 @@ static int sunxi_musb_probe(struct platform_device *pdev)
  	if (IS_ERR(glue->musb_pdev)) {
  		ret = PTR_ERR(glue->musb_pdev);
  		dev_err(&pdev->dev, "Error registering musb dev: %d\n", ret);

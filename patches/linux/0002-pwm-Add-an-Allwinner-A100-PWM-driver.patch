@@ -1,4 +1,4 @@
-From 83898f201be13c7f0f3ec30372f1b86b5bc8d9f0 Mon Sep 17 00:00:00 2001
+From 7bcfff710bb4eb6b65514ff1726cc5de8889368a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:24 +0100
 Subject: [PATCH 002/106] pwm: Add an Allwinner A100 PWM driver
@@ -7,12 +7,13 @@ Add a driver for the PWM controller of the Allwinner A100/A133: plain PWM
 output (cycle mode) on its 4 channels, clocked from the 24 MHz oscillator,
 whose rate comes from the "hosc" clock.
 
-The block has the register layout of the D1/T113 PWM, for which no driver is
-in mainline, and not the one of the H616 PWM (pwm-sun8i, proposed upstream),
-so neither can be reused. Periods and duty cycles are rounded down as the PWM
-core expects (get_state() rounds up), the channel count comes from the match
-data, and the channel clock is only set up when the channel is off, so
-changing the duty cycle of a running channel does not glitch the output.
+The block has the register layout of the D1/T113 PWM, for which no driver
+is in mainline, and not the one of the H616 PWM (pwm-sun8i, proposed
+upstream), so neither can be reused. Periods and duty cycles are rounded
+down as the PWM core expects (get_state() rounds up), the channel count
+comes from the match data, and the channel clock is only set up when the
+channel is off, so changing the duty cycle of a running channel does not
+glitch the output.
 
 Tested on the TrimUI Smart Pro (A133): the pwm-backlight on channel 0.
 
@@ -22,13 +23,13 @@ uses the running sibling's setting (and refuses an APB1 source, whose
 rate it does not know). get_state() takes the divider and the bypass
 into account.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/pwm/Kconfig           |  12 ++
  drivers/pwm/Makefile          |   1 +
- drivers/pwm/pwm-sun50i-a100.c | 327 ++++++++++++++++++++++++++++++++++
- 3 files changed, 340 insertions(+)
+ drivers/pwm/pwm-sun50i-a100.c | 331 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 344 insertions(+)
  create mode 100644 drivers/pwm/pwm-sun50i-a100.c
 
 diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
@@ -68,10 +69,10 @@ index 5630a521a..0222ad7dc 100644
  obj-$(CONFIG_PWM_TH1520)	+= pwm_th1520.o
 diff --git a/drivers/pwm/pwm-sun50i-a100.c b/drivers/pwm/pwm-sun50i-a100.c
 new file mode 100644
-index 000000000..138cd5286
+index 000000000..0c0fc6f31
 --- /dev/null
 +++ b/drivers/pwm/pwm-sun50i-a100.c
-@@ -0,0 +1,327 @@
+@@ -0,0 +1,331 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Driver for the Allwinner A100/A133 (sun50iw10) PWM controller
@@ -94,9 +95,12 @@ index 000000000..138cd5286
 +
 +#include <linux/bitfield.h>
 +#include <linux/bits.h>
++#include <linux/cleanup.h>
 +#include <linux/clk.h>
++#include <linux/err.h>
 +#include <linux/io.h>
 +#include <linux/math64.h>
++#include <linux/minmax.h>
 +#include <linux/mod_devicetable.h>
 +#include <linux/module.h>
 +#include <linux/mutex.h>
@@ -279,15 +283,16 @@ index 000000000..138cd5286
 +{
 +	struct a100_pwm *pc = to_a100_pwm(chip);
 +	unsigned int ch = pwm->hwpwm;
-+	u32 pcr, ppr, pcgr, entire_cycle, act_cycle, prescale;
++	u32 pcr, ppr, per, pcgr, entire_cycle, act_cycle, prescale;
 +	unsigned long rate;
 +
 +	rate = a100_pwm_pair_rate(pc, readl(pc->base + A100_PWM_PCCR(ch)));
 +	pcgr = readl(pc->base + A100_PWM_PCGR);
 +
++	per = readl(pc->base + A100_PWM_PER);
++
 +	/* PER and PCGR use the same bit per channel */
-+	state->enabled = readl(pc->base + A100_PWM_PER) & pcgr &
-+			 A100_PWM_PER_EN(ch);
++	state->enabled = per & pcgr & A100_PWM_PER_EN(ch);
 +	if (!rate) {
 +		/* Clocked from APB1 (not set up by this driver) */
 +		state->enabled = false;

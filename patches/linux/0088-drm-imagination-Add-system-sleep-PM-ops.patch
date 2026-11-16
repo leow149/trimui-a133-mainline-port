@@ -1,4 +1,4 @@
-From 9713daa4b99a87cb78a4e8129630bc393ba7a6cc Mon Sep 17 00:00:00 2001
+From 78f1aa5a8264238c51d5776b41874e7d04f551c9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:00:46 +0100
 Subject: [PATCH 088/106] drm/imagination: Add system sleep PM ops
@@ -17,7 +17,7 @@ Tested on the TrimUI Smart Pro (A133, GE8300): vkcube (60 frames) works
 before suspend and after each of three s2idle cycles, with no pvr errors.
 Before, the first render after one suspend cycle lost the device.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/gpu/drm/imagination/pvr_drv.c | 6 ++++++

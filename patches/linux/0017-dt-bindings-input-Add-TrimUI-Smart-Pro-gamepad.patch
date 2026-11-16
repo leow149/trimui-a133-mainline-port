@@ -1,11 +1,13 @@
-From f4c6a0177ff9e11285419c648bfb0d9d934a42da Mon Sep 17 00:00:00 2001
+From 1c54e88f2715303610de660168f4bd9142c41b1d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 017/106] dt-bindings: input: Add TrimUI Smart Pro gamepad
 
-The Smart Pro reads its buttons and sticks from two small MCUs, one per side, each on its own UART. Describe them as serdev children; the left half points at the right one so both feed one input device.
+The Smart Pro reads its buttons and sticks from two small MCUs, one per
+side, each on its own UART. Describe them as serdev children; the left
+half points at the right one so both feed one input device.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../bindings/input/trimui,smart-pro-pad.yaml  | 74 +++++++++++++++++++

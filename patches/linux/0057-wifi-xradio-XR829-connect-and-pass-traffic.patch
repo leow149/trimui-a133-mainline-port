@@ -1,4 +1,4 @@
-From 8ac6528f3d95a1278894d13501fbbf17626bd44c Mon Sep 17 00:00:00 2001
+From 17728b1c6fbcc8fe49aa08be6eca64c3b28267e2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:26:41 +0100
 Subject: [PATCH 057/106] wifi: xradio: XR829: connect and pass traffic
@@ -18,8 +18,8 @@ boundary so both chips keep sharing the driver:
 WPA2 (CCMP) station mode works: 29 Mbit/s RX and 12 Mbit/s TX in iperf3
 at MCS 7, stable over 2 minutes.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/net/wireless/xradio/ap.c   |   9 ++
  drivers/net/wireless/xradio/scan.c |   9 +-

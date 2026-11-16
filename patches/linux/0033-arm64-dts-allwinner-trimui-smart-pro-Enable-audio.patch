@@ -1,13 +1,13 @@
-From 7e6c3a05fc18b799e2a8e004d350b0025ac4dd60 Mon Sep 17 00:00:00 2001
+From 1c4c75d37ac373a019e80496f41725e62a4b8d1d Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:52 +0100
 Subject: [PATCH 033/106] arm64: dts: allwinner: trimui-smart-pro: Enable audio
 
-The stereo speakers (amplifier enabled by PH6) and the 3.5 mm jack both hang
-off the headphone output; the line out is not used.
+The stereo speakers (amplifier enabled by PH6) and the 3.5 mm jack both
+hang off the headphone output; the line out is not used.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../dts/allwinner/sun50i-a133-trimui-smartpro.dts     | 11 +++++++++++
  1 file changed, 11 insertions(+)

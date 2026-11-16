@@ -1,4 +1,4 @@
-From d1ef5f1cd4dbb9f05c83d1729ab8b8186fcb6bc1 Mon Sep 17 00:00:00 2001
+From b6f117c9bdac711b19812c181d9c647db5f81a3c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:05:59 +0100
 Subject: [PATCH 064/106] clk: sunxi-ng: a100: Let the GPU clock change the GPU
@@ -8,8 +8,8 @@ The GPU module clock only divides pll-gpu by up to 4, so a GPU rate above
 the PLL's boot rate can only be reached by changing the PLL. Allow that,
 as the other sunxi-ng drivers do for their GPU clocks.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

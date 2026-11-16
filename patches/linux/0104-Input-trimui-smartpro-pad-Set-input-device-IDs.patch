@@ -1,4 +1,4 @@
-From fc1cbdb9d416e85ba14ed35b3493cde9d22b52ff Mon Sep 17 00:00:00 2001
+From fb41bb4784cb5ed348b94de82a2e57456a4b7eaa Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 14 Nov 2026 18:46:02 +0100
 Subject: [PATCH 104/106] Input: trimui-smartpro-pad: Set input device IDs
@@ -13,14 +13,26 @@ controller mappings of the distribution using this driver.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/input/joystick/trimui-smartpro-pad.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ drivers/input/joystick/trimui-smartpro-pad.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
 diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
-index ab65d2e95..26a03b2df 100644
+index 5938a7d13..63c587f8c 100644
 --- a/drivers/input/joystick/trimui-smartpro-pad.c
 +++ b/drivers/input/joystick/trimui-smartpro-pad.c
-@@ -275,7 +275,15 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
+@@ -55,6 +55,11 @@
+ #define TSP_PAD_AXIS_FUZZ	128
+ #define TSP_PAD_AXIS_FLAT	4096
+ 
++/* Made-up input IDs ("TU", "SP", v1.0): the MCUs have no USB IDs. */
++#define TSP_PAD_ID_VENDOR	0x5455
++#define TSP_PAD_ID_PRODUCT	0x5350
++#define TSP_PAD_ID_VERSION	0x0100
++
+ struct tsp_pad_side {
+ 	unsigned short keys[8];		/* by bit in the button byte, 0 = unused */
+ 	unsigned int abs_x;
+@@ -279,7 +284,15 @@ static int tsp_pad_setup_input(struct tsp_pad_half *half)
  
  	input->name = "TrimUI Smart Pro Gamepad";
  	input->phys = "trimui-smartpro-pad/input0";
@@ -30,9 +42,9 @@ index ab65d2e95..26a03b2df 100644
 +	 * on, instead of a hash of the name.
 +	 */
  	input->id.bustype = BUS_HOST;
-+	input->id.vendor = 0x5455;
-+	input->id.product = 0x5350;
-+	input->id.version = 0x0100;
++	input->id.vendor = TSP_PAD_ID_VENDOR;
++	input->id.product = TSP_PAD_ID_PRODUCT;
++	input->id.version = TSP_PAD_ID_VERSION;
  	tsp_pad_setup_side(input, half->side);
  	tsp_pad_setup_side(input, right->side);
  

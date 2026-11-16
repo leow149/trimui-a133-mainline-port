@@ -1,4 +1,4 @@
-From 19ec050b120a11fd96e555713e9b9bf2cdbe8793 Mon Sep 17 00:00:00 2001
+From fd55517368c2ea94d2dfaf6b1462dcae295bf43e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:36:10 +0100
 Subject: [PATCH 085/106] usb: musb: sunxi: Preserve the session across system
@@ -19,14 +19,14 @@ with the NCM gadget: 0 of 6 cycles re-enumerated before, 11 of 11 after.
 Only the A100/A133 glue gets the quirk (its own platform ops), as only
 that one was tested; the other sunxi SoCs keep the current behaviour.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/usb/musb/sunxi.c | 57 ++++++++++++++++++++++++++--------------
  1 file changed, 37 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
-index 87e21ffa2..7f7d27ea8 100644
+index a7562f198..412923525 100644
 --- a/drivers/usb/musb/sunxi.c
 +++ b/drivers/usb/musb/sunxi.c
 @@ -76,6 +76,7 @@ struct sunxi_musb_cfg {
@@ -37,9 +37,9 @@ index 87e21ffa2..7f7d27ea8 100644
  };
  
  /* Our read/write methods need access and do not get passed in a musb ref :| */
-@@ -912,26 +913,40 @@ static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
- #define SUNXI_MUSB_DMA_QUIRK	0
- #endif
+@@ -909,26 +910,40 @@ static void sunxi_musb_writew(void __iomem *addr, unsigned offset, u16 data)
+ #define SUNXI_MUSB_DMA_QUIRK \
+ 	(IS_ENABLED(CONFIG_USB_SUNXI_DMA) ? MUSB_DMA_SUNXI : 0)
  
 +#define SUNXI_MUSB_OPS							\
 +	.init		= sunxi_musb_init,				\
@@ -96,7 +96,7 @@ index 87e21ffa2..7f7d27ea8 100644
  };
  
  #define SUNXI_MUSB_RAM_BITS	11
-@@ -1052,12 +1067,13 @@ static int sunxi_musb_probe(struct platform_device *pdev)
+@@ -1049,12 +1064,13 @@ static int sunxi_musb_probe(struct platform_device *pdev)
  		dev_err(&pdev->dev, "Invalid or missing 'dr_mode' property\n");
  		return -EINVAL;
  	}
@@ -112,7 +112,7 @@ index 87e21ffa2..7f7d27ea8 100644
  	pdata.config = cfg->hdrc_config;
  
  	glue->dev = &pdev->dev;
-@@ -1173,6 +1189,7 @@ static const struct sunxi_musb_cfg sun50i_a100_musb_cfg = {
+@@ -1170,6 +1186,7 @@ static const struct sunxi_musb_cfg sun50i_a100_musb_cfg = {
  	.hdrc_config = &sunxi_musb_hdrc_config_a100,
  	.has_reset = true,
  	.no_configdata = true,

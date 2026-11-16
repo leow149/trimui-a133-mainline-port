@@ -1,4 +1,4 @@
-From f0361aa6f8f62afadd0259f4c5b2a7ed517a75f2 Mon Sep 17 00:00:00 2001
+From 8c6ce7bdfe837845b29dd3c56fa843f0b38e3762 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
 Subject: [PATCH 055/106] wifi: xradio: Add XR829 support (WIP: scanning works)
@@ -24,8 +24,8 @@ tail but not data_len, frags or the cloned state, is gone: every RX skb
 is freshly allocated. xradio_update_dpllctrl() checks the result of
 every AHB access and warns about a DPLL mismatch only once.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/net/wireless/xradio/bh.c     | 42 +++++++--------
  drivers/net/wireless/xradio/fwio.c   | 81 +++++++++++++++++++++++++++-

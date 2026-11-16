@@ -1,4 +1,4 @@
-From 1477f49b828780f70915204943d4cfd81740e12e Mon Sep 17 00:00:00 2001
+From 3bc71291436f8b4d0fb8f45b701127dc3ad2ea04 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
 Subject: [PATCH 02/10] pvr: Use 16 pixel units for the terminate clip on 16x16
@@ -10,7 +10,7 @@ fixed 32 pixel unit only the top left quarter of the render target was
 binned and rendered on the GE8300.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 ---
  src/imagination/vulkan/pvr_arch_framebuffer.c | 19 +++++++++----------
  1 file changed, 9 insertions(+), 10 deletions(-)

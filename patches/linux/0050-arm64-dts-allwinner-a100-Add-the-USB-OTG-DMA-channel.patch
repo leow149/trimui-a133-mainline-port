@@ -1,4 +1,4 @@
-From d74066df3e0f21f366be5e4c3c40f892113e3634 Mon Sep 17 00:00:00 2001
+From dec29e4e22c170fa511fa2c2007792f8ae821702 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:51 +0100
 Subject: [PATCH 050/106] arm64: dts: allwinner: a100: Add the USB OTG DMA
@@ -10,8 +10,8 @@ Only the TX channels are listed: the driver moves RX data by PIO, so RX
 request lines would only be requested to stay unused. The binding still
 allows them, as the hardware has them.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 4 ++++
  1 file changed, 4 insertions(+)

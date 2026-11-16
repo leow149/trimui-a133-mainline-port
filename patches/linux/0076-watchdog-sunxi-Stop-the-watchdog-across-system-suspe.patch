@@ -1,4 +1,4 @@
-From ac7f9bc67f27af7be50738a7a04032f17565fdbe Mon Sep 17 00:00:00 2001
+From 6a88a615937ff42c75bf919bf54e680529cea893 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:56 +0100
 Subject: [PATCH 076/106] watchdog: sunxi: Stop the watchdog across system
@@ -19,7 +19,7 @@ stopped.
 The callbacks run late in suspend and early in resume, so the watchdog
 still covers the suspend and resume of the other devices.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/watchdog/sunxi_wdt.c | 42 ++++++++++++++++++++++++++++++++++++

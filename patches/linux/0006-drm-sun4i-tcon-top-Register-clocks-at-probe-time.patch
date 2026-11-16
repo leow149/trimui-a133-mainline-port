@@ -1,17 +1,17 @@
-From 7216cf7fcb2e6c1716eb87edc0e3ca95878e0195 Mon Sep 17 00:00:00 2001
+From 15c41e6c2fd1fd94131c694df18d7d8bae7e5c81 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 006/106] drm/sun4i: tcon-top: Register clocks at probe time
 
-On SoCs where the DSI controller takes its module clock from the TCON TOP DSI
-gate (A133), the DSI driver needs that clock in its probe, but the TCON TOP
-only registered its clocks in the component bind callback, which runs later.
-Add a quirk to set up the registers and clocks in probe instead, and keep
-the bind-time setup on the other SoCs. The D1 DT describes the same clock
-arrangement and probably needs the quirk too; that is untested.
+On SoCs where the DSI controller takes its module clock from the TCON TOP
+DSI gate (A133), the DSI driver needs that clock in its probe, but the TCON
+TOP only registered its clocks in the component bind callback, which runs
+later. Add a quirk to set up the registers and clocks in probe instead, and
+keep the bind-time setup on the other SoCs. The D1 DT describes the same
+clock arrangement and probably needs the quirk too; that is untested.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/gpu/drm/sun4i/sun8i_tcon_top.c | 58 +++++++++++++++++++++++---
  1 file changed, 52 insertions(+), 6 deletions(-)

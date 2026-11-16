@@ -1,4 +1,4 @@
-From 965c852cf6923938e12e502800ed821a87476159 Mon Sep 17 00:00:00 2001
+From 84ca584151d9c2cdfe74402081aca7f258645dca Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:19:45 +0100
 Subject: [PATCH 080/106] wifi: xradio: detect HT peers so the firmware
@@ -25,7 +25,7 @@ Firmware now reports ~8 MPDUs per TX A-MPDU.  Known remaining issue:
 roughly one TX run in ten still stalls for a few seconds (also seen
 before this change).
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/ht.h | 6 +++++-

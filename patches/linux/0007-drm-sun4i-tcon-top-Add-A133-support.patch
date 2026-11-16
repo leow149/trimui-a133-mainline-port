@@ -1,4 +1,4 @@
-From a9f9de77d8b89cf1ce268d238b067cddf7581084 Mon Sep 17 00:00:00 2001
+From a04429151e7e12c1e9566d5da2c28139917af74c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 007/106] drm/sun4i: tcon-top: Add A133 support
@@ -7,8 +7,8 @@ The A133 TCON TOP has no TV path and exposes the MIPI DSI clock gate.
 
 The A133 has no TCON TV, so no TV0 gate is registered for it.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/gpu/drm/sun4i/sun8i_tcon_top.c | 20 ++++++++++++++++----
  1 file changed, 16 insertions(+), 4 deletions(-)

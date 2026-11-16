@@ -1,12 +1,14 @@
-From 802fee1cd5bc5a99831957326e460231ed39d530 Mon Sep 17 00:00:00 2001
+From 11c08d626272c0f0dd3013b17add452a2caa57c8 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:52 +0100
 Subject: [PATCH 032/106] arm64: dts: allwinner: a100: Add the audio codec
 
-Interrupt and DMA request line from the A133 user manual (GIC 57, DRQ port 7).
+Add the audio codec node, disabled by default so that only boards using it
+enable it. The interrupt and the DMA request line come from the A133 user
+manual (GIC 57, DRQ port 7).
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 14 ++++++++++++++
  1 file changed, 14 insertions(+)

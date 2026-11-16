@@ -1,4 +1,4 @@
-From 5babf069ff30f572e7a3b8214ef190ada911527a Mon Sep 17 00:00:00 2001
+From 23e714d81952676e7e6693e80a44d3efa657c129 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:05:59 +0100
 Subject: [PATCH 065/106] arm64: dts: allwinner: trimui-smart-pro: Run the GPU
@@ -8,14 +8,14 @@ The stock firmware runs the GE8300 at 700 MHz with vdd-gpu-sys at 0.9 V;
 mainline left it at the 432 MHz boot rate of pll-gpu, with the rail at
 1.0 V. Use the closest PLL rate to stock.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts      | 6 ++++++
  1 file changed, 6 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index c659b13db..aa26e9338 100644
+index b453ab752..b0c8dd0c0 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -366,6 +366,12 @@ button-879 {

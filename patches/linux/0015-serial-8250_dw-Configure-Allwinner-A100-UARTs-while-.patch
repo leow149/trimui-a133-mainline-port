@@ -1,36 +1,38 @@
-From e9316738f10ff08d9b01615ddb858cbd7ed902a7 Mon Sep 17 00:00:00 2001
+From 0bcefd1cf03a6d386e398d38a22ba6f49e3dacf4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
 Subject: [PATCH 015/106] serial: 8250_dw: Configure Allwinner A100 UARTs while
  busy
 
-LCR/DLL/DLH writes are ignored while a DesignWare UART is busy. The driver's
-workaround (loopback, then wait for BUSY to clear) does not work on the A133:
-BUSY stays set in loopback while the RX line is active or held low. A UART
-connected to a peer that is already streaming, or held in break, is then left
-with DLAB set and the IER write landing in DLH, and never receives anything.
+LCR/DLL/DLH writes are ignored while a DesignWare UART is busy. The
+driver's workaround (loopback, then wait for BUSY to clear) does not work
+on the A133: BUSY stays set in loopback while the RX line is active or held
+low. A UART connected to a peer that is already streaming, or held in
+break, is then left with DLAB set and the IER write landing in DLH, and
+never receives anything.
 
-Allwinner's UART_HALT register has a documented way out: with CHCFG_AT_BUSY set
-the configuration registers accept writes while busy, and CHANGE_UPDATE applies
-them. Use it for the new "allwinner,sun50i-a100-uart" compatible. The divisor
-is changed with the sequence of the vendor driver: hold TX (HALT_TX), set DLAB
-and the divisor, apply, clear DLAB, apply again, release TX; it does not rely
-on reading back LCR. The wait for CHANGE_UPDATE runs under the port lock, so it
-is bounded (1 ms) and a timeout is reported.
+Allwinner's UART_HALT register has a documented way out: with CHCFG_AT_BUSY
+set the configuration registers accept writes while busy, and CHANGE_UPDATE
+applies them. Use it for the new "allwinner,sun50i-a100-uart" compatible.
+The divisor is changed with the sequence of the vendor driver: hold TX
+(HALT_TX), set DLAB and the divisor, apply, clear DLAB, apply again,
+release TX; it does not rely on reading back LCR. The wait for
+CHANGE_UPDATE runs under the port lock, so it is bounded (1 ms) and a
+timeout is reported.
 
 The update waits for the line to be idle, so the timeout is three
 character times of the old or the new setting (at least 1 ms), which
 covers low baud rates. If an update is still pending, CHCFG_AT_BUSY
 stays set so that it can complete, and only TX is released.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/tty/serial/8250/8250_dw.c | 109 ++++++++++++++++++++++++++++++
  1 file changed, 109 insertions(+)
 
 diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
-index 51d026f20..53c30df2f 100644
+index 51d026f20..c4b30a59b 100644
 --- a/drivers/tty/serial/8250/8250_dw.c
 +++ b/drivers/tty/serial/8250/8250_dw.c
 @@ -16,6 +16,7 @@
@@ -94,7 +96,7 @@ index 51d026f20..53c30df2f 100644
 +static bool dw8250_chcfg_update(struct uart_port *p)
 +{
 +	struct dw8250_data *d = to_dw8250_data(p->private_data);
-+	u64 frame_ns = max(d->chcfg_frame_ns, (u64)p->frame_time);
++	u64 frame_ns = max_t(u64, d->chcfg_frame_ns, p->frame_time);
 +	u32 timeout_us = max_t(u64, USEC_PER_MSEC,
 +			       div_u64(3 * frame_ns, NSEC_PER_USEC));
 +	u32 val;

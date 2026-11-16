@@ -1,4 +1,4 @@
-From 0e3ccff9004be87f494363fb26c09b7135f9bec4 Mon Sep 17 00:00:00 2001
+From 20e85d9fb92f23acc876ad5a7c06e935460ee1db Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:38 +0100
 Subject: [PATCH 08/10] pvr/pco: Fix fragment throughput on GE8300 (HSR, null
@@ -44,7 +44,7 @@ for UBO loads at a constant offset inside that range; loads at a dynamic
 offset keep it, as reads through a null descriptor must return zero at
 any offset.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/common/pvr_limits.h           |  2 +

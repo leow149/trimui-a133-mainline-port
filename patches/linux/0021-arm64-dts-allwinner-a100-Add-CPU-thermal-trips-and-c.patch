@@ -1,15 +1,15 @@
-From 283ae67264e90c556faf064b48cffe242765ac45 Mon Sep 17 00:00:00 2001
+From 5b146f607d0ad5e6e97c124e8cc3c16d43a4f117 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:31 +0100
 Subject: [PATCH 021/106] arm64: dts: allwinner: a100: Add CPU thermal trips
  and cooling
 
-The CPU thermal zone had no trip points, so nothing throttled the CPUs or shut
-down on overheating once cpufreq can run the top OPPs. Use the stock firmware's
-values: passive cooling from 80 C, critical at 110 C.
+The CPU thermal zone had no trip points, so nothing throttled the CPUs or
+shut down on overheating once cpufreq can run the top OPPs. Use the stock
+firmware's values: passive cooling from 80 C, critical at 110 C.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 33 +++++++++++++++++--
  1 file changed, 31 insertions(+), 2 deletions(-)

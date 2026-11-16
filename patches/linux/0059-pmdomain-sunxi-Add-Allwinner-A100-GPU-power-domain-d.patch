@@ -1,4 +1,4 @@
-From 5d0bacd3967121380eec5f3aca5017091b27f1e1 Mon Sep 17 00:00:00 2001
+From 007436a415abc26f7cf6c5e3e774a33c7fc141c1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 19:17:48 +0100
 Subject: [PATCH 059/106] pmdomain: sunxi: Add Allwinner A100 GPU power domain
@@ -10,20 +10,20 @@ in software: close the power switches group by group, open the clock,
 release isolation and reset, then mark the domain as on; and the reverse
 for power off. Do the same, with the vendor's order and delays.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/pmdomain/sunxi/Kconfig               |   9 +
+ drivers/pmdomain/sunxi/Kconfig               |  14 ++
  drivers/pmdomain/sunxi/Makefile              |   1 +
- drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c | 172 +++++++++++++++++++
- 3 files changed, 182 insertions(+)
+ drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c | 186 +++++++++++++++++++
+ 3 files changed, 201 insertions(+)
  create mode 100644 drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
 
 diff --git a/drivers/pmdomain/sunxi/Kconfig b/drivers/pmdomain/sunxi/Kconfig
-index 858446594..644c66cc9 100644
+index 858446594..8cef2c6ae 100644
 --- a/drivers/pmdomain/sunxi/Kconfig
 +++ b/drivers/pmdomain/sunxi/Kconfig
-@@ -11,6 +11,15 @@ config SUN20I_PPU
+@@ -11,6 +11,20 @@ config SUN20I_PPU
  	  to enable power to certain peripherals, such as the display
  	  engine.
  
@@ -35,6 +35,11 @@ index 858446594..644c66cc9 100644
 +	help
 +	  Say y to enable the power domain driver for the GPU of the
 +	  Allwinner A100/A133.
++
++	  The GPU power switches, isolation cells, clock gate and reset are
++	  sequenced by software through the R_PPU registers. The driver
++	  provides a single generic power domain that the GPU node refers
++	  to, and it is built in because the domain must stay registered.
 +
  config SUN50I_H6_PRCM_PPU
  	tristate "Allwinner H6 PRCM power domain driver"
@@ -51,10 +56,10 @@ index e344b232f..a35d208c6 100644
  obj-$(CONFIG_SUN55I_PCK600)		+= sun55i-pck600.o
 diff --git a/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c b/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
 new file mode 100644
-index 000000000..ac7304b81
+index 000000000..9f8ac24ff
 --- /dev/null
 +++ b/drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,186 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Allwinner A100/A133 GPU power domain (R_PPU)
@@ -64,6 +69,7 @@ index 000000000..ac7304b81
 + * vendor kernel uses.
 + */
 +
++#include <linux/bits.h>
 +#include <linux/clk.h>
 +#include <linux/delay.h>
 +#include <linux/io.h>
@@ -80,6 +86,12 @@ index 000000000..ac7304b81
 +#define PPU_PWROFF_GATE_ISO1		BIT(1)
 +#define PPU_PSW_ON_REG		0x0c
 +#define PPU_PSW_OFF_REG		0x10
++/* 8 small power switches in bits 7:0, 8 big ones in bits 23:16. */
++#define PPU_PSW_SMALL_NUM		8
++#define PPU_PSW_SMALL(n)		BIT(n)
++#define PPU_PSW_BIG(n)			BIT(16 + (n))
++#define PPU_PSW_ALL_SMALL		GENMASK(7, 0)
++#define PPU_PSW_ALL_BIG			GENMASK(23, 16)
 +#define PPU_STATE_REG		0x20
 +#define PPU_STATE_MASK			GENMASK(1, 0)
 +#define PPU_STATE_ON			0
@@ -106,10 +118,12 @@ index 000000000..ac7304b81
 +
 +static int sun50i_a100_gpu_ppu_power_on(struct generic_pm_domain *genpd)
 +{
-+	/* Remaining switch groups, in vendor order, with their settle time */
++	/* Big power switches, in vendor order, with their settle time */
 +	static const struct { u32 sw; unsigned int delay_us; } seq[] = {
-+		{ BIT(23), 10 }, { BIT(18), 10 }, { BIT(16), 5 }, { BIT(19), 5 },
-+		{ BIT(20), 5 }, { BIT(21), 5 }, { BIT(22), 5 }, { BIT(17), 5 },
++		{ PPU_PSW_BIG(7), 10 }, { PPU_PSW_BIG(2), 10 },
++		{ PPU_PSW_BIG(0), 5 }, { PPU_PSW_BIG(3), 5 },
++		{ PPU_PSW_BIG(4), 5 }, { PPU_PSW_BIG(5), 5 },
++		{ PPU_PSW_BIG(6), 5 }, { PPU_PSW_BIG(1), 5 },
 +	};
 +	struct sun50i_a100_gpu_ppu *ppu = to_gpu_ppu(genpd);
 +	int i;
@@ -117,9 +131,13 @@ index 000000000..ac7304b81
 +	if (!sun50i_a100_gpu_ppu_is_off(ppu))
 +		return 0;
 +
-+	/* Close the small switches one by one to limit inrush current. */
-+	for (i = 0; i < 8; i++) {
-+		writel(BIT(i), ppu->base + PPU_PSW_ON_REG);
++	/*
++	 * Close the small switches one by one to limit inrush current. The
++	 * delays below are mostly 1 to 5 us, too short for usleep_range() to
++	 * be worthwhile, so they stay busy-waits.
++	 */
++	for (i = 0; i < PPU_PSW_SMALL_NUM; i++) {
++		writel(PPU_PSW_SMALL(i), ppu->base + PPU_PSW_ON_REG);
 +		udelay(1);
 +	}
 +	writel(1, ppu->base + PPU_CLK_GATE_REG);
@@ -134,7 +152,8 @@ index 000000000..ac7304b81
 +	sun50i_a100_gpu_ppu_clrbits(ppu, PPU_PWROFF_GATE_REG, PPU_PWROFF_GATE_ISO1);
 +	udelay(1);
 +	writel(1, ppu->base + PPU_RSTN_REG);
-+	udelay(10);
++	/* Called from genpd with a sleeping lock held, so sleeping is fine. */
++	usleep_range(10, 20);
 +
 +	writel(PPU_STATE_ON, ppu->base + PPU_STATE_REG);
 +	writel(1, ppu->base + PPU_STATE_UPDATE_REG);
@@ -158,8 +177,8 @@ index 000000000..ac7304b81
 +	udelay(2);
 +	writel(0, ppu->base + PPU_RSTN_REG);
 +
-+	writel(0xff0000, ppu->base + PPU_PSW_OFF_REG);
-+	writel(0xff, ppu->base + PPU_PSW_OFF_REG);
++	writel(PPU_PSW_ALL_BIG, ppu->base + PPU_PSW_OFF_REG);
++	writel(PPU_PSW_ALL_SMALL, ppu->base + PPU_PSW_OFF_REG);
 +
 +	writel(PPU_STATE_OFF, ppu->base + PPU_STATE_REG);
 +	writel(1, ppu->base + PPU_STATE_UPDATE_REG);

@@ -1,4 +1,4 @@
-From 928c3d47366d30646bedf60e5fe48137098a5b0d Mon Sep 17 00:00:00 2001
+From 1d87dfdae7dcbad600cfab74195e64cf3c948f2f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:04:00 +0100
 Subject: [PATCH 056/106] arm64: dts: allwinner: trimui-smart-pro: Describe the
@@ -6,14 +6,14 @@ Subject: [PATCH 056/106] arm64: dts: allwinner: trimui-smart-pro: Describe the
 
 Child node for the xradio driver, with the WL_HOSTWAKE interrupt on PL6.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts    | 8 ++++++++
  1 file changed, 8 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 27fa60c16..b97362efe 100644
+index 216361840..6bb7aff3e 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -380,6 +380,14 @@ &mmc1 {

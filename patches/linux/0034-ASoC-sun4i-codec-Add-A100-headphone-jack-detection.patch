@@ -1,13 +1,13 @@
-From 2366ce6a562ea8d79522bdabfdb6df33e84cfa79 Mon Sep 17 00:00:00 2001
+From 2780bc986837862488477aed03a555da16adb891 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:38 +0100
 Subject: [PATCH 034/106] ASoC: sun4i-codec: Add A100 headphone jack detection
 
 The A100/A133 codec detects the headphone jack itself (HMIC block): with
-JACKDETEN set it raises plug-in and removal interrupts on the codec interrupt
-line. There is no state bit, so the state follows the events. Report the jack
-on the card and mute the speaker pin while headphones are plugged in, as both
-share the headphone output on the boards seen so far.
+JACKDETEN set it raises plug-in and removal interrupts on the codec
+interrupt line. There is no state bit, so the state follows the events.
+Report the jack on the card and mute the speaker pin while headphones are
+plugged in, as both share the headphone output on the boards seen so far.
 
 The interrupt is requested at probe (disabled until the card has created
 the jack, so rebinding the card does not hit -EBUSY) with
@@ -15,8 +15,8 @@ platform_get_irq_optional(). The jack starts out unplugged (speaker on);
 a jack that is already plugged in is reported by the plug-in event the
 detector raises once enabled.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  sound/soc/sunxi/sun4i-codec.c | 128 ++++++++++++++++++++++++++++++++++
  1 file changed, 128 insertions(+)

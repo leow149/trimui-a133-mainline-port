@@ -1,4 +1,4 @@
-From 985515b9675d5ace0b850fb733fa69b532ed646f Mon Sep 17 00:00:00 2001
+From 314fa565fa7653c319eb5ac5ac3a7325d94ea0a3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:39 +0100
 Subject: [PATCH 09/10] pvr: Support the v1 simple internal parameter format in
@@ -25,7 +25,7 @@ transfer submissions) and from TA-written parameter memory:
 Verified with tools/gpu/vkxfer (125 cases): 80 pass/45 crash before, 125 pass
 after. Xwayland clients (glxgears, es2gears_x11) and moonlight-qt run.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../vulkan/pvr_arch_job_transfer.c            | 88 +++++++++++++++++--

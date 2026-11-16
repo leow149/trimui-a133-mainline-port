@@ -1,4 +1,4 @@
-From 6808cb9738e441b8982aba6ea9934c8e563a78c1 Mon Sep 17 00:00:00 2001
+From 5cc515c293396db1ccedb3ba4141072efdd92817 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
 Subject: [PATCH 03/10] pvr: Program the background depth as F32 on v1
@@ -10,7 +10,7 @@ D16/D24 clear value written as unorm made every depth test against the
 cleared depth fail.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 ---
  src/imagination/vulkan/pvr_arch_job_render.c | 7 +++++++
  1 file changed, 7 insertions(+)

@@ -1,4 +1,4 @@
-From 4dd14b48edc379ecdc61ce531c4a5d0f5f85381c Mon Sep 17 00:00:00 2001
+From 2735d61290e045edac872be91039afb398f6f150 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:53:12 +0100
 Subject: [PATCH 05/10] pvr: Don't regenerate the render setup for every
@@ -34,7 +34,7 @@ validity, as those of a framebuffer that is used from several command
 buffers.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 ---
  src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  83 +++++-
  src/imagination/vulkan/pvr_arch_device.c      |   3 +

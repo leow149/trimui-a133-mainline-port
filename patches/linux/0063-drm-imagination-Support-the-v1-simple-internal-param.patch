@@ -1,4 +1,4 @@
-From 0c6daf04cfe2b9903065520f83295c254d88994f Mon Sep 17 00:00:00 2001
+From e503b98db30ab841f2163e6a0707e8c92b8daf29 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:22:57 +0100
 Subject: [PATCH 063/106] drm/imagination: Support the v1 simple internal
@@ -10,8 +10,8 @@ Program them like the vendor driver does: a single macrotile covering the
 whole render target and the last tile as screen maximum, without the 2x2
 tile group alignment of version 2.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/gpu/drm/imagination/pvr_hwrt.c | 31 +++++++++++++++++---------
  1 file changed, 21 insertions(+), 10 deletions(-)

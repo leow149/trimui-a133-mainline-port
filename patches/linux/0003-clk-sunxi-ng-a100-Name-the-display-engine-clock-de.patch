@@ -1,15 +1,15 @@
-From b407ca6e554691ffe7234159d8f034853e57a625 Mon Sep 17 00:00:00 2001
+From 48a180fe9b1687088fb6cda544d83cd714dc1c01 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:25 +0100
 Subject: [PATCH 003/106] clk: sunxi-ng: a100: Name the display engine clock
  "de"
 
-The DE2 clock block (ccu-sun8i-de2) looks up its parent by the name "de". On
-A100 that clock was called "de0", which left the mixer clocks orphaned and
-reading 0 Hz.
+The DE2 clock block (ccu-sun8i-de2) looks up its parent by the name "de".
+On A100 that clock was called "de0", which left the mixer clocks orphaned
+and reading 0 Hz.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/clk/sunxi-ng/ccu-sun50i-a100.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)

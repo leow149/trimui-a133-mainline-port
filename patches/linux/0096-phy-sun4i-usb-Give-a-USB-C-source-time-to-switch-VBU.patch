@@ -1,18 +1,18 @@
-From f31b1db327e94a65bd4fb9ba094684205a712213 Mon Sep 17 00:00:00 2001
+From dab965c97f44b0399dd82dca64a3f39dd989cd81 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:11:57 +0100
 Subject: [PATCH 096/106] phy: sun4i-usb: Give a USB-C source time to switch
  VBUS on before driving it
 
 On the TrimUI Smart Pro the ID pin is driven from the USB-C CC lines by a
-circuit we have not identified. It reads low (host) with an OTG adapter, and
-also with a USB-C charger on a C-to-C cable; with a C-to-A cable to a PC it
-stays high (see "phy: sun4i-usb: Only drive phy0 VBUS while the ID pin says
-host"). A USB-C source only switches VBUS on after tCCDebounce plus tVBUSON
-(up to ~475 ms), so phy0 saw "host, no external VBUS" and enabled the AXP717
-boost at once. The TrimUI then back-fed 5.1 V into the charger's port, and
-the charger, which must not switch on while VBUS is already present, never
-did: the battery discharged while plugged in.
+circuit we have not identified. It reads low (host) with an OTG adapter,
+and also with a USB-C charger on a C-to-C cable; with a C-to-A cable to a
+PC it stays high (see "phy: sun4i-usb: Only drive phy0 VBUS while the ID
+pin says host"). A USB-C source only switches VBUS on after tCCDebounce
+plus tVBUSON (up to ~475 ms), so phy0 saw "host, no external VBUS" and
+enabled the AXP717 boost at once. The TrimUI then back-fed 5.1 V into the
+charger's port, and the charger, which must not switch on while VBUS is
+already present, never did: the battery discharged while plugged in.
 
 Only drive VBUS once the ID has said host for one second and no external
 VBUS has shown up by then. The delay is a per-SoC setting
@@ -22,15 +22,15 @@ window reschedule the detect work, so VBUS still comes on once the delay is
 over.
 
 This is a heuristic: a source that takes longer than a second to switch its
-VBUS on still gets back-fed. A PC on a C-to-C cable (ID presumably low, then
-external VBUS) was not tested and would end up in host role without VBUS
-rather than as a gadget.
+VBUS on still gets back-fed. A PC on a C-to-C cable (ID presumably low,
+then external VBUS) was not tested and would end up in host role without
+VBUS rather than as a gadget.
 
 Tested: on a 140 W USB-C charger (C-to-C) the boost stays off at boot and
-across an unplug/replug, VBUS comes from the charger and the battery charges.
-An OTG adapter with a bus-powered hub still gets VBUS.
+across an unplug/replug, VBUS comes from the charger and the battery
+charges. An OTG adapter with a bus-powered hub still gets VBUS.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/phy/allwinner/phy-sun4i-usb.c | 60 ++++++++++++++++++++-------

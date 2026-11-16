@@ -1,4 +1,4 @@
-From 31c8ae56c4dfc5984d95551690e320fd9da82ce9 Mon Sep 17 00:00:00 2001
+From 9c6de900b48aab849b6a55ed43aa175dbc99e5e3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Fri, 6 Nov 2026 08:41:15 +0100
 Subject: [PATCH 075/106] arm64: dts: allwinner: trimui-smart-pro: XR829
@@ -10,7 +10,8 @@ Bluetooth HCI and describe BT_RST_N (PL2) as a rfkill-gpio.
 The firmware download and the H4 line discipline attach are done in
 userspace, which also keeps BT_WAKE (PL4) high through the GPIO character
 device while the HCI is attached. There is no binding or driver for the
-XR829 low-power (BT_WAKE/BT_HOSTWAKE) signalling, so they are not described.
+XR829 low-power (BT_WAKE/BT_HOSTWAKE) signalling, so they are not
+described.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
@@ -36,7 +37,7 @@ index b0a99f4af..52a0b7762 100644
  
  		iommu: iommu@30f0000 {
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 412eadd8d..a3abfa14b 100644
+index 096d22fad..e9ba23e32 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -551,6 +551,28 @@ &uart0 {

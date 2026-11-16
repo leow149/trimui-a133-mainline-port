@@ -1,4 +1,4 @@
-From 497ae2a96a5e92fffdf19c4478b1eefb19272cf5 Mon Sep 17 00:00:00 2001
+From 925c96b563d57eb6666462a63124a685c34318ec Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 00:23:17 +0100
 Subject: [PATCH 01/10] pvr: Support the v1 simple internal parameter format
@@ -9,7 +9,7 @@ version 2. Like the vendor driver, use a single macrotile covering the
 whole render target, and only align to 2x2 tile groups on version 2.
 
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 ---
  src/imagination/include/hwdef/rogue_hw_utils.h | 15 +++++++++++----
  src/imagination/vulkan/pvr_arch_job_render.c   | 12 +++++++++++-

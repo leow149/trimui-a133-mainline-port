@@ -1,4 +1,4 @@
-From f96680a794c17673f0f295a4130c4190f7bf9719 Mon Sep 17 00:00:00 2001
+From fa0c070afd325280ec600d47b253c298b751f481 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 084/106] wifi: xradio: report the real TX rate entries to
@@ -17,7 +17,7 @@ home AP (40 MHz), iperf3 vs host laptop, 10 s runs:
   after:  TX 29.5-31.8,        RX 35.1-38.4; iw tx rate MCS7 135-150 Mbit/s 40MHz
 Total vs. 20 MHz before HT40: TX +10%, RX +25-30%.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/tx.c  | 62 ++++++++++++++++++++++++++++++-

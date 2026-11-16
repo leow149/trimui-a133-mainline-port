@@ -1,22 +1,22 @@
-From b3f2b24eb1c1a23378c08858b6c28ddbd6912364 Mon Sep 17 00:00:00 2001
+From 6c6e73bb27c9ed5b78f1ba33683fccd2e2c98563 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:49 +0100
 Subject: [PATCH 046/106] usb: musb: Let other dmaengine based glue share the
  ux500 DMA paths
 
 The gadget and host code have special cases for the ux500 DMA glue, which
-only drives the FIFO through a generic dmaengine channel. Another glue doing
-the same needs the same handling: add MUSB_DMA_SUNXI and test for either via
-musb_dma_dmaengine().
+only drives the FIFO through a generic dmaengine channel. Another glue
+doing the same needs the same handling: add MUSB_DMA_SUNXI and test for
+either via musb_dma_dmaengine().
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/usb/musb/musb_core.h   | 1 +
- drivers/usb/musb/musb_dma.h    | 9 +++++++++
- drivers/usb/musb/musb_gadget.c | 4 ++--
- drivers/usb/musb/musb_host.c   | 8 ++++----
- 4 files changed, 16 insertions(+), 6 deletions(-)
+ drivers/usb/musb/musb_core.h   |  1 +
+ drivers/usb/musb/musb_dma.h    |  6 ++++++
+ drivers/usb/musb/musb_gadget.c |  6 +++---
+ drivers/usb/musb/musb_host.c   | 22 +++++++++++-----------
+ 4 files changed, 21 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/usb/musb/musb_core.h b/drivers/usb/musb/musb_core.h
 index 91b5b6b66..59d72da28 100644
@@ -31,18 +31,15 @@ index 91b5b6b66..59d72da28 100644
  #define MUSB_DA8XX		BIT(8)
  #define MUSB_PRESERVE_SESSION	BIT(7)
 diff --git a/drivers/usb/musb/musb_dma.h b/drivers/usb/musb/musb_dma.h
-index 0cd7fc468..66785ceca 100644
+index 0cd7fc468..eee62fe3d 100644
 --- a/drivers/usb/musb/musb_dma.h
 +++ b/drivers/usb/musb/musb_dma.h
-@@ -55,6 +55,15 @@ struct musb_hw_ep;
+@@ -55,6 +55,12 @@ struct musb_hw_ep;
  #define musb_dma_ux500(musb)		0
  #endif
  
-+#ifdef CONFIG_USB_SUNXI_DMA
-+#define musb_dma_sunxi(musb)		(musb->ops->quirks & MUSB_DMA_SUNXI)
-+#else
-+#define musb_dma_sunxi(musb)		0
-+#endif
++#define musb_dma_sunxi(musb)		(IS_ENABLED(CONFIG_USB_SUNXI_DMA) && \
++					 ((musb)->ops->quirks & MUSB_DMA_SUNXI))
 +
 +/* dmaengine based backends: the controller only moves FIFO data */
 +#define musb_dma_dmaengine(musb)	(musb_dma_ux500(musb) || musb_dma_sunxi(musb))
@@ -51,7 +48,7 @@ index 0cd7fc468..66785ceca 100644
  #define musb_dma_cppi41(musb)		(musb->ops->quirks & MUSB_DMA_CPPI41)
  #else
 diff --git a/drivers/usb/musb/musb_gadget.c b/drivers/usb/musb/musb_gadget.c
-index 016d3f3fc..045858361 100644
+index 016d3f3fc..f7f3ffc49 100644
 --- a/drivers/usb/musb/musb_gadget.c
 +++ b/drivers/usb/musb/musb_gadget.c
 @@ -281,7 +281,7 @@ static void txstate(struct musb *musb, struct musb_request *req)
@@ -63,17 +60,19 @@ index 016d3f3fc..045858361 100644
  			if (request_size < musb_ep->packet_sz)
  				musb_ep->dma->desired_mode = 0;
  			else
-@@ -674,7 +674,7 @@ static void rxstate(struct musb *musb, struct musb_request *req)
+@@ -674,8 +674,8 @@ static void rxstate(struct musb *musb, struct musb_request *req)
  					return;
  			}
  
 -			if ((musb_dma_ux500(musb)) &&
-+			if ((musb_dma_dmaengine(musb)) &&
- 				(request->actual < request->length)) {
+-				(request->actual < request->length)) {
++			if (musb_dma_dmaengine(musb) &&
++			    request->actual < request->length) {
  
  				struct dma_controller *c;
+ 				struct dma_channel *channel;
 diff --git a/drivers/usb/musb/musb_host.c b/drivers/usb/musb/musb_host.c
-index 31b061248..6a1f602f4 100644
+index 31b061248..9411f1863 100644
 --- a/drivers/usb/musb/musb_host.c
 +++ b/drivers/usb/musb/musb_host.c
 @@ -631,7 +631,7 @@ static bool musb_tx_dma_program(struct dma_controller *dma,
@@ -94,21 +93,36 @@ index 31b061248..6a1f602f4 100644
  	    (rx_csr & MUSB_RXCSR_H_REQPKT)) {
  		/* REVISIT this happened for a while on some short reads...
  		 * the cleanup still needs investigation... looks bad...
-@@ -1894,7 +1894,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1894,14 +1894,14 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  			| MUSB_RXCSR_RXPKTRDY);
  		musb_writew(hw_ep->regs, MUSB_RXCSR, val);
  
 -		if (musb_dma_inventra(musb) || musb_dma_ux500(musb) ||
 +		if (musb_dma_inventra(musb) || musb_dma_dmaengine(musb) ||
  		    musb_dma_cppi41(musb)) {
- 			    done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
- 			    musb_dbg(hw_ep->musb,
-@@ -1923,7 +1923,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+-			    done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
+-			    musb_dbg(hw_ep->musb,
+-				    "ep %d dma %s, rxcsr %04x, rxcount %d",
+-				    epnum, done ? "off" : "reset",
+-				    musb_readw(epio, MUSB_RXCSR),
+-				    musb_readw(epio, MUSB_RXCOUNT));
++			done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
++			musb_dbg(hw_ep->musb,
++				 "ep %d dma %s, rxcsr %04x, rxcount %d",
++				 epnum, done ? "off" : "reset",
++				 musb_readw(epio, MUSB_RXCSR),
++				 musb_readw(epio, MUSB_RXCOUNT));
+ 		} else {
+ 			done = true;
+ 		}
+@@ -1923,8 +1923,8 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  		}
  
  		/* we are expecting IN packets */
 -		if ((musb_dma_inventra(musb) || musb_dma_ux500(musb) ||
+-		    musb_dma_cppi41(musb)) && dma) {
 +		if ((musb_dma_inventra(musb) || musb_dma_dmaengine(musb) ||
- 		    musb_dma_cppi41(musb)) && dma) {
++		     musb_dma_cppi41(musb)) && dma) {
  			musb_dbg(hw_ep->musb,
  				"RX%d count %d, buffer 0x%llx len %d/%d",
+ 				epnum, musb_readw(epio, MUSB_RXCOUNT),

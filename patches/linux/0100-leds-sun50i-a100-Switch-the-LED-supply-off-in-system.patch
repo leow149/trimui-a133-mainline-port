@@ -1,12 +1,16 @@
-From bbcf476bed604e1d741047f2ce7cc534a5f9e70c Mon Sep 17 00:00:00 2001
+From a457e17f73bf4e8ba4e8f94c87a9ad82ca176824 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 100/106] leds: sun50i-a100: Switch the LED supply off in
  system sleep
 
-Take an optional vled-supply. Turn it off in system sleep and on again on resume, and send the colour buffer again then, as the LEDs forget it without power. The regulator core leaves supplies alone in s2idle, so the consumers have to do this.
+Take an optional vled-supply. Turn it off in system sleep and on again on
+resume, and send the colour buffer again then, as the LEDs forget it
+without power. The regulator core leaves supplies alone in s2idle, so the
+consumers have to do this.
 
-Tested on the TrimUI Smart Pro: the 23 LEDs go dark in s2idle and come back with their colours.
+Tested on the TrimUI Smart Pro: the 23 LEDs go dark in s2idle and come back
+with their colours.
 
 The driver tracks whether it holds its vled reference, so a resume that
 failed to switch the supply back on does not lead to an unbalanced
@@ -16,7 +20,7 @@ Errors switching the supply are only reported: the controller is
 suspended and resumed either way, so its clocks stay balanced. The LEDs
 are registered with LED_CORE_SUSPENDRESUME.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/leds/leds-sun50i-a100.c | 96 ++++++++++++++++++++++++++++++++-

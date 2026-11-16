@@ -1,4 +1,4 @@
-From 56c087ca0c6e2969a5f24976c6187ee422898132 Mon Sep 17 00:00:00 2001
+From 04513bca1827ab2c21fca3517ab82d907689099c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:39:05 +0100
 Subject: [PATCH 099/106] iio: adc: axp20x_adc: AXP717 battery current is 0.5
@@ -15,7 +15,7 @@ on the TrimUI Smart Pro measured with an inline USB meter:
 The register only reflects charge current; while the battery supplies
 the system (charging paused) it reads near zero.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/iio/adc/axp20x_adc.c | 4 +++-

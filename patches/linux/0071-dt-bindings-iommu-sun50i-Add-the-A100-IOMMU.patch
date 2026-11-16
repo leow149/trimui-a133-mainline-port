@@ -1,4 +1,4 @@
-From 7ebc22f663dcb71fb3e4a7611b1608e0953f62fa Mon Sep 17 00:00:00 2001
+From 6b3e59636872580ce859e8aced424147b47007c2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:12:24 +0100
 Subject: [PATCH 071/106] dt-bindings: iommu: sun50i: Add the A100 IOMMU
@@ -7,8 +7,8 @@ The A100 has the same IOMMU as the H6 and H616 at the same address, with
 DE0 as master 0 and the video engine as master 2, but no reset line: its
 CCU register only has a bus clock gate.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../bindings/iommu/allwinner,sun50i-h6-iommu.yaml | 15 ++++++++++++++-
  1 file changed, 14 insertions(+), 1 deletion(-)

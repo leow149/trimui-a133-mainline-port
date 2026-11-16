@@ -1,4 +1,4 @@
-From 7aed3092330bd2ca3c1543c650791ef6c190b160 Mon Sep 17 00:00:00 2001
+From d2c0f8fcf549ff886bb24e4a571fa9f05bc52bb9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 14:30:00 +0100
 Subject: [PATCH 06/10] pco: Do 2D RGBA8 and 32-bit-per-channel image stores in
@@ -32,7 +32,7 @@ The software path is only taken at run time for twiddled 2D images
 images) and 3D twiddled ones take the TPU store, which is lowered in place
 in the else branch of that run-time check.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/pco/pco_nir_tex.c | 142 ++++++++++++++++++++++++++++++

@@ -1,28 +1,29 @@
-From 81d83d7d3d60feb0650b82c27f4d2aaa286e570d Mon Sep 17 00:00:00 2001
+From 0d334c341f1221977829a8f35125b0b66f34b3ea Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:30 +0100
-Subject: [PATCH 018/106] Input: joystick: Add TrimUI Smart Pro gamepad driver
+Subject: [PATCH 018/106] Input: trimui-smartpro-pad: Add TrimUI Smart Pro
+ gamepad driver
 
 The buttons and analog sticks of the TrimUI Smart Pro are scanned by two
-microcontrollers, one per side, each streaming 8-byte frames over its own UART
-(19200 8N1, receive only). Both halves are bound by this serdev driver and
-reported through one input device owned by the left half.
+microcontrollers, one per side, each streaming 8-byte frames over its own
+UART (19200 8N1, receive only). Both halves are bound by this serdev driver
+and reported through one input device owned by the left half.
 
-The stick centre is taken from the first frames after power-up and the range
-grows to the extremes seen, as the stock default calibration leaves the sticks
-up to 20% off centre on real units.
+The stick centre is taken from the first frames after power-up and the
+range grows to the extremes seen, as the stock default calibration leaves
+the sticks up to 20% off centre on real units.
 
 Both halves report under the lock of the half that owns the input
 device, so a frame and its input_sync() never interleave with the other
 half's.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/input/joystick/Kconfig               |  11 +
  drivers/input/joystick/Makefile              |   1 +
- drivers/input/joystick/trimui-smartpro-pad.c | 349 +++++++++++++++++++
- 3 files changed, 361 insertions(+)
+ drivers/input/joystick/trimui-smartpro-pad.c | 353 +++++++++++++++++++
+ 3 files changed, 365 insertions(+)
  create mode 100644 drivers/input/joystick/trimui-smartpro-pad.c
 
 diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
@@ -59,10 +60,10 @@ index 9976f596a..53952b31e 100644
  obj-$(CONFIG_JOYSTICK_WARRIOR)		+= warrior.o
 diff --git a/drivers/input/joystick/trimui-smartpro-pad.c b/drivers/input/joystick/trimui-smartpro-pad.c
 new file mode 100644
-index 000000000..f29ec9bda
+index 000000000..8db6e038e
 --- /dev/null
 +++ b/drivers/input/joystick/trimui-smartpro-pad.c
-@@ -0,0 +1,349 @@
+@@ -0,0 +1,353 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * TrimUI Smart Pro gamepad
@@ -72,6 +73,9 @@ index 000000000..f29ec9bda
 + * UART (19200 8N1, receive only):
 + *
 + *   0xff  ??  buttons  x_hi x_lo  y_hi y_lo  0xfe
++ *
++ * Byte 1 (??) is unknown: its meaning has not been determined and the
++ * driver ignores it.
 + *
 + * The stick values are 12-bit ADC readings. Both halves are reported through
 + * one input device owned by the left half, which links to the right half.
@@ -165,16 +169,17 @@ index 000000000..f29ec9bda
 +static int tsp_pad_axis(struct tsp_pad_axis_cal *cal, int raw)
 +{
 +	int v = raw - cal->zero;
++	int span;
 +
 +	cal->low = min(cal->low, raw);
 +	cal->high = max(cal->high, raw);
 +
-+	if (v > 0)
-+		v = v * TSP_PAD_AXIS_MAX / (cal->high - cal->zero);
-+	else
-+		v = v * TSP_PAD_AXIS_MAX / (cal->zero - cal->low);
++	span = v > 0 ? cal->high - cal->zero : cal->zero - cal->low;
++	/* A zero span cannot be scaled: report the centre. */
++	if (span <= 0)
++		return 0;
 +
-+	return -v;
++	return -(v * TSP_PAD_AXIS_MAX / span);
 +}
 +
 +/* Average the first frames into the centre, then set the starting range. */

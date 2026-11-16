@@ -1,21 +1,21 @@
-From e634fbc6db3bc4282ddafbd2f438d8772ad93597 Mon Sep 17 00:00:00 2001
+From c56fad3d82dc1d6e0228354ba407d1fcc3417232 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
 Subject: [PATCH 038/106] arm64: dts: allwinner: trimui-smart-pro: Add slider
  switch and stick LEDs
 
-The slider on PH19 is a two-position switch; report it as SW_TABLET_MODE like
-the stock firmware. 23 RGB LEDs on the LEDC: the logo (RGB) and the two stick
-rings (GRB, 11 LEDs each).
+The slider on PH19 is a two-position switch; report it as SW_TABLET_MODE
+like the stock firmware. 23 RGB LEDs on the LEDC: the logo (RGB) and the
+two stick rings (GRB, 11 LEDs each).
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 207 ++++++++++++++++++
  1 file changed, 207 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index 51a60a7ac..d9a1bbc2a 100644
+index 51a60a7ac..d7fb8e16b 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -73,6 +73,18 @@ reg_vcc5v: regulator-vcc5v {
@@ -43,9 +43,9 @@ index 51a60a7ac..d9a1bbc2a 100644
   */
 +/*
 + * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
-+ * right one. The rings are GRB (the stock DT says "RGB", but red shows green
-+ * with it), the logo LED is RGB. Timings from the stock firmware. They are
-+ * powered from vcc-pad, which the gamepad driver switches on.
++ * right one. The rings are GRB, the logo LED is RGB. Timings from the stock
++ * firmware. They are powered from vcc-pad, which the gamepad driver switches
++ * on.
 + */
 +&ledc {
 +	pinctrl-names = "default";

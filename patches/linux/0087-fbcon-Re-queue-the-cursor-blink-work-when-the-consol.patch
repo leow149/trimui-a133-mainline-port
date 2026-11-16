@@ -1,4 +1,4 @@
-From d7932270632c72c7df9c903f204a6bf458811567 Mon Sep 17 00:00:00 2001
+From 6bbabb2d332ddc7b0581a070afea2ddc7ac9d80b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 00:54:41 +0100
 Subject: [PATCH 087/106] fbcon: Re-queue the cursor blink work when the
@@ -14,13 +14,14 @@ does not block, which is what the trylock is there to avoid, and
 cancel_delayed_work_sync() in fbcon_del_cursor_work() handles the
 self-re-queue on teardown.
 
-Tested on the TrimUI Smart Pro (A133): /sys/class/graphics/fbcon/cursor_blink
-(delayed_work_pending of the blink work) stays 1 in 10/10 samples over 20 s
-after each of two boots. Before, the blink stopped intermittently at boot.
+Tested on the TrimUI Smart Pro (A133):
+/sys/class/graphics/fbcon/cursor_blink (delayed_work_pending of the blink
+work) stays 1 in 10/10 samples over 20 s after each of two boots. Before,
+the blink stopped intermittently at boot.
 
 This is a generic fbcon change, not specific to this board.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/video/fbdev/core/fbcon.c | 12 +++++++++++-

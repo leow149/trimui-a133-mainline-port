@@ -1,4 +1,4 @@
-From c6ae8656840b53a6dffc50a30da14a6b53cef200 Mon Sep 17 00:00:00 2001
+From 607b7b315785e937a1f3893e5df88d78583a011f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 11:30:55 +0100
 Subject: [PATCH 095/106] power: supply: axp20x_battery: Read the AXP717 charge
@@ -19,7 +19,7 @@ Tested on the TrimUI Smart Pro (DT limit 1 A, register 960 mA): 0,
 1024000 is rejected as above the limit, and an inline USB meter shows the
 input current go from ~60 mA back to ~1.1 A when charging is resumed.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/power/supply/axp20x_battery.c | 7 ++++++-

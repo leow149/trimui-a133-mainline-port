@@ -1,12 +1,15 @@
-From 26554c33a1ed63bdde4e05bb0dcc590af542cb68 Mon Sep 17 00:00:00 2001
+From 12323e2616e6150761f632e6cdc15b47d5181c22 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:27 +0100
 Subject: [PATCH 008/106] drm/sun4i: mixer: Add A133 mixers
 
-The A133 display engine is DE2-style with two mixers; mixer 0 runs at 300 MHz.
+The A133 display engine is DE2-style with two mixers. The configuration
+comes from the vendor BSP's de_feat.c: mixer 0 has 2 VI and 2 UI channels,
+mixer 1 has 1 VI and 2 UI channels, all with scalers. The stock firmware
+runs the mixers at 300 MHz.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/gpu/drm/sun4i/sun8i_mixer.c | 43 +++++++++++++++++++++++++++++
  1 file changed, 43 insertions(+)

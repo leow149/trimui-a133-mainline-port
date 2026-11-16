@@ -1,4 +1,4 @@
-From c03ca9a4a33a3aaf8e638e60d72c71d3db16bfb6 Mon Sep 17 00:00:00 2001
+From ac6631048cd24933daa32d819ac4d0126b9e7ea2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:23 +0100
 Subject: [PATCH 001/106] dt-bindings: pwm: Add the Allwinner A100 PWM
@@ -11,8 +11,8 @@ bus clock it takes the 24 MHz oscillator ("hosc"), the clock source the
 channels use. The compatible follows the A100 naming of the other blocks of
 this SoC.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../pwm/allwinner,sun50i-a100-pwm.yaml        | 65 +++++++++++++++++++
  1 file changed, 65 insertions(+)

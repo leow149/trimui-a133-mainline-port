@@ -1,4 +1,4 @@
-From d5dc414df94a18049c723ada727bc548570d9eaf Mon Sep 17 00:00:00 2001
+From 180e2adada3cddc1af10e47ceb166fd51c120bf2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:44:53 +0100
 Subject: [PATCH 067/106] arm64: dts: allwinner: trimui-smart-pro: Alias the
@@ -7,14 +7,14 @@ Subject: [PATCH 067/106] arm64: dts: allwinner: trimui-smart-pro: Alias the
 So that the bootloader can give the XR829 a stable MAC address derived
 from the SID, instead of the random one it uses without.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index aa26e9338..1bedbaec0 100644
+index b0c8dd0c0..f5414d514 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -27,6 +27,7 @@ / {

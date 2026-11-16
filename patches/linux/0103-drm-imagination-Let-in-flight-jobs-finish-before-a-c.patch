@@ -1,4 +1,4 @@
-From 25ed4b89fa728a6a6c865aa9261e4001119c5d98 Mon Sep 17 00:00:00 2001
+From 794860411f8562c6c6fbbd779cb91c74604748fd Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:23:29 +0100
 Subject: [PATCH 103/106] drm/imagination: Let in-flight jobs finish before a
@@ -23,7 +23,7 @@ DESTROY_CONTEXT ioctl, and only the teardown that actually unmaps waits.
 Reproduced in about half of the runs by stopping a cage session running
 vkcube on the GE8300.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/gpu/drm/imagination/pvr_job.c |  8 ++++

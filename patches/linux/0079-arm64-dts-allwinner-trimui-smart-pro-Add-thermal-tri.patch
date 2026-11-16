@@ -1,4 +1,4 @@
-From c7c9c00784afc457a972af985dcfa1259f2b52ad Mon Sep 17 00:00:00 2001
+From 2afa448cbd6ee2ce98c4a8f4387aebaa5af26b91 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 21:32:09 +0100
 Subject: [PATCH 079/106] arm64: dts: allwinner: trimui-smart-pro: Add thermal
@@ -21,18 +21,18 @@ GPU at 83 C. vkmark frame rates are unchanged.
 
 All measurements were taken with the back cover off and the stock SoC
 cooling removed (development setup with UART access). With a temporary
-heatsink on the SoC, the same load reaches CPU 83 C / GPU 80 C at 5 minutes,
-still slowly rising at 1.2-1.32 GHz. Stock-condition behaviour is
+heatsink on the SoC, the same load reaches CPU 83 C / GPU 80 C at 5
+minutes, still slowly rising at 1.2-1.32 GHz. Stock-condition behaviour is
 not measured yet.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  .../allwinner/sun50i-a133-trimui-smartpro.dts | 78 +++++++++++++++++++
  1 file changed, 78 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
-index ab329b73d..79e79b645 100644
+index 88f8c09ef..7cd9fb178 100644
 --- a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
 @@ -131,6 +131,84 @@ wifi_pwrseq: pwrseq {

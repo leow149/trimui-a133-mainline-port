@@ -1,4 +1,4 @@
-From b0fa93df20cab7a741fae74361221fe772918065 Mon Sep 17 00:00:00 2001
+From 1959536830d73f7f6fabcc60bdc1465952502808 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:39:31 +0100
 Subject: [PATCH 049/106] dt-bindings: usb: sun4i-a10-musb: Allow DMA channels

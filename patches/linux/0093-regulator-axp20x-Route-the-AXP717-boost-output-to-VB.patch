@@ -1,4 +1,4 @@
-From 7f636b541a0b27cda13848ce675695fb2663154a Mon Sep 17 00:00:00 2001
+From a9e198c53d928cad735cc5d3585dfec1c4d1a0df Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:22 +0100
 Subject: [PATCH 093/106] regulator: axp20x: Route the AXP717 boost output to
@@ -27,7 +27,7 @@ firmware left running without the route is switched off at probe
 unused boost does not stay on; before this change the core would have
 switched it off at late init anyway.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/mfd/axp20x.c                 |   1 +

@@ -1,4 +1,4 @@
-From 008f3e67b8d29310c5c84130ea391ee94f8cb205 Mon Sep 17 00:00:00 2001
+From 7005985de87964f055380d18f3b53849f131006a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
 Subject: [PATCH 048/106] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on
@@ -7,20 +7,20 @@ Subject: [PATCH 048/106] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on
 With single-buffered FIFOs the controller waits for the host to take each
 packet before the next one can be loaded. The A100/A133 has 8 KB of FIFO
 RAM, enough to double-buffer endpoints 1 and 2, where bulk gadget functions
-end up. NCM over the OTG port went from 120 to 309 Mbit/s device to host and
-from 75 to 154 Mbit/s host to device (with TX DMA).
+end up. NCM over the OTG port went from 120 to 309 Mbit/s device to host
+and from 75 to 154 Mbit/s host to device (with TX DMA).
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/usb/musb/sunxi.c | 36 ++++++++++++++++++++++++++++++++++++
  1 file changed, 36 insertions(+)
 
 diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
-index b93bf6d3f..87e21ffa2 100644
+index 6c0ce89d1..a7562f198 100644
 --- a/drivers/usb/musb/sunxi.c
 +++ b/drivers/usb/musb/sunxi.c
-@@ -982,6 +982,34 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_4eps = {
+@@ -979,6 +979,34 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_4eps = {
  	.ram_bits	= SUNXI_MUSB_RAM_BITS,
  };
  
@@ -55,7 +55,7 @@ index b93bf6d3f..87e21ffa2 100644
  static int sunxi_musb_probe(struct platform_device *pdev)
  {
  	struct musb_hdrc_platform_data	pdata;
-@@ -1141,6 +1169,12 @@ static const struct sunxi_musb_cfg sun8i_h3_musb_cfg = {
+@@ -1138,6 +1166,12 @@ static const struct sunxi_musb_cfg sun8i_h3_musb_cfg = {
  	.no_configdata = true,
  };
  
@@ -68,7 +68,7 @@ index b93bf6d3f..87e21ffa2 100644
  static const struct sunxi_musb_cfg suniv_f1c100s_musb_cfg = {
  	.hdrc_config = &sunxi_musb_hdrc_config_5eps,
  	.has_sram = true,
-@@ -1157,6 +1191,8 @@ static const struct of_device_id sunxi_musb_match[] = {
+@@ -1154,6 +1188,8 @@ static const struct of_device_id sunxi_musb_match[] = {
  	  .data = &sun8i_a33_musb_cfg, },
  	{ .compatible = "allwinner,sun8i-h3-musb",
  	  .data = &sun8i_h3_musb_cfg, },

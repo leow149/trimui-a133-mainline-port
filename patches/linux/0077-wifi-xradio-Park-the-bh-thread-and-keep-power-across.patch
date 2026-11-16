@@ -1,4 +1,4 @@
-From 97edea65ff33ea47d8fe64734a6822f1e786083a Mon Sep 17 00:00:00 2001
+From 216cdfbc1f0c1483d1e08d05983b2d93ad3c14f0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:56 +0100
 Subject: [PATCH 077/106] wifi: xradio: Park the bh thread and keep power
@@ -41,7 +41,7 @@ before it parks the thread, and fails with -EBUSY if that does not
 happen. When the thread exits on an error it sets bh_error, so suspend
 no longer tries to park a thread that is gone.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/net/wireless/xradio/bh.c     | 34 ++++++++++++------

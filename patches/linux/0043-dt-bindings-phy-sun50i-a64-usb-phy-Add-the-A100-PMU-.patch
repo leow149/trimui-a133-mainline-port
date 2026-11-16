@@ -1,4 +1,4 @@
-From 9a219fad4c8cc4d00cf17c1e9709bfdd6d1cc2b1 Mon Sep 17 00:00:00 2001
+From 4c7bb34ca537a7cd6f02779099c4b540fccad4ef Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:39:30 +0100
 Subject: [PATCH 043/106] dt-bindings: phy: sun50i-a64-usb-phy: Add the A100

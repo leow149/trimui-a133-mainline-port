@@ -1,4 +1,4 @@
-From dd72bfb7a7f94533afa1fbafc28184e7e5c0e420 Mon Sep 17 00:00:00 2001
+From 0bc52263dac598a5553d36448fc0986f7a3532ea Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
 Subject: [PATCH 069/106] dt-bindings: media: cedrus: Add the A100 video engine
@@ -6,8 +6,8 @@ Subject: [PATCH 069/106] dt-bindings: media: cedrus: Add the A100 video engine
 The A100 video engine works with the H6 programming model: H.264 and
 H.265 decode bit-exact compared to FFmpeg's software decoders.
 
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  .../allwinner,sun4i-a10-video-engine.yaml     | 28 +++++++++++--------
  1 file changed, 16 insertions(+), 12 deletions(-)
