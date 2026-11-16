@@ -1,4 +1,4 @@
-From 602291dd20529fe0df652e31bd59392e21523027 Mon Sep 17 00:00:00 2001
+From 31c8ae56c4dfc5984d95551690e320fd9da82ce9 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Fri, 6 Nov 2026 08:41:15 +0100
 Subject: [PATCH 075/106] arm64: dts: allwinner: trimui-smart-pro: XR829

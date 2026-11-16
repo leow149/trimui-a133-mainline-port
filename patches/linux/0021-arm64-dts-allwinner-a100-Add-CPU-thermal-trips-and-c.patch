@@ -1,4 +1,4 @@
-From 94138f64f01853e584a3c60448ccb434c132fd22 Mon Sep 17 00:00:00 2001
+From 283ae67264e90c556faf064b48cffe242765ac45 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:31 +0100
 Subject: [PATCH 021/106] arm64: dts: allwinner: a100: Add CPU thermal trips

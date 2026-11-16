@@ -1,4 +1,4 @@
-From a33c074617c9b897a73a43da66864db9261d2df3 Mon Sep 17 00:00:00 2001
+From f0361aa6f8f62afadd0259f4c5b2a7ed517a75f2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
 Subject: [PATCH 055/106] wifi: xradio: Add XR829 support (WIP: scanning works)

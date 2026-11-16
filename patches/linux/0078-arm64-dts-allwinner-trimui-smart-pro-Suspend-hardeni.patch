@@ -1,4 +1,4 @@
-From 5e7efd0708357d9d721168d004fe4ec718945c2c Mon Sep 17 00:00:00 2001
+From 988d108dfd0271bd747893430c35809668fc4dc0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:57 +0100
 Subject: [PATCH 078/106] arm64: dts: allwinner: trimui-smart-pro: Suspend

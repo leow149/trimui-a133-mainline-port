@@ -1,4 +1,4 @@
-From ac01e490d7b7710fdbb42272056718fffb0ffad5 Mon Sep 17 00:00:00 2001
+From 524ba717d7c845d4ee4d1afc93404175232a664a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:28 +0100
 Subject: [PATCH 011/106] drm/sun4i: dsi: Set the panel orientation at bind

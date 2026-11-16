@@ -1,4 +1,4 @@
-From 7529cb86f59d01ba287eba05f7d81e9dbde4a1b2 Mon Sep 17 00:00:00 2001
+From 445579b8ede34c90a3c7f63dd08c3c53942d230c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:28 +0100
 Subject: [PATCH 053/106] dt-bindings: net: wireless: Add XRadio XR819 and

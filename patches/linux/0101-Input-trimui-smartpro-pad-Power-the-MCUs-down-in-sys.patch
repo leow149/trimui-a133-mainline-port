@@ -1,4 +1,4 @@
-From 5aec75f77ea7303d31865f69af815bd07ba2e025 Mon Sep 17 00:00:00 2001
+From 137fd7c6f86d1f59b4d527b562fbf732075b9faa Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 101/106] Input: trimui-smartpro-pad: Power the MCUs down in

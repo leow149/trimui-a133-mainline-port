@@ -1,4 +1,4 @@
-From 81a3b68cc0c6f41f53dd164fb0e17e78e8082459 Mon Sep 17 00:00:00 2001
+From 7aed3092330bd2ca3c1543c650791ef6c190b160 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 14:30:00 +0100
 Subject: [PATCH 06/10] pco: Do 2D RGBA8 and 32-bit-per-channel image stores in
@@ -19,43 +19,31 @@ access). The address is the one of the image's first mip level, so stores
 to another level (view base level or lod not 0) are dropped instead of
 corrupting level 0; BGRA8 storage images still take the TPU path.
 
-Tested: tools/gpu/vklinear (compute mode) at 240x160, 256x224, 320x240,
-241x161; RetroArch (Vulkan) with mGBA shows the game; vkmark unchanged.
+Tested: an earlier version without the TEXTYPE dispatch with
+tools/gpu/vklinear (compute mode) at 240x160, 256x224, 320x240, 241x161,
+and RetroArch (Vulkan) with mGBA, which shows the game; vkmark unchanged.
+This version: tools/gpu/vkstore (a compute pipeline with 2D and 2D-array
+rgba8 imageStore) compiles on the noop DRM shim with the GE8300 BVNC;
+without the in-place lowering of the TPU branch it crashed the compiler.
 Details: docs/pvr-linear-texture.md.
 
 The software path is only taken at run time for twiddled 2D images
 (texture state TEXTYPE_2D): linear images (e.g. legacy scanout WSI
-images) and 3D twiddled ones keep the TPU store in the other branch.
+images) and 3D twiddled ones take the TPU store, which is lowered in place
+in the else branch of that run-time check.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- src/imagination/pco/pco_nir_tex.c | 160 +++++++++++++++++++++++++++++-
+ src/imagination/pco/pco_nir_tex.c | 142 ++++++++++++++++++++++++++++++
  src/imagination/pco/usclib/tex.cl |  12 +++
- 2 files changed, 168 insertions(+), 4 deletions(-)
+ 2 files changed, 154 insertions(+)
 
 diff --git a/src/imagination/pco/pco_nir_tex.c b/src/imagination/pco/pco_nir_tex.c
-index 19addc4a745..54902daca01 100644
+index 19addc4a745..c000fcde446 100644
 --- a/src/imagination/pco/pco_nir_tex.c
 +++ b/src/imagination/pco/pco_nir_tex.c
-@@ -21,6 +21,7 @@
- #include "pco_usclib.h"
- #include "pvr_iface.h"
- #include "util/macros.h"
-+#include "util/set.h"
- 
- #include <assert.h>
- #include <stdbool.h>
-@@ -29,6 +30,8 @@
- struct state {
-    pco_data *data;
-    pco_ctx *ctx;
-+   /* Image stores left to the TPU by the software store path. */
-+   struct set *tpu_stores;
- };
- 
- static inline nir_def *get_src_def(nir_tex_instr *tex,
-@@ -1380,6 +1383,151 @@ lower_image(nir_builder *b, nir_intrinsic_instr *intr, void *cb_data)
+@@ -1380,6 +1380,145 @@ lower_image(nir_builder *b, nir_intrinsic_instr *intr, void *cb_data)
        return true;
     }
  
@@ -74,10 +62,10 @@ index 19addc4a745..54902daca01 100644
 +   const bool tpu_write_broken =
 +      dev_info->ident.b == 22 && dev_info->ident.v == 102 &&
 +      dev_info->ident.n == 54 && dev_info->ident.c == 38;
++   bool sw_store_if = false;
 +   unsigned sw_texel_dwords = 0;
 +   bool sw_merge_bytes = false;
 +   if (tpu_write_broken && write_data && !ia &&
-+       !_mesa_set_search(state->tpu_stores, intr) &&
 +       format != PIPE_FORMAT_NONE && !msaa &&
 +       image_dim == GLSL_SAMPLER_DIM_2D && util_format_is_plain(format)) {
 +      const struct util_format_description *fdesc = util_format_description(format);
@@ -169,8 +157,7 @@ index 19addc4a745..54902daca01 100644
 +      /*
 +       * Only twiddled 2D images (TEXTYPE_2D) have the layout computed
 +       * above; linear (TEXTYPE_STRIDE) and 3D twiddled ones keep the TPU
-+       * store, moved into the else branch and lowered when the pass gets
-+       * to it.
++       * store, lowered below in the else branch of this if.
 +       */
 +      nir_def *twiddled_2d = usclib_tex_state_is_twiddled_2d(b, tex_state);
 +      nir_push_if(b, twiddled_2d);
@@ -191,40 +178,26 @@ index 19addc4a745..54902daca01 100644
 +         nir_dma_flush_pco(b, addr);
 +      }
 +      nir_pop_if(b, NULL);
++
++      /* The TPU store below goes into the else branch, closed at the end. */
 +      nir_push_else(b, NULL);
-+      {
-+         nir_instr_remove(&intr->instr);
-+         nir_builder_instr_insert(b, &intr->instr);
-+         _mesa_set_add(state->tpu_stores, intr);
-+      }
-+      nir_pop_if(b, NULL);
++      sw_store_if = true;
 +
 +      data->common.uses.usclib = true;
-+
-+      return true;
 +   }
 +
     unsigned smp_desc = ia ? PCO_IA_SAMPLER : PCO_POINT_SAMPLER;
     nir_def *smp_state = nir_load_smp_state_pco(b,
                                                 ROGUE_NUM_TEXSTATE_DWORDS,
-@@ -1551,10 +1699,14 @@ bool pco_nir_lower_images(nir_shader *shader, pco_data *data, pco_ctx *ctx)
-    struct state state = {
-       .data = data,
-       .ctx = ctx,
-+      .tpu_stores = _mesa_pointer_set_create(NULL),
-    };
+@@ -1542,6 +1681,9 @@ lower_image(nir_builder *b, nir_intrinsic_instr *intr, void *cb_data)
+       return true;
+    }
  
--   return nir_shader_intrinsics_pass(shader,
--                                     lower_image,
--                                     nir_metadata_none,
--                                     &state);
-+   bool progress = nir_shader_intrinsics_pass(shader,
-+                                              lower_image,
-+                                              nir_metadata_none,
-+                                              &state);
++   if (sw_store_if)
++      nir_pop_if(b, NULL);
 +
-+   _mesa_set_destroy(state.tpu_stores, NULL);
-+   return progress;
+    nir_instr_remove(&intr->instr);
+    return true;
  }
 diff --git a/src/imagination/pco/usclib/tex.cl b/src/imagination/pco/usclib/tex.cl
 index 58ada4d0b4e..e3f74cf9a01 100644

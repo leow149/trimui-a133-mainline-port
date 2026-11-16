@@ -1,4 +1,4 @@
-From 995297621a70299c45e655a7d83bb4955b72b5ca Mon Sep 17 00:00:00 2001
+From 008f3e67b8d29310c5c84130ea391ee94f8cb205 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
 Subject: [PATCH 048/106] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on

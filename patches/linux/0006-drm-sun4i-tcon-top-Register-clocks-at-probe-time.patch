@@ -1,4 +1,4 @@
-From 71878d46f6dd208c5de25c40892e1fadfbda7f6a Mon Sep 17 00:00:00 2001
+From 7216cf7fcb2e6c1716eb87edc0e3ca95878e0195 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:26 +0100
 Subject: [PATCH 006/106] drm/sun4i: tcon-top: Register clocks at probe time

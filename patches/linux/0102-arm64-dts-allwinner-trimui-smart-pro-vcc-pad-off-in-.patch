@@ -1,4 +1,4 @@
-From fab32fb7309fa74e831e6c41314e29d639b4ef61 Mon Sep 17 00:00:00 2001
+From df692c9e21c5cc1530dd2832838f597f851d4c39 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 102/106] arm64: dts: allwinner: trimui-smart-pro: vcc-pad off

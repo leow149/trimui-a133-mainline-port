@@ -1,4 +1,4 @@
-From 664c716ef133b341c1afee644012fbbea00e2e81 Mon Sep 17 00:00:00 2001
+From 10a590d627d602e57fad36877c0c664c181d95f1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:09 +0100
 Subject: [PATCH 044/106] arm64: dts: allwinner: a100: Add the USB PHY PMU

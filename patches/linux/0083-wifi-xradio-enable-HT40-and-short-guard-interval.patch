@@ -1,4 +1,4 @@
-From a1e485e0cbea348b0717b85626c62090b822f7fe Mon Sep 17 00:00:00 2001
+From d9ca6c8796e4bb152b62bf8cb87a9199f1e4a7b8 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 083/106] wifi: xradio: enable HT40 and short guard interval

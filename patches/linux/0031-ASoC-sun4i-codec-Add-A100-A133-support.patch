@@ -1,4 +1,4 @@
-From 380d4f190045e6ff80f2b6424688dc508a0c3fde Mon Sep 17 00:00:00 2001
+From 0f29c48117f527b026eb5adf967444e0d8d5471e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 01:24:51 +0100
 Subject: [PATCH 031/106] ASoC: sun4i-codec: Add A100/A133 support

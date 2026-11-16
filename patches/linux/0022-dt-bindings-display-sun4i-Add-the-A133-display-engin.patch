@@ -1,4 +1,4 @@
-From ab78175cd42aa6ab1521a09036e794aa29bb9ba8 Mon Sep 17 00:00:00 2001
+From 7a2930de233d5013286bb3a350844eae6353d4b4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:31:30 +0100
 Subject: [PATCH 022/106] dt-bindings: display: sun4i: Add the A133 display

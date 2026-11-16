@@ -1,4 +1,4 @@
-From 676473647f5dcc36f664d8b51f3014c392360e69 Mon Sep 17 00:00:00 2001
+From ee4c69c483039cdf6d46a0b9ba7e86f6f95f6f73 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
 Subject: [PATCH 047/106] usb: musb: sunxi: Add DMA support

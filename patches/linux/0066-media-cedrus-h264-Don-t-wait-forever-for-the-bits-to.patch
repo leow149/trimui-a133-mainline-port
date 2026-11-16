@@ -1,4 +1,4 @@
-From 0fc510646b0c96d109dea5a99a976d7e9d9b449b Mon Sep 17 00:00:00 2001
+From 2a67ef09e0bf63e73b63c59a4985372d2505bfdb Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 01:41:02 +0100
 Subject: [PATCH 066/106] media: cedrus: h264: Don't wait forever for the bits

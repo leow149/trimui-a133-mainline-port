@@ -1,4 +1,4 @@
-From 55375f56b49a950581e5506c0e01d0b480b2d3e8 Mon Sep 17 00:00:00 2001
+From 7688c0bba358c7bc8fe04c8422b590cd1f620d27 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:31 +0100
 Subject: [PATCH 020/106] arm64: dts: allwinner: a100: Add UART3/UART4 PD pins

@@ -1,4 +1,4 @@
-From 2a4ac3f2e72f8f473ac96ed78c5ae9178cac595e Mon Sep 17 00:00:00 2001
+From a4d3f390311fa2aab21dffe4c812050aa0f8101b Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 15 Nov 2026 16:29:22 +0100
 Subject: [PATCH 105/106] arm64: dts: allwinner: a100: Move the display

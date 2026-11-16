@@ -1,4 +1,4 @@
-From a1cf9b7f801891a430057a7061318ab14fa8f4e4 Mon Sep 17 00:00:00 2001
+From 965c852cf6923938e12e502800ed821a87476159 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:19:45 +0100
 Subject: [PATCH 080/106] wifi: xradio: detect HT peers so the firmware

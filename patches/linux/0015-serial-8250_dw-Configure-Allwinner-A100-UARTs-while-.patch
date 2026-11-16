@@ -1,4 +1,4 @@
-From a62dd2a3ea455688f4e8714505f1bb049050c961 Mon Sep 17 00:00:00 2001
+From e9316738f10ff08d9b01615ddb858cbd7ed902a7 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
 Subject: [PATCH 015/106] serial: 8250_dw: Configure Allwinner A100 UARTs while
@@ -18,14 +18,19 @@ and the divisor, apply, clear DLAB, apply again, release TX; it does not rely
 on reading back LCR. The wait for CHANGE_UPDATE runs under the port lock, so it
 is bounded (1 ms) and a timeout is reported.
 
+The update waits for the line to be idle, so the timeout is three
+character times of the old or the new setting (at least 1 ms), which
+covers low baud rates. If an update is still pending, CHCFG_AT_BUSY
+stays set so that it can complete, and only TX is released.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- drivers/tty/serial/8250/8250_dw.c | 93 +++++++++++++++++++++++++++++++
- 1 file changed, 93 insertions(+)
+ drivers/tty/serial/8250/8250_dw.c | 109 ++++++++++++++++++++++++++++++
+ 1 file changed, 109 insertions(+)
 
 diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
-index 51d026f20..c573b56cf 100644
+index 51d026f20..53c30df2f 100644
 --- a/drivers/tty/serial/8250/8250_dw.c
 +++ b/drivers/tty/serial/8250/8250_dw.c
 @@ -16,6 +16,7 @@
@@ -44,7 +49,15 @@ index 51d026f20..c573b56cf 100644
  
  /*
   * Number of consecutive IIR_NO_INT interrupts required to trigger interrupt
-@@ -99,6 +101,73 @@ static inline u32 dw8250_modify_msr(struct uart_port *p, unsigned int offset, u3
+@@ -77,6 +79,7 @@ struct dw8250_data {
+ 	unsigned int		skip_autocfg:1;
+ 	unsigned int		uart_16550_compatible:1;
+ 	unsigned int		in_idle:1;
++	u64			chcfg_frame_ns;	/* frame time of the last setting */
+ 
+ 	u8			no_int_count;
+ };
+@@ -99,6 +102,89 @@ static inline u32 dw8250_modify_msr(struct uart_port *p, unsigned int offset, u3
  	return value;
  }
  
@@ -73,11 +86,17 @@ index 51d026f20..c573b56cf 100644
 +}
 +
 +/*
-+ * Apply the configuration registers written since dw8250_chcfg_begin().
-+ * Called with the port lock held, so the wait is bounded (1 ms).
++ * Apply the configuration registers written since dw8250_chcfg_begin(). The
++ * update waits for the line to be idle, so allow a few character times of
++ * the old and the new setting, at least 1 ms. Called with the port lock
++ * held. Returns false if the update is still pending.
 + */
-+static void dw8250_chcfg_update(struct uart_port *p)
++static bool dw8250_chcfg_update(struct uart_port *p)
 +{
++	struct dw8250_data *d = to_dw8250_data(p->private_data);
++	u64 frame_ns = max(d->chcfg_frame_ns, (u64)p->frame_time);
++	u32 timeout_us = max_t(u64, USEC_PER_MSEC,
++			       div_u64(3 * frame_ns, NSEC_PER_USEC));
 +	u32 val;
 +
 +	serial_port_out(p, SUNXI_UART_HALT,
@@ -85,14 +104,25 @@ index 51d026f20..c573b56cf 100644
 +			SUNXI_UART_HALT_CHANGE_UPDATE);
 +	if (read_poll_timeout_atomic(serial_port_in, val,
 +				     !(val & SUNXI_UART_HALT_CHANGE_UPDATE),
-+				     1, 1000, false, p, SUNXI_UART_HALT))
++				     1, timeout_us, false, p, SUNXI_UART_HALT)) {
 +		dev_warn_ratelimited(p->dev, "line settings update timed out\n");
++		return false;
++	}
++
++	d->chcfg_frame_ns = p->frame_time;
++	return true;
 +}
 +
-+static void dw8250_chcfg_end(struct uart_port *p)
++/*
++ * Release the transmitter. CHCFG_AT_BUSY stays set while an update is still
++ * pending, so that it can complete later.
++ */
++static void dw8250_chcfg_end(struct uart_port *p, bool updated)
 +{
++	u32 clear = updated ? SUNXI_UART_HALT_CFG : SUNXI_UART_HALT_TX;
++
 +	serial_port_out(p, SUNXI_UART_HALT,
-+			serial_port_in(p, SUNXI_UART_HALT) & ~SUNXI_UART_HALT_CFG);
++			serial_port_in(p, SUNXI_UART_HALT) & ~clear);
 +}
 +
 +/*
@@ -110,21 +140,19 @@ index 51d026f20..c573b56cf 100644
 +	serial_dl_write(up, quot);
 +	dw8250_chcfg_update(p);
 +	serial_port_out(p, UART_LCR, up->lcr);
-+	dw8250_chcfg_update(p);
-+	dw8250_chcfg_end(p);
++	dw8250_chcfg_end(p, dw8250_chcfg_update(p));
 +	d->in_idle = 0;
 +}
 +
  static void dw8250_idle_exit(struct uart_port *p)
  {
  	struct dw8250_data *d = to_dw8250_data(p->private_data);
-@@ -107,6 +176,13 @@ static void dw8250_idle_exit(struct uart_port *p)
+@@ -107,6 +193,12 @@ static void dw8250_idle_exit(struct uart_port *p)
  	if (d->uart_16550_compatible)
  		return;
  
 +	if (dw8250_has_chcfg_at_busy(d)) {
-+		dw8250_chcfg_update(p);
-+		dw8250_chcfg_end(p);
++		dw8250_chcfg_end(p, dw8250_chcfg_update(p));
 +		d->in_idle = 0;
 +		return;
 +	}
@@ -132,7 +160,7 @@ index 51d026f20..c573b56cf 100644
  	if (up->capabilities & UART_CAP_FIFO)
  		serial_port_out(p, UART_FCR, up->fcr);
  	serial_port_out(p, UART_MCR, up->mcr);
-@@ -141,6 +217,11 @@ static int dw8250_idle_enter(struct uart_port *p)
+@@ -141,6 +233,11 @@ static int dw8250_idle_enter(struct uart_port *p)
  
  	d->in_idle = 1;
  
@@ -144,7 +172,7 @@ index 51d026f20..c573b56cf 100644
  	/* Prevent triggering interrupt from RBR filling */
  	serial_port_out(p, UART_IER, 0);
  
-@@ -188,9 +269,15 @@ static int dw8250_idle_enter(struct uart_port *p)
+@@ -188,9 +285,15 @@ static int dw8250_idle_enter(struct uart_port *p)
  static void dw8250_set_divisor(struct uart_port *p, unsigned int baud,
  			       unsigned int quot, unsigned int quot_frac)
  {
@@ -160,7 +188,7 @@ index 51d026f20..c573b56cf 100644
  	ret = dw8250_idle_enter(p);
  	if (ret < 0)
  		return;
-@@ -845,6 +932,11 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
+@@ -845,6 +948,11 @@ static const struct dw8250_platform_data dw8250_dw_apb = {
  	.usr_reg = DW_UART_USR,
  };
  
@@ -172,7 +200,7 @@ index 51d026f20..c573b56cf 100644
  static const struct dw8250_platform_data dw8250_octeon_3860_data = {
  	.usr_reg = OCTEON_UART_USR,
  	.quirks = DW_UART_QUIRK_OCTEON,
-@@ -890,6 +982,7 @@ static const struct dw8250_platform_data dw8250_ultrarisc_dp1000_data = {
+@@ -890,6 +998,7 @@ static const struct dw8250_platform_data dw8250_ultrarisc_dp1000_data = {
  
  static const struct of_device_id dw8250_of_match[] = {
  	{ .compatible = "snps,dw-apb-uart", .data = &dw8250_dw_apb },

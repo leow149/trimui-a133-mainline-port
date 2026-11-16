@@ -1,4 +1,4 @@
-From 828d17d51ad426014537678cefabf1d2d21a9f05 Mon Sep 17 00:00:00 2001
+From bbcf476bed604e1d741047f2ce7cc534a5f9e70c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:38 +0100
 Subject: [PATCH 100/106] leds: sun50i-a100: Switch the LED supply off in
@@ -12,14 +12,18 @@ The driver tracks whether it holds its vled reference, so a resume that
 failed to switch the supply back on does not lead to an unbalanced
 disable later.
 
+Errors switching the supply are only reported: the controller is
+suspended and resumed either way, so its clocks stay balanced. The LEDs
+are registered with LED_CORE_SUSPENDRESUME.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/leds/leds-sun50i-a100.c | 90 ++++++++++++++++++++++++++++++++-
- 1 file changed, 88 insertions(+), 2 deletions(-)
+ drivers/leds/leds-sun50i-a100.c | 96 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 94 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/leds/leds-sun50i-a100.c b/drivers/leds/leds-sun50i-a100.c
-index 7bd99a444..4d56a2293 100644
+index 7bd99a444..2d3fead35 100644
 --- a/drivers/leds/leds-sun50i-a100.c
 +++ b/drivers/leds/leds-sun50i-a100.c
 @@ -19,6 +19,7 @@
@@ -79,7 +83,15 @@ index 7bd99a444..4d56a2293 100644
  	ret = sun50i_a100_ledc_resume(dev);
  	if (ret)
  		return ret;
-@@ -574,6 +603,63 @@ static void sun50i_a100_ledc_remove(struct platform_device *pdev)
+@@ -540,6 +569,7 @@ static int sun50i_a100_ledc_probe(struct platform_device *pdev)
+ 
+ 		cdev = &led->mc_cdev.led_cdev;
+ 		cdev->max_brightness = U8_MAX;
++		cdev->flags |= LED_CORE_SUSPENDRESUME;
+ 		cdev->brightness_set = sun50i_a100_ledc_brightness_set;
+ 
+ 		init_data.fwnode = child;
+@@ -574,6 +604,68 @@ static void sun50i_a100_ledc_remove(struct platform_device *pdev)
  	sun50i_a100_ledc_suspend(&pdev->dev);
  }
  
@@ -97,10 +109,13 @@ index 7bd99a444..4d56a2293 100644
 +	if (ret || !priv->vled_on)
 +		return ret;
 +
++	/* The controller is suspended either way: keep that balanced. */
 +	ret = regulator_disable(priv->vled);
-+	if (!ret)
++	if (ret)
++		dev_warn(dev, "cannot switch the LED supply off: %d\n", ret);
++	else
 +		priv->vled_on = false;
-+	return ret;
++	return 0;
 +}
 +
 +static int sun50i_a100_ledc_pm_resume(struct device *dev)
@@ -110,11 +125,13 @@ index 7bd99a444..4d56a2293 100644
 +	bool xfer_active;
 +	int ret;
 +
-+	if (priv->vled) {
++	if (priv->vled && !priv->vled_on) {
++		/* Resume the controller anyway, so its clocks stay balanced. */
 +		ret = regulator_enable(priv->vled);
 +		if (ret)
-+			return ret;
-+		priv->vled_on = true;
++			dev_warn(dev, "cannot switch the LED supply on: %d\n", ret);
++		else
++			priv->vled_on = true;
 +		/* Let the LEDs' own controllers power up. */
 +		usleep_range(1000, 2000);
 +	}
@@ -123,7 +140,7 @@ index 7bd99a444..4d56a2293 100644
 +	if (ret)
 +		return ret;
 +
-+	if (!priv->vled)
++	if (!priv->vled_on)
 +		return 0;
 +
 +	spin_lock_irqsave(&priv->lock, flags);
@@ -143,7 +160,7 @@ index 7bd99a444..4d56a2293 100644
  static const struct of_device_id sun50i_a100_ledc_of_match[] = {
  	{ .compatible = "allwinner,sun50i-a100-ledc" },
  	{}
-@@ -581,8 +667,8 @@ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
+@@ -581,8 +673,8 @@ static const struct of_device_id sun50i_a100_ledc_of_match[] = {
  MODULE_DEVICE_TABLE(of, sun50i_a100_ledc_of_match);
  
  static DEFINE_SIMPLE_DEV_PM_OPS(sun50i_a100_ledc_pm,

@@ -1,4 +1,4 @@
-From ae58329fb990d047c1700f742f87e6c6c4801abb Mon Sep 17 00:00:00 2001
+From f85b657648ce93a996d87050c491c4d46521473c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 01:07:59 +0100
 Subject: [PATCH 089/106] arm64: dts: allwinner: trimui-smartpro: Enable OTG

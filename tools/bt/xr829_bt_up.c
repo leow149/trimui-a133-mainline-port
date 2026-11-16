@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include <signal.h>
 #include <termios.h>
 #include <dirent.h>
 #include <sys/ioctl.h>
@@ -105,10 +106,19 @@ static int rfkill_attr(const char *attr)
 	return v[0] == '1' ? 1 : v[0] == '0' ? 0 : -1;
 }
 
+/* 1 if blocked, 0 if not, -1 if the rfkill switch is gone */
 static int rfkill_blocked(void)
 {
-	return rfkill_attr("soft") != 0 || rfkill_attr("hard") != 0;
+	int soft = rfkill_attr("soft"), hard = rfkill_attr("hard");
+
+	if (soft < 0 || hard < 0)
+		return -1;
+	return soft || hard;
 }
+
+/* Exit codes for the wrapper script */
+#define EXIT_FAIL	1	/* bring-up failed */
+#define EXIT_BLOCKED	3	/* blocked after the attach: not a failure */
 
 /*
  * Request "label:line" as an output driven high; returns the line fd (keep it open to
@@ -162,15 +172,37 @@ static int bt_wake_request(const char *spec)
 	return -1;
 }
 
-/* Reset pulse on BT_RST_N through the (unblocked) rfkill switch. */
-static void power_cycle(int low_ms)
-{
-	char p[320];
+/*
+ * Reset pulse on BT_RST_N through the rfkill switch, which owns that GPIO.
+ * The pulse is skipped if someone else blocked the switch, and a signal
+ * during the low phase unblocks it again before exiting. A block issued by
+ * someone else during the low phase itself is still undone.
+ */
+static char rfkill_state_path[320];
+static volatile sig_atomic_t in_pulse;
 
-	snprintf(p, sizeof p, "%s/state", rfkill_dir);
-	write_file(p, "0");
+static void pulse_signal(int sig)
+{
+	if (in_pulse)
+		write_file(rfkill_state_path, "1");
+	_exit(128 + sig);
+}
+
+static int power_cycle(int low_ms)
+{
+	if (rfkill_blocked())
+		return -1;
+
+	snprintf(rfkill_state_path, sizeof rfkill_state_path, "%s/state", rfkill_dir);
+	signal(SIGTERM, pulse_signal);
+	signal(SIGINT, pulse_signal);
+	signal(SIGALRM, pulse_signal);
+	in_pulse = 1;
+	write_file(rfkill_state_path, "0");
 	msleep(low_ms);
-	write_file(p, "1");
+	write_file(rfkill_state_path, "1");
+	in_pulse = 0;
+	return 0;
 }
 
 static int set_baud(speed_t sp, int crtscts)
@@ -304,7 +336,9 @@ static int brom_sync(int tries, int cycle_after)
 		}
 		if (cycle_after && (i + 1) % cycle_after == 0) {
 			fprintf(stderr, "sync: no answer after %d tries, power cycle\n", i + 1);
-			power_cycle(500); msleep(20);
+			if (power_cycle(500))
+				return -1;
+			msleep(20);
 			tcflush(fd, TCIOFLUSH);
 		}
 	}
@@ -358,10 +392,14 @@ int main(int argc, char **argv)
 	}
 	if (find_rfkill()) { fprintf(stderr, "no rfkill named %s\n", rfkill_name); return 1; }
 	/* Respect a block by the user or systemd-rfkill: wait for the unblock. */
-	if (rfkill_blocked()) {
+	if (rfkill_blocked() > 0) {
 		fprintf(stderr, "%s is blocked, waiting\n", rfkill_name);
-		while (rfkill_blocked())
+		while (rfkill_blocked() > 0)
 			sleep(2);
+	}
+	if (rfkill_blocked() < 0) {
+		fprintf(stderr, "%s is gone\n", rfkill_name);
+		return EXIT_FAIL;
 	}
 	alarm(40);	/* SIGALRM ends a wedged bring-up */
 	fd = open(dev, O_RDWR | O_NOCTTY | O_NONBLOCK);
@@ -374,7 +412,10 @@ int main(int argc, char **argv)
 		if (wake_fd < 0)
 			fprintf(stderr, "warning: BT_WAKE not driven\n");
 	}
-	power_cycle(rstlow);
+	if (power_cycle(rstlow)) {
+		fprintf(stderr, "%s got blocked\n", rfkill_name);
+		return EXIT_BLOCKED;
+	}
 	{ uint8_t u[64]; int k = rd(u, 64, 150); fprintf(stderr, "unsolicited rx after reset: %d bytes\n", k); hexdump("unsol", u, k); }
 
 	fprintf(stderr, "== BROM sync @%d\n", ibaud);
@@ -484,9 +525,13 @@ int main(int argc, char **argv)
 
 		sleep(1);
 		snprintf(p, sizeof p, "/sys/class/bluetooth/hci%d", hci);
-		if (rfkill_blocked() || (hci >= 0 && access(p, F_OK))) {
-			fprintf(stderr, "controller blocked or gone, exiting\n");
-			return 1;
+		if (rfkill_blocked() > 0) {
+			fprintf(stderr, "controller blocked, exiting\n");
+			return EXIT_BLOCKED;
+		}
+		if (rfkill_blocked() < 0 || (hci >= 0 && access(p, F_OK))) {
+			fprintf(stderr, "controller gone, exiting\n");
+			return EXIT_FAIL;
 		}
 	}
 }

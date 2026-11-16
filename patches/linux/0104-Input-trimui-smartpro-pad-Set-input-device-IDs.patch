@@ -1,4 +1,4 @@
-From 4ed2bf30a1cb687aed076434027332ebecae83c0 Mon Sep 17 00:00:00 2001
+From fc1cbdb9d416e85ba14ed35b3493cde9d22b52ff Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 14 Nov 2026 18:46:02 +0100
 Subject: [PATCH 104/106] Input: trimui-smartpro-pad: Set input device IDs

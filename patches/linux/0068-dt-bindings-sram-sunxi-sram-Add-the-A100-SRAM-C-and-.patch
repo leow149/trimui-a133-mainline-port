@@ -1,4 +1,4 @@
-From 03dd5fe1fbaffe8ee0866c77fe4ccaf093d3c9ee Mon Sep 17 00:00:00 2001
+From 7d5d2148fa4ac2c9d9e8d993d235096add019eac Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:45 +0100
 Subject: [PATCH 068/106] dt-bindings: sram: sunxi-sram: Add the A100 SRAM C

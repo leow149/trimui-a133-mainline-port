@@ -1,4 +1,4 @@
-From 0925ba96f5b70267702b48c0c28ed8a2ba7c24f9 Mon Sep 17 00:00:00 2001
+From f31b1db327e94a65bd4fb9ba094684205a712213 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:11:57 +0100
 Subject: [PATCH 096/106] phy: sun4i-usb: Give a USB-C source time to switch

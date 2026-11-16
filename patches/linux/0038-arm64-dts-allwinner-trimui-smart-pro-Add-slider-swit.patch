@@ -1,4 +1,4 @@
-From 5291ab023fef2e5e4f5d405af82ffa3feae0f0d7 Mon Sep 17 00:00:00 2001
+From e634fbc6db3bc4282ddafbd2f438d8772ad93597 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:39 +0100
 Subject: [PATCH 038/106] arm64: dts: allwinner: trimui-smart-pro: Add slider

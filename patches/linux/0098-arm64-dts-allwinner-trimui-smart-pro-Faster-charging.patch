@@ -1,4 +1,4 @@
-From 351a1edcfad10783a798356be5f85ef8b86b2bea Mon Sep 17 00:00:00 2001
+From d9a3044ce408ae20bf8acc68b5a2869d84b0c69e Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:27:26 +0100
 Subject: [PATCH 098/106] arm64: dts: allwinner: trimui-smart-pro: Faster

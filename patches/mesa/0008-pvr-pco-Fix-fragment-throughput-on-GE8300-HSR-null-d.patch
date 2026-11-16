@@ -1,4 +1,4 @@
-From cd936e80f9f982fcb5f5609faaeb3c05fa56a06d Mon Sep 17 00:00:00 2001
+From 0e3ccff9004be87f494363fb26c09b7135f9bec4 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 9 Nov 2026 07:24:38 +0100
 Subject: [PATCH 08/10] pvr/pco: Fix fragment throughput on GE8300 (HSR, null
@@ -39,28 +39,29 @@ VK_EXT_color_write_enable is only hidden on the GE8300 (22.102.54.38);
 other cores keep exposing it.
 
 The zero BO that null UBOs point at is at least maxUniformBufferRange
-large (PVR_MAX_UNIFORM_BUFFER_RANGE), so unchecked loads at any in-range
-offset stay inside it; out-of-range offsets are as undefined as with a
-real buffer.
+large (PVR_MAX_UNIFORM_BUFFER_RANGE), so the null check is only left out
+for UBO loads at a constant offset inside that range; loads at a dynamic
+offset keep it, as reads through a null descriptor must return zero at
+any offset.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  src/imagination/common/pvr_limits.h           |  2 +
- src/imagination/pco/pco_data.h                |  9 +++-
+ src/imagination/pco/pco_data.h                |  9 ++-
  src/imagination/pco/pco_internal.h            |  4 +-
  src/imagination/pco/pco_nir.c                 |  7 ++-
- .../pco/pco_nir_lower_null_descriptors.c      | 47 +++++++++++++++++--
- src/imagination/pco/pco_nir_pvfio.c           | 44 ++++++++++++++---
- src/imagination/pco/pco_opt.c                 | 35 +++++++-------
- src/imagination/pco/pco_trans_nir.c           | 31 ++++++++++++
+ .../pco/pco_nir_lower_null_descriptors.c      | 61 ++++++++++++++++++-
+ src/imagination/pco/pco_nir_pvfio.c           | 44 +++++++++++--
+ src/imagination/pco/pco_opt.c                 | 35 +++++------
+ src/imagination/pco/pco_trans_nir.c           | 31 ++++++++++
  src/imagination/vulkan/pvr_arch_cmd_buffer.c  |  7 +++
- .../vulkan/pvr_arch_descriptor_set.c          | 45 +++++++++++++++++-
- src/imagination/vulkan/pvr_arch_device.c      | 29 +++++++++++-
- src/imagination/vulkan/pvr_arch_pipeline.c    | 17 +++++++
+ .../vulkan/pvr_arch_descriptor_set.c          | 45 +++++++++++++-
+ src/imagination/vulkan/pvr_arch_device.c      | 29 ++++++++-
+ src/imagination/vulkan/pvr_arch_pipeline.c    | 17 ++++++
  src/imagination/vulkan/pvr_device.h           |  4 ++
- src/imagination/vulkan/pvr_physical_device.c  | 20 ++++++--
- 14 files changed, 264 insertions(+), 37 deletions(-)
+ src/imagination/vulkan/pvr_physical_device.c  | 20 +++++-
+ 14 files changed, 279 insertions(+), 36 deletions(-)
 
 diff --git a/src/imagination/common/pvr_limits.h b/src/imagination/common/pvr_limits.h
 index 1b07522eed8..c81645562a1 100644
@@ -150,11 +151,14 @@ index 6115d6b16fd..c4e3de2d2e6 100644
        NIR_PASS(_, nir, nir_lower_is_helper_invocation);
        NIR_PASS(_, nir, pco_nir_lower_fs_intrinsics);
 diff --git a/src/imagination/pco/pco_nir_lower_null_descriptors.c b/src/imagination/pco/pco_nir_lower_null_descriptors.c
-index 0b0a3d1fd98..fe63a084003 100644
+index 0b0a3d1fd98..c38a004ae84 100644
 --- a/src/imagination/pco/pco_nir_lower_null_descriptors.c
 +++ b/src/imagination/pco/pco_nir_lower_null_descriptors.c
-@@ -10,6 +10,44 @@
+@@ -8,8 +8,47 @@
+ 
+ #include "compiler/nir/nir.h"
  #include "compiler/nir/nir_builder.h"
++#include "pvr_limits.h"
  #include "pco_internal.h"
  
 +/* Sampling through a null combined image sampler reads the device's 1x1
@@ -198,20 +202,35 @@ index 0b0a3d1fd98..fe63a084003 100644
  static nir_def *get_is_null(nir_builder *b,
                              nir_instr *instr,
                              nir_def **def,
-@@ -36,10 +74,8 @@ static nir_def *get_is_null(nir_builder *b,
+@@ -35,11 +74,24 @@ static nir_def *get_is_null(nir_builder *b,
+          break;
  
        case nir_intrinsic_get_ubo_size:
-       case nir_intrinsic_load_ubo:
+-      case nir_intrinsic_load_ubo:
 -         if (!(options & pco_nir_lower_null_descriptor_ubo))
 -            return NULL;
--
--         break;
-+         /* Null UBO descriptors point at the zero page with size 0. */
++         /* Null UBO descriptors have size 0. */
 +         return NULL;
+ 
++      case nir_intrinsic_load_ubo: {
++         /*
++          * Null UBO descriptors point at a zero BO as large as
++          * maxUniformBufferRange, so a load at a constant offset inside
++          * that range reads zero without a check. Dynamic offsets keep it.
++          */
++         nir_src *offset = nir_get_io_offset_src(intr);
++         unsigned bytes = intr->num_components * intr->def.bit_size / 8;
++
++         if (nir_src_is_const(*offset) &&
++             nir_src_as_uint(*offset) + bytes <= PVR_MAX_UNIFORM_BUFFER_RANGE) {
++            return NULL;
++         }
+          break;
++      }
  
        case nir_intrinsic_get_ssbo_size:
        case nir_intrinsic_load_ssbo:
-@@ -74,6 +110,9 @@ static nir_def *get_is_null(nir_builder *b,
+@@ -74,6 +126,9 @@ static nir_def *get_is_null(nir_builder *b,
        if (!deref_def)
           return NULL;
  

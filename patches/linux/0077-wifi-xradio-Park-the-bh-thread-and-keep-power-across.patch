@@ -1,4 +1,4 @@
-From 4222b7d3cca89329f9a58226f7d491f79993d64f Mon Sep 17 00:00:00 2001
+From 97edea65ff33ea47d8fe64734a6822f1e786083a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 20:02:56 +0100
 Subject: [PATCH 077/106] wifi: xradio: Park the bh thread and keep power
@@ -34,17 +34,24 @@ now takes a resume request it finds while running as "nothing to undo"
 and reports itself running again, instead of parking for good or leaving
 the state at "resume" (which made every later suspend skip the park).
 
+The thread moves the state with cmpxchg (SUSPEND to SUSPENDED, RESUME to
+RESUMED), so a resume request that arrives while it is still busy with
+the park is not overwritten. sdio_suspend() lets a pending resume finish
+before it parks the thread, and fails with -EBUSY if that does not
+happen. When the thread exits on an error it sets bh_error, so suspend
+no longer tries to park a thread that is gone.
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/net/wireless/xradio/bh.c     | 18 +++++++-----
+ drivers/net/wireless/xradio/bh.c     | 34 ++++++++++++------
  drivers/net/wireless/xradio/bh.h     |  8 +++++
- drivers/net/wireless/xradio/sdio.c   | 44 ++++++++++++++++++++++++----
+ drivers/net/wireless/xradio/sdio.c   | 53 +++++++++++++++++++++++++---
  drivers/net/wireless/xradio/xradio.h |  1 +
- 4 files changed, 58 insertions(+), 13 deletions(-)
+ 4 files changed, 80 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/net/wireless/xradio/bh.c b/drivers/net/wireless/xradio/bh.c
-index e72fb7f61..dbc14b4e9 100644
+index e72fb7f61..01d97facc 100644
 --- a/drivers/net/wireless/xradio/bh.c
 +++ b/drivers/net/wireless/xradio/bh.c
 @@ -26,13 +26,6 @@
@@ -79,6 +86,41 @@ index e72fb7f61..dbc14b4e9 100644
  			dev_dbg(hw_priv->pdev, "Host suspend request.\n");
  			/* Check powersave setting again. */
  			if (hw_priv->powersave_enabled) {
+@@ -800,8 +802,14 @@ static int xradio_bh(void *arg)
+ 				hw_priv->device_can_sleep = true;
+ 			}
+ 
+-			/* bh thread go to suspend. */
+-			atomic_set(&hw_priv->bh_suspend, XRADIO_BH_SUSPENDED);
++			/*
++			 * bh thread go to suspend, unless the request was
++			 * withdrawn meanwhile (the park timed out and resume
++			 * was requested): then handle that on the next loop.
++			 */
++			if (atomic_cmpxchg(&hw_priv->bh_suspend, XRADIO_BH_SUSPEND,
++					   XRADIO_BH_SUSPENDED) != XRADIO_BH_SUSPEND)
++				continue;
+ 			wake_up(&hw_priv->bh_evt_wq);
+ 			status = wait_event_interruptible(hw_priv->bh_wq,
+ 					XRADIO_BH_RESUME == atomic_read(&hw_priv->bh_suspend));
+@@ -812,12 +820,16 @@ static int xradio_bh(void *arg)
+ 				break;
+ 			}
+ 			dev_dbg(hw_priv->pdev, "Host resume.\n");
+-			atomic_set(&hw_priv->bh_suspend, XRADIO_BH_RESUMED);
++			atomic_cmpxchg(&hw_priv->bh_suspend, XRADIO_BH_RESUME,
++				       XRADIO_BH_RESUMED);
+ 			wake_up(&hw_priv->bh_evt_wq);
+ 		}
+ 	} /* for (;;)*/
+ 
+ 	dev_err(hw_priv->pdev, "bh thread exiting\n");
++	/* Nothing services the chip any more: let waiters and suspend know. */
++	hw_priv->bh_error = 1;
++	wake_up(&hw_priv->bh_evt_wq);
+ 
+ 	return 0;
+ }
 diff --git a/drivers/net/wireless/xradio/bh.h b/drivers/net/wireless/xradio/bh.h
 index ca9187e24..c9e016f43 100644
 --- a/drivers/net/wireless/xradio/bh.h
@@ -99,7 +141,7 @@ index ca9187e24..c9e016f43 100644
  void xradio_unregister_bh(struct xradio_common *hw_priv);
  void xradio_irq_handler(struct xradio_common *hw_priv);
 diff --git a/drivers/net/wireless/xradio/sdio.c b/drivers/net/wireless/xradio/sdio.c
-index 587c59416..4ed262ad4 100644
+index 587c59416..676822019 100644
 --- a/drivers/net/wireless/xradio/sdio.c
 +++ b/drivers/net/wireless/xradio/sdio.c
 @@ -21,6 +21,7 @@
@@ -110,7 +152,7 @@ index 587c59416..4ed262ad4 100644
  
  /* sdio vendor id and device id*/
  #define SDIO_VENDOR_ID_XRADIO 0x0020
-@@ -220,18 +221,51 @@ static void sdio_remove(struct sdio_func *func)
+@@ -220,18 +221,60 @@ static void sdio_remove(struct sdio_func *func)
  
  static int sdio_suspend(struct device *dev)
  {
@@ -128,6 +170,15 @@ index 587c59416..4ed262ad4 100644
 +	 * (xradio_wow_suspend()) has parked it already and its resume
 +	 * releases it: only undo what we did here.
 +	 */
++	/* A resume still being taken over by the bh thread: let it finish. */
++	if (hw_priv && atomic_read(&hw_priv->bh_suspend) == XRADIO_BH_RESUME &&
++	    !wait_event_timeout(hw_priv->bh_evt_wq, hw_priv->bh_error ||
++				atomic_read(&hw_priv->bh_suspend) ==
++				XRADIO_BH_RESUMED, HZ)) {
++		dev_err(dev, "bh thread did not resume, cannot park it\n");
++		return -EBUSY;
++	}
++
 +	if (hw_priv && !hw_priv->bh_error &&
 +	    atomic_read(&hw_priv->bh_suspend) == XRADIO_BH_RESUMED) {
 +		ret = xradio_bh_suspend(hw_priv);

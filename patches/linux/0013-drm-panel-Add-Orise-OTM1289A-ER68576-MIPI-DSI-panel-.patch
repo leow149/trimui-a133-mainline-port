@@ -1,4 +1,4 @@
-From 9ed935decc428d2b66bfec5eba507ca93f3997f8 Mon Sep 17 00:00:00 2001
+From dfaaa0f6c70e3ddf0deb306e68985def60ab2953 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:29 +0100
 Subject: [PATCH 013/106] drm/panel: Add Orise OTM1289A / ER68576 MIPI DSI

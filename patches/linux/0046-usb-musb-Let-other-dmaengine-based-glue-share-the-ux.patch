@@ -1,4 +1,4 @@
-From 7914aeef6a6fcbd7292b51264a0fd56ff2d5694b Mon Sep 17 00:00:00 2001
+From b3f2b24eb1c1a23378c08858b6c28ddbd6912364 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:49 +0100
 Subject: [PATCH 046/106] usb: musb: Let other dmaengine based glue share the

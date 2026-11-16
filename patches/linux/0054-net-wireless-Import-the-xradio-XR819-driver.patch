@@ -1,4 +1,4 @@
-From fafd015fb24e30b00a5a1725e2a8850ab6e59857 Mon Sep 17 00:00:00 2001
+From f98ce37607ee55e4f5eb4b3b178cd8ff655a1ee2 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 15:03:41 +0100
 Subject: [PATCH 054/106] net: wireless: Import the xradio XR819 driver

@@ -1,4 +1,4 @@
-From 8a1c202b5608674863127969a20b065e65210d27 Mon Sep 17 00:00:00 2001
+From 42055973f12a8c9aa5c78fa7d4c9caa98d448734 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:36 +0100
 Subject: [PATCH 016/106] dt-bindings: vendor-prefixes: Add TrimUI

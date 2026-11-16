@@ -1,4 +1,4 @@
-From 73fae47f2ed212b660aa90e7b42e46832386a674 Mon Sep 17 00:00:00 2001
+From f63756b20e0a985b2db9bf88a552c94facbc38c8 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:19:46 +0100
 Subject: [PATCH 081/106] wifi: xradio: add debugfs with firmware counters and

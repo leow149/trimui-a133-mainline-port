@@ -1,4 +1,4 @@
-From 2283c14c7140c6c70cad0b954ada357940994e1a Mon Sep 17 00:00:00 2001
+From f51e4c2df26d18af01ef0bbb64e9da03d4f40ec1 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:58:37 +0100
 Subject: [PATCH 014/106] dt-bindings: serial: snps-dw-apb-uart: Add Allwinner

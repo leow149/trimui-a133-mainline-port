@@ -1,4 +1,4 @@
-From bfd4cf2d5098ad6ce0764936d0ffdd7ca32b28c6 Mon Sep 17 00:00:00 2001
+From 2e97d0b8d106faf32a226721fde3cbbce3a2d8ef Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 07:46:46 +0100
 Subject: [PATCH 070/106] arm64: dts: allwinner: a100: Add the video engine

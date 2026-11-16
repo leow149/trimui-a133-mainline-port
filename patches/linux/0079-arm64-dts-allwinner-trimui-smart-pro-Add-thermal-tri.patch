@@ -1,4 +1,4 @@
-From d821fac8f625525ec18f8e076331fa947f5f17d0 Mon Sep 17 00:00:00 2001
+From c7c9c00784afc457a972af985dcfa1259f2b52ad Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 21:32:09 +0100
 Subject: [PATCH 079/106] arm64: dts: allwinner: trimui-smart-pro: Add thermal

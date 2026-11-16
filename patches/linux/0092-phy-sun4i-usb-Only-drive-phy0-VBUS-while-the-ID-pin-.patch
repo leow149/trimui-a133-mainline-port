@@ -1,4 +1,4 @@
-From 7c55ae1a805434d303e5a8e171a721469e8e8d76 Mon Sep 17 00:00:00 2001
+From 36e582d4ef69a8d26f43f5fb96ac6a785bdd2e67 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:10 +0100
 Subject: [PATCH 092/106] phy: sun4i-usb: Only drive phy0 VBUS while the ID pin

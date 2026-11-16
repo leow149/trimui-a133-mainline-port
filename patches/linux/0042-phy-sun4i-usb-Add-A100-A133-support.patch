@@ -1,4 +1,4 @@
-From 2b1d34d514c96f3755bbf62466693fbb77ce48e6 Mon Sep 17 00:00:00 2001
+From f3aca78b75cecd38d68173f6835e805cdb4befb3 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:45:08 +0100
 Subject: [PATCH 042/106] phy: sun4i-usb: Add A100/A133 support

@@ -1,4 +1,4 @@
-From 69e3404b54fcd2b6c56b3f5e567e4af2cfa80639 Mon Sep 17 00:00:00 2001
+From 115bfd396b1efda1da1743f9f606827e207199ea Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:36:22 +0100
 Subject: [PATCH 027/106] arm64: dts: allwinner: a100: Add the RTC

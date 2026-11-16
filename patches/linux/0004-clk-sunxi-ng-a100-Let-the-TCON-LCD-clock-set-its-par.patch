@@ -1,4 +1,4 @@
-From 1e0aeba5963bf89dc4c85fe69ae33ce76951807e Mon Sep 17 00:00:00 2001
+From 7e0f91c7caceab7fc7559efa13424c39ff22d15c Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:25 +0100
 Subject: [PATCH 004/106] clk: sunxi-ng: a100: Let the TCON LCD clock set its

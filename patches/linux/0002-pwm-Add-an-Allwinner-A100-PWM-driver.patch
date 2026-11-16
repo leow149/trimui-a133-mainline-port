@@ -1,4 +1,4 @@
-From cf2243a8fc73fab0f3e0fa84ea4b86503bfa6a3a Mon Sep 17 00:00:00 2001
+From 83898f201be13c7f0f3ec30372f1b86b5bc8d9f0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:24 +0100
 Subject: [PATCH 002/106] pwm: Add an Allwinner A100 PWM driver
@@ -16,13 +16,19 @@ changing the duty cycle of a running channel does not glitch the output.
 
 Tested on the TrimUI Smart Pro (A133): the pwm-backlight on channel 0.
 
+The clock source and divider (PCCR) are shared by a channel pair: they
+are only programmed while both channels are off; otherwise the channel
+uses the running sibling's setting (and refuses an APB1 source, whose
+rate it does not know). get_state() takes the divider and the bypass
+into account.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  drivers/pwm/Kconfig           |  12 ++
  drivers/pwm/Makefile          |   1 +
- drivers/pwm/pwm-sun50i-a100.c | 287 ++++++++++++++++++++++++++++++++++
- 3 files changed, 300 insertions(+)
+ drivers/pwm/pwm-sun50i-a100.c | 327 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 340 insertions(+)
  create mode 100644 drivers/pwm/pwm-sun50i-a100.c
 
 diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
@@ -62,10 +68,10 @@ index 5630a521a..0222ad7dc 100644
  obj-$(CONFIG_PWM_TH1520)	+= pwm_th1520.o
 diff --git a/drivers/pwm/pwm-sun50i-a100.c b/drivers/pwm/pwm-sun50i-a100.c
 new file mode 100644
-index 000000000..608f3c4bd
+index 000000000..138cd5286
 --- /dev/null
 +++ b/drivers/pwm/pwm-sun50i-a100.c
-@@ -0,0 +1,287 @@
+@@ -0,0 +1,327 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Driver for the Allwinner A100/A133 (sun50iw10) PWM controller
@@ -102,6 +108,8 @@ index 000000000..608f3c4bd
 +#define A100_PWM_PCCR(ch)		(0x0020 + 4 * ((ch) / 2))
 +#define A100_PWM_PCCR_CLK_SRC		GENMASK(8, 7)
 +#define A100_PWM_PCCR_CLK_SRC_HOSC	0
++#define A100_PWM_PCCR_CLK_DIV_M		GENMASK(3, 0)
++#define A100_PWM_PCCR_CLK_DIV_M_MAX	8
 +
 +#define A100_PWM_PCGR			0x0040
 +#define A100_PWM_PCGR_BYPASS(ch)	BIT(16 + (ch))
@@ -187,39 +195,60 @@ index 000000000..608f3c4bd
 +	writel(val & ~A100_PWM_PCGR_GATING(ch), pc->base + A100_PWM_PCGR);
 +}
 +
++/*
++ * Rate of the clock of a channel pair, from its PCCR, or 0 if the pair runs
++ * from APB1, whose rate the driver does not know.
++ */
++static unsigned long a100_pwm_pair_rate(struct a100_pwm *pc, u32 pccr)
++{
++	unsigned int div_m = FIELD_GET(A100_PWM_PCCR_CLK_DIV_M, pccr);
++
++	if (FIELD_GET(A100_PWM_PCCR_CLK_SRC, pccr) != A100_PWM_PCCR_CLK_SRC_HOSC ||
++	    div_m > A100_PWM_PCCR_CLK_DIV_M_MAX)
++		return 0;
++
++	return pc->clk_rate >> div_m;
++}
++
 +static int a100_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 +			  const struct pwm_state *state)
 +{
 +	struct a100_pwm *pc = to_a100_pwm(chip);
 +	unsigned int ch = pwm->hwpwm;
-+	u32 entire_cycle, act_cycle, prescale_k, val, pcgr;
++	u32 entire_cycle, act_cycle, prescale_k, val, pcgr, pccr;
++	unsigned long rate;
 +	int ret;
 +
++	guard(mutex)(&pc->lock);
++
 +	if (!state->enabled) {
-+		guard(mutex)(&pc->lock);
 +		a100_pwm_disable(pc, ch);
 +		return 0;
 +	}
 +
-+	ret = a100_pwm_calc(pc->clk_rate, state->period, state->duty_cycle,
-+			    &entire_cycle, &act_cycle, &prescale_k);
-+	if (ret)
-+		return ret;
-+
-+	guard(mutex)(&pc->lock);
-+
 +	/*
-+	 * Only set up the clock when the channel is off: the period and duty
-+	 * of a running channel are updated without stopping its clock, so the
++	 * The clock source and divider are shared by the pair: only set them
++	 * (hosc, undivided) when both channels are off, and otherwise use what
++	 * the running sibling uses. A running channel is not touched either:
++	 * its period and duty are updated without stopping its clock, so the
 +	 * output does not glitch (they are loaded at the end of the period).
 +	 */
 +	pcgr = readl(pc->base + A100_PWM_PCGR);
-+	if (!(pcgr & A100_PWM_PCGR_GATING(ch))) {
-+		val = readl(pc->base + A100_PWM_PCCR(ch));
-+		val &= ~A100_PWM_PCCR_CLK_SRC;
-+		val |= FIELD_PREP(A100_PWM_PCCR_CLK_SRC, A100_PWM_PCCR_CLK_SRC_HOSC);
-+		writel(val, pc->base + A100_PWM_PCCR(ch));
++	pccr = readl(pc->base + A100_PWM_PCCR(ch));
++	if (!(pcgr & (A100_PWM_PCGR_GATING(ch) | A100_PWM_PCGR_GATING(ch ^ 1)))) {
++		pccr &= ~(A100_PWM_PCCR_CLK_SRC | A100_PWM_PCCR_CLK_DIV_M);
++		pccr |= FIELD_PREP(A100_PWM_PCCR_CLK_SRC, A100_PWM_PCCR_CLK_SRC_HOSC);
++		writel(pccr, pc->base + A100_PWM_PCCR(ch));
 +	}
++
++	rate = a100_pwm_pair_rate(pc, pccr);
++	if (!rate)
++		return -EBUSY;
++
++	ret = a100_pwm_calc(rate, state->period, state->duty_cycle,
++			    &entire_cycle, &act_cycle, &prescale_k);
++	if (ret)
++		return ret;
 +
 +	/* Cycle mode (A100_PWM_PCR_MODE_PULSE clear) */
 +	val = FIELD_PREP(A100_PWM_PCR_PRESCAL_K, prescale_k);
@@ -250,11 +279,28 @@ index 000000000..608f3c4bd
 +{
 +	struct a100_pwm *pc = to_a100_pwm(chip);
 +	unsigned int ch = pwm->hwpwm;
-+	u32 pcr, ppr, entire_cycle, act_cycle, prescale;
++	u32 pcr, ppr, pcgr, entire_cycle, act_cycle, prescale;
++	unsigned long rate;
++
++	rate = a100_pwm_pair_rate(pc, readl(pc->base + A100_PWM_PCCR(ch)));
++	pcgr = readl(pc->base + A100_PWM_PCGR);
 +
 +	/* PER and PCGR use the same bit per channel */
-+	state->enabled = readl(pc->base + A100_PWM_PER) &
-+			 readl(pc->base + A100_PWM_PCGR) & A100_PWM_PER_EN(ch);
++	state->enabled = readl(pc->base + A100_PWM_PER) & pcgr &
++			 A100_PWM_PER_EN(ch);
++	if (!rate) {
++		/* Clocked from APB1 (not set up by this driver) */
++		state->enabled = false;
++		return 0;
++	}
++
++	if (pcgr & A100_PWM_PCGR_BYPASS(ch)) {
++		/* The output is the channel clock itself */
++		state->period = DIV_ROUND_UP(NSEC_PER_SEC, rate);
++		state->duty_cycle = DIV_ROUND_UP(state->period, 2);
++		state->polarity = PWM_POLARITY_NORMAL;
++		return 0;
++	}
 +
 +	pcr = readl(pc->base + A100_PWM_PCR(ch));
 +	ppr = readl(pc->base + A100_PWM_PPR(ch));
@@ -268,9 +314,9 @@ index 000000000..608f3c4bd
 +
 +	/* Round up, so that applying the result gives the same settings */
 +	state->period = DIV_ROUND_UP_ULL((u64)entire_cycle * prescale * NSEC_PER_SEC,
-+					 pc->clk_rate);
++					 rate);
 +	state->duty_cycle = DIV_ROUND_UP_ULL((u64)act_cycle * prescale * NSEC_PER_SEC,
-+					     pc->clk_rate);
++					     rate);
 +
 +	return 0;
 +}

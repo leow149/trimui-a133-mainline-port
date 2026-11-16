@@ -1,4 +1,4 @@
-From 4d42292f985e7eacc243c351f5afc21580181ba1 Mon Sep 17 00:00:00 2001
+From d94242993c7f2902fd141fb4c664c7eee84c0921 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 14:30:30 +0100
 Subject: [PATCH 052/106] arm64: dts: allwinner: trimui-smart-pro: Enable the

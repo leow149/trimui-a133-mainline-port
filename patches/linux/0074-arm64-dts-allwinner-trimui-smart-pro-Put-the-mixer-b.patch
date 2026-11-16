@@ -1,4 +1,4 @@
-From 964360e712512d98fed6032d93d54a841fac2152 Mon Sep 17 00:00:00 2001
+From 98dad19cff7268f21f86b5ca74ae45ef11a3ca80 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 09:12:26 +0100
 Subject: [PATCH 074/106] arm64: dts: allwinner: trimui-smart-pro: Put the

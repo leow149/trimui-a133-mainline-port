@@ -1,4 +1,4 @@
-From e5b783657bb41a2b34156cbb3c5d9300714a2245 Mon Sep 17 00:00:00 2001
+From 0ecf45a73002a046c910d64ff8fe1681581e05b8 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 11:06:24 +0100
 Subject: [PATCH 039/106] drm/panel: otm1289a: Only reset the panel on its
@@ -21,14 +21,42 @@ flag and the empty enable and unprepare callbacks while at it.
 Unbinding through sysfs is disabled: after a rebind the panel would need
 a power cycle that the board cannot do.
 
+For the same reason the driver can only be built in; unbinding the DSI
+host, which removes the panel device, is not supported either.
+
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
- .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 76 ++++++++++---------
- 1 file changed, 42 insertions(+), 34 deletions(-)
+ drivers/gpu/drm/panel/Kconfig                 |  8 +-
+ .../gpu/drm/panel/panel-orisetech-otm1289a.c  | 79 +++++++++++--------
+ 2 files changed, 51 insertions(+), 36 deletions(-)
 
+diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
+index fab1ed5f4..03dbaeb3c 100644
+--- a/drivers/gpu/drm/panel/Kconfig
++++ b/drivers/gpu/drm/panel/Kconfig
+@@ -759,13 +759,17 @@ config DRM_PANEL_ORISETECH_OTM8009A
+ 	  otm8009a 480x800 dsi 2dl panel.
+ 
+ config DRM_PANEL_ORISETECH_OTM1289A
+-	tristate "Orise Technology otm1289a 720x1280 dsi panel"
++	bool "Orise Technology otm1289a 720x1280 dsi panel"
+ 	depends on OF
+-	depends on DRM_MIPI_DSI
++	depends on DRM_MIPI_DSI=y
+ 	help
+ 	  Say Y here if you want to enable support for Orise Technology
+ 	  otm1289a 720x1280 dsi panel, as used on the TrimUI Smart Pro.
+ 
++	  Built-in only: the panel is reset only once, so it cannot be
++	  brought back after the driver is unloaded or unbound, which also
++	  happens when the DSI host driver is unbound.
++
+ config DRM_PANEL_OSD_OSD101T2587_53TS
+ 	tristate "OSD OSD101T2587-53TS DSI 1920x1200 video mode panel"
+ 	depends on OF
 diff --git a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
-index 2b3df810c..94cab02b7 100644
+index 2b3df810c..5aaf195e4 100644
 --- a/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
 +++ b/drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
 @@ -32,7 +32,7 @@ struct otm1289a {
@@ -153,7 +181,7 @@ index 2b3df810c..94cab02b7 100644
  }
  
  static const struct of_device_id orisetech_otm1289a_of_match[] = {
-@@ -445,6 +447,12 @@ static struct mipi_dsi_driver orisetech_otm1289a_driver = {
+@@ -445,6 +447,15 @@ static struct mipi_dsi_driver orisetech_otm1289a_driver = {
  	.driver = {
  		.name = "panel-orisetech-otm1289a",
  		.of_match_table = orisetech_otm1289a_of_match,
@@ -161,6 +189,9 @@ index 2b3df810c..94cab02b7 100644
 +		 * The panel is only reset on its first power-up (see
 +		 * otm1289a_power_up()) and cannot be brought back after a
 +		 * rebind without a power cycle, which the board cannot do.
++		 * For the same reason the driver is built-in only; unbinding
++		 * the DSI host (which removes the panel device) is not
++		 * supported either.
 +		 */
 +		.suppress_bind_attrs = true,
  	},

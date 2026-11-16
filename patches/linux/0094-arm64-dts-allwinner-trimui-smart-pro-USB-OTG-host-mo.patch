@@ -1,4 +1,4 @@
-From 88b6872e6315a03d2e7f8decb14722ca643c66e3 Mon Sep 17 00:00:00 2001
+From b0a787a0343d5db3a0589ff7537b91a3ba754978 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 02:15:22 +0100
 Subject: [PATCH 094/106] arm64: dts: allwinner: trimui-smart-pro: USB OTG host

@@ -1,4 +1,4 @@
-From 77026cca36defb2641b14bf7462794447b49eb7c Mon Sep 17 00:00:00 2001
+From f96680a794c17673f0f295a4130c4190f7bf9719 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sat, 7 Nov 2026 22:59:08 +0100
 Subject: [PATCH 084/106] wifi: xradio: report the real TX rate entries to

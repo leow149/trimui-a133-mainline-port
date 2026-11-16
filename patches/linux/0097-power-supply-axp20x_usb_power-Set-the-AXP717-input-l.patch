@@ -1,4 +1,4 @@
-From 918232471ceb0b67f90fad056547f8d5dbef442a Mon Sep 17 00:00:00 2001
+From 40355494efde0b35beab8098e0b31980579cd123 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 8 Nov 2026 12:27:25 +0100
 Subject: [PATCH 097/106] power: supply: axp20x_usb_power: Set the AXP717 input

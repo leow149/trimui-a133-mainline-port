@@ -1,4 +1,4 @@
-From d6a0c5b0dba8a5f20b80c07d18968dec6a4523da Mon Sep 17 00:00:00 2001
+From b407ca6e554691ffe7234159d8f034853e57a625 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 00:21:25 +0100
 Subject: [PATCH 003/106] clk: sunxi-ng: a100: Name the display engine clock
