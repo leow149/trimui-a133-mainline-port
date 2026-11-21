@@ -89,3 +89,72 @@ Recommendation until then: use WPA2 (the home-ssid mixed-mode SSID) on this devi
 About 4 per 120 s of iperf load at 50 MHz SDIO; they are retried transparently (no driver error, no throughput collapse). A 40 MHz cap (max-frequency on &mmc1) gave 1 per 120 s but cost ~10 % throughput, so it was reverted. Left as is.
 
 - Station + AP verified with a real client (2026-11-08, kernel #53): a phone on trimui-ap (10.66.0.x lease, signal -40 dBm) answered 14/15 pings (avg 91 ms, phone power save), while wlan0 pinged the gateway 15/15 (avg 13 ms) at the same time.
+
+## WPA3 root cause found (2026-11-21, ROCKNIX, kernel 7.3.4)
+
+Air capture (`tools/wifi_air_capture.sh`, Intel 8260 in monitor mode; captures in
+`tests/results-20261121/wifi/`):
+
+- With MFP the AP's ADDBA requests are CCMP-protected (53 bytes on air). With the firmware PMF
+  policy off the firmware drops them silently: they never reach the driver (logged at the top
+  of `xradio_rx_cb`), and nobody answers. The AP retries about once a second and holds the
+  downlink frame for its ~100 ms ADDBA timeout each time. That's the 35-116 ms average /
+  up to 400 ms downlink latency; uplink-initiated pings look fine. Power save is not involved.
+- With the policy on, the firmware forwards the protected ADDBA (decrypted, IV kept) but still
+  doesn't answer it. `xradio_tx_h_action` read the category at offset 24, which is IV space on a
+  protected frame, so mac80211's own response was sent: the AP then ran BA sessions that the
+  firmware doesn't know about, and unicast RX died (the 11-07 "policy on" failure; the vendor
+  driver has the same offset bug).
+- Policy on + filter reading the category after the IV + RX BA declined on MFP links
+  (mac80211 sends the decline): downlink latency 9-16 ms avg (max ~60), RX 18 Mbit/s.
+  Bulk TX stalled 5/5, which looked like the firmware dropping downlink ACKs. **That was
+  wrong:** a device-side TCP trace (`rocknix_a133_port/tcpsniff.py`, no tcpdump on ROCKNIX)
+  showed one segment (952 B payload) retransmitted forever, with every copy failing in the
+  firmware with status 1 and `ackFailures 0`, so it never went on air.
+
+## TX stall root cause: stale header after skb_padto (2026-11-21, fixed)
+
+`xradio_tx_h_skb_pad()` used `skb_padto()`. A cloned skb (TCP keeps a clone for
+retransmission) or one without tailroom gets a new data buffer, but `xradio_tx()` kept its
+`wsm`/`hdr` pointers. The HT40 API conversion then rewrote the *old* buffer, so the firmware
+got the legacy TX header (maxTxRate 0x15, flags 0xd8, htTxParameters 1 instead of
+DataOffset/TxRateEntry/policy) and rejected it with status 1 on every retry. UDP and ping
+(not cloned) never hit it; a UDP size sweep at the same frame length passed. This is also
+the "about 1 in 10 TX runs stalls" seen on WPA2 above. Fix: pad in place via
+`pskb_expand_head()` and reload the pointers (this also removes a double free on the error
+path).
+
+## WPA3 final state (2026-11-21)
+
+Branch `xr829-pmf` (on top of the tsp-wip base 6ceb025b0), two commits:
+1. `wifi: xradio: Reload header pointers after padding a reallocated skb`
+2. `wifi: xradio: Handle block ack on MFP (WPA3) links`: PMF policy (enable, unprotected
+   allowed, enc auth) set at association when the AP sta has `mfp`, cleared otherwise; only
+   *unprotected* BACK frames dropped (category read after the IV); RX BA declined on MFP links;
+   firmware TX BA mask 0 on MFP links.
+
+Results on the home AP (WPA3 SAE, MFP required, HT40 ch1), python socat tools:
+
+| | before | after |
+|---|---|---|
+| Downlink ping avg / max | 35-116 / 400 ms | 10-13 / <100 ms |
+| TX | 3/5 runs ~11 Mbit/s, rest stalled | 6/6 + 8/8 runs, 12-15 Mbit/s |
+| RX | 14-19 Mbit/s | 17-19 Mbit/s |
+
+Why not WPA2 speed (~30/35 Mbit/s with A-MPDU): the firmware only delivers A-MPDU data for
+sessions it negotiated itself, and it never processes protected ADDBA frames in either
+direction:
+- Accepting RX BA in mac80211 with firmware-encrypted mgmt frames: the AP sets up the session
+  and sends A-MPDUs (`ampdu_counters` rx_ampdus rising), but `udata_in` stays flat. The link is
+  dead.
+- Same with mac80211-encrypted mgmt (`IEEE80211_KEY_FLAG_SW_MGMT_TX`): the AP never accepts
+  the response and keeps re-sending ADDBA.
+- Firmware TX BA on MFP: no aggregated TX confirms at all, latency worse.
+- IGTK uploaded to the firmware (`WSM_KEY_TYPE_IGTK_GROUP`, as wfx does), all policy-bit
+  combinations: no change.
+- No host API to install a session: `WSM_MIB_ID_BLOCK_ACK_INFO` (0x100D, "test only") reads 4
+  bytes of buffer-size config (`10 04 00 00`). No newer fw_xr829.bin found (ours:
+  XR_C09.08.52.73, same md5 as stock).
+Closing the remaining gap would need firmware changes (RE of the fw BA state machine).
+Experiment switches (`dbg_flags`, raw `mib` debugfs file, TX/RX counters) are kept in the
+linux branch `wip-xr829-pmf-addba` HEAD; harness: `rocknix_a133_port/pmf_matrix.sh`.
