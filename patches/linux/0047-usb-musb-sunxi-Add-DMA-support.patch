@@ -1,13 +1,15 @@
-From edc7f72a7f1eb95d450087479b3ea0d417cef7eb Mon Sep 17 00:00:00 2001
+From 07a906ef4948f6ec426c7b5643dcb8e1f8625a01 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
-Subject: [PATCH 047/106] usb: musb: sunxi: Add DMA support
+Subject: [PATCH 047/100] usb: musb: sunxi: Add DMA support
 
 Use the SoC's general purpose DMA controller, which has a request line per
 OTG endpoint, through dmaengine: one channel per endpoint and direction,
-taken from the device tree ("ep1rx".."ep5tx"); without them the controller
+taken from the device tree ("ep1tx".."ep5rx"); without them the controller
 stays in PIO mode. Like musbhsdma, send a short last packet (or a mode 0
-transfer) by hand on completion, as AutoSet only sends full packets.
+transfer) by hand on completion, as AutoSet only sends full packets. The
+glue sets the new MUSB_DMA_SUNXI quirk, which makes musb_dma_dmaengine()
+true for it.
 
 Only TX uses DMA. The gadget code programs dmaengine RX one packet at a
 time and gives each one back, which breaks functions that expect a whole
@@ -27,10 +29,11 @@ Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
  drivers/usb/musb/Kconfig     |  12 ++
- drivers/usb/musb/musb_dma.h  |   4 +-
- drivers/usb/musb/musb_host.c |   9 +-
+ drivers/usb/musb/musb_core.h |   1 +
+ drivers/usb/musb/musb_dma.h  |   7 +-
+ drivers/usb/musb/musb_host.c |   7 +-
  drivers/usb/musb/sunxi.c     | 307 ++++++++++++++++++++++++++++++++++-
- 4 files changed, 328 insertions(+), 4 deletions(-)
+ 5 files changed, 331 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/usb/musb/Kconfig b/drivers/usb/musb/Kconfig
 index 1b0d27d8e..ab9d6982b 100644
@@ -55,24 +58,39 @@ index 1b0d27d8e..ab9d6982b 100644
  config USB_INVENTRA_DMA
  	bool 'Inventra'
  	depends on USB_MUSB_OMAP2PLUS || USB_MUSB_MEDIATEK || USB_MUSB_JZ4740 || USB_MUSB_POLARFIRE_SOC
+diff --git a/drivers/usb/musb/musb_core.h b/drivers/usb/musb/musb_core.h
+index 91b5b6b66..59d72da28 100644
+--- a/drivers/usb/musb/musb_core.h
++++ b/drivers/usb/musb/musb_core.h
+@@ -143,6 +143,7 @@ struct musb_io;
+  */
+ struct musb_platform_ops {
+ 
++#define MUSB_DMA_SUNXI		BIT(10)
+ #define MUSB_G_NO_SKB_RESERVE	BIT(9)
+ #define MUSB_DA8XX		BIT(8)
+ #define MUSB_PRESERVE_SESSION	BIT(7)
 diff --git a/drivers/usb/musb/musb_dma.h b/drivers/usb/musb/musb_dma.h
-index eee62fe3d..4bddd84d4 100644
+index c3abe0aa6..4bddd84d4 100644
 --- a/drivers/usb/musb/musb_dma.h
 +++ b/drivers/usb/musb/musb_dma.h
-@@ -55,8 +55,10 @@ struct musb_hw_ep;
+@@ -55,8 +55,13 @@ struct musb_hw_ep;
  #define musb_dma_ux500(musb)		0
  #endif
  
 +/* Only with DMA channels in the device tree; otherwise the glue is PIO only. */
- #define musb_dma_sunxi(musb)		(IS_ENABLED(CONFIG_USB_SUNXI_DMA) && \
--					 ((musb)->ops->quirks & MUSB_DMA_SUNXI))
++#define musb_dma_sunxi(musb)		(IS_ENABLED(CONFIG_USB_SUNXI_DMA) && \
 +					 ((musb)->ops->quirks & MUSB_DMA_SUNXI) && \
 +					 (musb)->dma_controller)
- 
++
  /* dmaengine based backends: the controller only moves FIFO data */
- #define musb_dma_dmaengine(musb)	(musb_dma_ux500(musb) || musb_dma_sunxi(musb))
+-#define musb_dma_dmaengine(musb)	musb_dma_ux500(musb)
++#define musb_dma_dmaengine(musb)	(musb_dma_ux500(musb) || musb_dma_sunxi(musb))
+ 
+ #ifdef CONFIG_USB_TI_CPPI41_DMA
+ #define musb_dma_cppi41(musb)		(musb->ops->quirks & MUSB_DMA_CPPI41)
 diff --git a/drivers/usb/musb/musb_host.c b/drivers/usb/musb/musb_host.c
-index 9411f1863..004b5e079 100644
+index aaa6ae66d..54f7253c6 100644
 --- a/drivers/usb/musb/musb_host.c
 +++ b/drivers/usb/musb/musb_host.c
 @@ -1861,8 +1861,13 @@ void musb_host_rx(struct musb *musb, u8 epnum)
@@ -80,19 +98,18 @@ index 9411f1863..004b5e079 100644
  	 */
  
 -	/* FIXME this is _way_ too much in-line logic for Mentor DMA */
--	if (!musb_dma_inventra(musb) && !musb_dma_dmaengine(musb) &&
 +	/*
 +	 * Clean up a pending request-packet bit unless a DMA engine handles
 +	 * this endpoint. The sunxi glue only uses DMA for some endpoints (TX),
 +	 * so the cleanup stays for its PIO endpoints.
 +	 */
-+	if (!musb_dma_inventra(musb) && !musb_dma_ux500(musb) &&
+ 	if (!musb_dma_inventra(musb) && !musb_dma_ux500(musb) &&
 +	    !(musb_dma_sunxi(musb) && dma) &&
  	    (rx_csr & MUSB_RXCSR_H_REQPKT)) {
  		/* REVISIT this happened for a while on some short reads...
  		 * the cleanup still needs investigation... looks bad...
 diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
-index a6bd3e968..6c0ce89d1 100644
+index 11c5ac2e1..f7f11c400 100644
 --- a/drivers/usb/musb/sunxi.c
 +++ b/drivers/usb/musb/sunxi.c
 @@ -9,6 +9,7 @@

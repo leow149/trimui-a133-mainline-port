@@ -1,0 +1,40 @@
+From a6b05ac7de4373eebed4ac142aeb845fc0018427 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:36 +0100
+Subject: [PATCH 065/100] arm64: dts: allwinner: a100: Add the audio codec
+
+Add the audio codec node, disabled by default so that only boards using it
+enable it. The interrupt and the DMA request line come from the A133 user
+manual (GIC 57, DRQ port 7).
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 4788f7fd8..f094c71d2 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -496,6 +496,20 @@ lradc: lradc@5070800 {
+ 			status = "disabled";
+ 		};
+ 
++		codec: codec@5096000 {
++			compatible = "allwinner,sun50i-a100-codec";
++			reg = <0x05096000 0x330>;
++			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_AUDIO_CODEC>,
++				 <&ccu CLK_AUDIO_DAC>;
++			clock-names = "apb", "codec";
++			resets = <&ccu RST_BUS_AUDIO_CODEC>;
++			dmas = <&dma 7>;
++			dma-names = "tx";
++			#sound-dai-cells = <0>;
++			status = "disabled";
++		};
++
+ 		usb_otg: usb@5100000 {
+ 			compatible = "allwinner,sun50i-a100-musb",
+ 				     "allwinner,sun8i-a33-musb";

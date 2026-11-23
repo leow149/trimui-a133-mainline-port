@@ -1,0 +1,188 @@
+===== ampdu
+TxAMPDUs:			47580
+TxMPDUsInAMPDUs:		242805
+TxOctetsInAMPDUs_l32:		361351030
+TxOctetsInAMPDUs_h32:		0
+RxAMPDUs:			2515
+RxMPDUsInAMPDUs:		4285
+RxOctetsInAMPDUs_l32:		1226509
+RxOctetsInAMPDUs_h32:		0
+RxDelimeterCRCErrorCount:	0
+ImplictBARFailures:		8150
+ExplictBARFailures:		-128
+===== status
+XRADIO Wireless LAN driver status
+Hardware:   7.9
+Firmware:   WSM 8.5272
+FW API:     1060
+FW caps:    0x8001
+Channel:    1
+  flags:    0x000001a0
+HT:         on
+2040BSS:    yes
+Second Chan:Above
+ShortGI:    yes
+Greenfield: no
+AMPDU dens: 0
+RC in use:  1
+BA stat:    1296, 1902528 (1468)
+BA RX stat:    5, 3967 (793)
+Block ACK:  on
+
+Queue       0:
+  capacity: 128
+  queued:   0
+  pending:  0
+  sent:     2
+  locked:   no
+  overfull: no
+  link map: 0-> 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+
+Queue       1:
+  capacity: 128
+  queued:   0
+  pending:  0
+  sent:     0
+  locked:   no
+  overfull: no
+  link map: 0-> 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <-17
+
+Queue       2:
+  capacity: 128
+  queued:   86
+  pending:  86
+  sent:     242897
+===== txpipe
+tx-aggr       :	48607
+retx-aggr     :	8150
+retry_type1   :	36944
+retry_type2   :	13932
+retry_type3   :	0
+rx-aggr-event :	2516
+rx-aggr-end   :	2515
+rx-ba         :	48606
+tx_ampdu_len  :	16
+fail_by_rts   :	16
+===== tx_delay
+MinDelay 191us, MaxDelay=384207us
+Delay (0~0.5ms]   :20661
+Delay (0.5~1ms]   :3793
+Delay (1~10ms]    :180146
+Delay (10~20ms]   :19265
+Delay (20~30ms]   :5528
+Delay (30~40ms]   :3177
+Delay (40~50ms]   :2775
+Delay (50~100ms]  :7473
+Delay (100~150ms] :138
+Delay (150~200ms] :74
+Delay (200~300ms] :0
+Delay (300~500ms] :31
+Delay (500~1000ms]:0
+Delay (1~3s]      :0
+Delay (3~15s]     :0
+===== txconfirm
+Txcfm1:29427	Txcfm9:870	Txcfm17:0	Txcfm25:0	
+Txcfm2:1065	Txcfm10:1144	Txcfm18:0	Txcfm26:0	
+Txcfm3:653	Txcfm11:1260	Txcfm19:0	Txcfm27:0	
+Txcfm4:559	Txcfm12:1459	Txcfm20:0	Txcfm28:0	
+Txcfm5:559	Txcfm13:1456	Txcfm21:0	Txcfm29:0	
+Txcfm6:594	Txcfm14:1577	Txcfm22:0	Txcfm30:0	
+Txcfm7:663	Txcfm15:2884	Txcfm23:0	Txcfm31:0	
+Txcfm8:875	Txcfm16:3402	Txcfm24:0	Txcfm32:0	
+===== backoff
+backoff_max 0:	1016
+[0, 7]       1:	24746
+[~, 15]      2:	24643
+[~, 31]      3:	5286
+[~, 63]      4:	1275
+[~, 127]     5:	494
+[~, 255]     6:	281
+[~, 511]     7:	171
+[~, 1023]    8:	142
+===== policy_info
+tx_retrylimit=0, tx_lower_limit=0, tx_over_limit=0, retry_mis=0
+policy_upload=1159, policy_num=1234
+===== retry_ctrl
+retry_dbg=0, short=15, long=15
+===== tala_ctrl
+tala_para=0x00000000, tala_thresh=0x00000000
+===== set_ampdu_len
+ampdu_len(0)=16, (1)=16
+===== 11n
+1
+===== temperature
+42
+===== version
+Driver Label:XR_V02.16.93_HT40_01.40  Apr 13 2024 02:34:44
+Firmware Label:XR_C09.08.52.73_DBG_02.122 2GHZ HT40 May 18 2021 13:36:09
+===== tpa_debug
+		m0	m1	m2	m3	m4	m5	m6	m7	m8	m9	m10	
+max_idx:	0	0	0	0	0	0	0	0	0	0	0
+def_idx:	0	0	0	0	0	0	0	0	0	0	0
+mid_idx:	0	0	0	0	0	0	0	0	0	0	0
+cur_pt :	0	0	0	0	0	0	0	0	0	0	0
+max_pt :	0	0	0	0	0	0	0	0	0	0	0
+stable :	0	0	0	0	0	0	0	0	0	0	0
+exceptn:	0	0	0	0	0	0	0	0	0	0	0
+listen :	0	0	0	0	0	0	0	0	0	0	0
+smp_cnt:	0	0	0	0	0	0	0	0	0	0	0
+update :	0	0	0	0	0	0	0	0	0	0	0
+pt[0]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[0]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[1]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[1]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[2]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[2]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[3]  :	0	0	0	0	0	0	0	0	0	0	0
+pt[3]  :	0	0	0	0	0	0	0	0	0	0	0
+rate   :	0	0	0	0	0	0	0	0	0	0	0
+Max Q  :	0	0	0	0	0	0	0	0	0	0	0
+
+update_total:	0	0	0	0	0	0	0	0	0	0	0
+pwr_avrg:	0	0	0	0	0	0	0	0	0	0	0
+SMP_CASE: 0, 0, 0, 0(E), 0, 0, 0(E), 0(E), 0
+MAX: M=0, L=0, R=0, D=0
+MOVE: M=0, L=0, R=0, D=0
+listen=0, timeout=0, thresh_q=0, excep=0, stable=0
+lsat Moduln=0, M=0, 0; L=0, 0; R=0, 0; D=0, 0
+===== bh_stat
+irq_count=53266, rx_total=58771, rx_miss=1, rx_fix=6542, rx_next=774, rx_burst=2572, irq/rx=90%
+tx_total=245038, tx_burst=184506, tx_limit=79956, tx_buf_limit=487, limit/tx=32%, buf_limit/limit=0%, tx_rx_idle=115580, bh_idle=608
+queue_lock_cnt=3545, overfull_lock_cnt=3541, policy_lock_cnt=0
+===== counters
+PlcpErrors:				807
+FcsErrors:				3723
+TxPackets:				57306
+RxPackets:				68159
+RxPacketErrors:			4530
+RtsSuccess:				0
+RtsFailures:			0
+RxFramesSuccess:		68424
+RxDecryptionFailures:	0
+RxMicFailures:			0
+RxNoKeyFailures:		35
+TxMulticastFrames:		14
+TxFramesSuccess:		243762
+TxFrameFailures:		0
+TxFramesRetried:		40839
+TxFramesMultiRetried:	9910
+RxFrameDuplicates:		8
+AckFailures:			54365
+RxMulticastFrames:		15050
+RxCMACICVErrors:		0
+RxCMACReplays:			0
+RxMgmtCCMPReplays:		0
+RxBIPMICErrors:			0
+AllBeacons:			6356
+ScanBeacons:			13
+ScanProbeRsps:			15
+OutChanBeacons:			5
+OutChanProbeRsps:		3
+BssBeacons:			2298
+HostBeacons:			10
+MissBeacons:			97
+DTIMBeacons:			35

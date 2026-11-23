@@ -1,0 +1,69 @@
+From 08f4030fcb0bc68363e83c15762351a25b06a80e Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:44:52 +0100
+Subject: [PATCH 084/100] MAINTAINERS: Add entries for the A133/TrimUI Smart
+ Pro drivers
+
+Add entries for the new drivers of this series: the A100/A133 PWM and GPU
+power domain drivers, the OTM1289A panel, the TrimUI Smart Pro gamepad and
+the xradio WLAN driver, with their bindings.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ MAINTAINERS | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 782389bd5..fa4fb256d 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -866,6 +866,20 @@ T:	git git://linuxtv.org/media.git
+ F:	Documentation/devicetree/bindings/media/allwinner,sun4i-a10-csi.yaml
+ F:	drivers/media/platform/sunxi/sun4i-csi/
+ 
++ALLWINNER A100 GPU POWER DOMAIN DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-sunxi@lists.linux.dev
++S:	Maintained
++F:	Documentation/devicetree/bindings/power/allwinner,sun50i-a100-gpu-ppu.yaml
++F:	drivers/pmdomain/sunxi/sun50i-a100-gpu-ppu.c
++
++ALLWINNER A100/A133 PWM DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-pwm@vger.kernel.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/pwm/allwinner,sun50i-a100-pwm.yaml
++F:	drivers/pwm/pwm-sun50i-a100.c
++
+ ALLWINNER A31 CSI DRIVER
+ M:	Yong Deng <yong.deng@magewell.com>
+ M:	Paul Kocialkowski <paulk@sys-base.io>
+@@ -20585,6 +20599,13 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/hubcap/linux.git
+ F:	Documentation/filesystems/orangefs.rst
+ F:	fs/orangefs/
+ 
++ORISETECH OTM1289A MIPI-DSI PANEL DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	dri-devel@lists.freedesktop.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/display/panel/orisetech,otm1289a.yaml
++F:	drivers/gpu/drm/panel/panel-orisetech-otm1289a.c
++
+ OV2659 OMNIVISION SENSOR DRIVER
+ M:	"Lad, Prabhakar" <prabhakar.csengg@gmail.com>
+ L:	linux-media@vger.kernel.org
+@@ -27804,6 +27825,13 @@ M:	David Lechner <dlechner@baylibre.com>
+ S:	Maintained
+ F:	Documentation/devicetree/bindings/trigger-source/*
+ 
++TRIMUI SMART PRO GAMEPAD DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-input@vger.kernel.org
++S:	Maintained
++F:	Documentation/devicetree/bindings/input/trimui,smart-pro-pad.yaml
++F:	drivers/input/joystick/trimui-smartpro-pad.c
++
+ TRUSTED EXECUTION ENVIRONMENT SECURITY MANAGER (TSM)
+ M:	Dan Williams <djbw@kernel.org>
+ L:	linux-coco@lists.linux.dev

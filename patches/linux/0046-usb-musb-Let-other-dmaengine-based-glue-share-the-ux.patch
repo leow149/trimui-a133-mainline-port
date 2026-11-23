@@ -1,48 +1,33 @@
-From 6c6e73bb27c9ed5b78f1ba33683fccd2e2c98563 Mon Sep 17 00:00:00 2001
+From 2a6ab7fc8578ea405035753a93ca0c11290360e0 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:49 +0100
-Subject: [PATCH 046/106] usb: musb: Let other dmaengine based glue share the
+Subject: [PATCH 046/100] usb: musb: Let other dmaengine based glue share the
  ux500 DMA paths
 
 The gadget and host code have special cases for the ux500 DMA glue, which
 only drives the FIFO through a generic dmaengine channel. Another glue
-doing the same needs the same handling: add MUSB_DMA_SUNXI and test for
-either via musb_dma_dmaengine().
+doing the same needs the same handling: test for musb_dma_dmaengine(),
+which is only the ux500 glue for now, in those places. No functional
+change.
 
 Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- drivers/usb/musb/musb_core.h   |  1 +
- drivers/usb/musb/musb_dma.h    |  6 ++++++
- drivers/usb/musb/musb_gadget.c |  6 +++---
- drivers/usb/musb/musb_host.c   | 22 +++++++++++-----------
- 4 files changed, 21 insertions(+), 14 deletions(-)
+ drivers/usb/musb/musb_dma.h    | 3 +++
+ drivers/usb/musb/musb_gadget.c | 6 +++---
+ drivers/usb/musb/musb_host.c   | 8 ++++----
+ 3 files changed, 10 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/usb/musb/musb_core.h b/drivers/usb/musb/musb_core.h
-index 91b5b6b66..59d72da28 100644
---- a/drivers/usb/musb/musb_core.h
-+++ b/drivers/usb/musb/musb_core.h
-@@ -143,6 +143,7 @@ struct musb_io;
-  */
- struct musb_platform_ops {
- 
-+#define MUSB_DMA_SUNXI		BIT(10)
- #define MUSB_G_NO_SKB_RESERVE	BIT(9)
- #define MUSB_DA8XX		BIT(8)
- #define MUSB_PRESERVE_SESSION	BIT(7)
 diff --git a/drivers/usb/musb/musb_dma.h b/drivers/usb/musb/musb_dma.h
-index 0cd7fc468..eee62fe3d 100644
+index 0cd7fc468..c3abe0aa6 100644
 --- a/drivers/usb/musb/musb_dma.h
 +++ b/drivers/usb/musb/musb_dma.h
-@@ -55,6 +55,12 @@ struct musb_hw_ep;
+@@ -55,6 +55,9 @@ struct musb_hw_ep;
  #define musb_dma_ux500(musb)		0
  #endif
  
-+#define musb_dma_sunxi(musb)		(IS_ENABLED(CONFIG_USB_SUNXI_DMA) && \
-+					 ((musb)->ops->quirks & MUSB_DMA_SUNXI))
-+
 +/* dmaengine based backends: the controller only moves FIFO data */
-+#define musb_dma_dmaengine(musb)	(musb_dma_ux500(musb) || musb_dma_sunxi(musb))
++#define musb_dma_dmaengine(musb)	musb_dma_ux500(musb)
 +
  #ifdef CONFIG_USB_TI_CPPI41_DMA
  #define musb_dma_cppi41(musb)		(musb->ops->quirks & MUSB_DMA_CPPI41)
@@ -72,7 +57,7 @@ index 016d3f3fc..f7f3ffc49 100644
  				struct dma_controller *c;
  				struct dma_channel *channel;
 diff --git a/drivers/usb/musb/musb_host.c b/drivers/usb/musb/musb_host.c
-index 31b061248..9411f1863 100644
+index 31b061248..aaa6ae66d 100644
 --- a/drivers/usb/musb/musb_host.c
 +++ b/drivers/usb/musb/musb_host.c
 @@ -631,7 +631,7 @@ static bool musb_tx_dma_program(struct dma_controller *dma,
@@ -84,37 +69,15 @@ index 31b061248..9411f1863 100644
  		musb_tx_dma_set_mode_mentor(hw_ep, qh,
  					    &length, &mode);
  	else if (is_cppi_enabled(hw_ep->musb) || tusb_dma_omap(hw_ep->musb))
-@@ -1862,7 +1862,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
- 	 */
- 
- 	/* FIXME this is _way_ too much in-line logic for Mentor DMA */
--	if (!musb_dma_inventra(musb) && !musb_dma_ux500(musb) &&
-+	if (!musb_dma_inventra(musb) && !musb_dma_dmaengine(musb) &&
- 	    (rx_csr & MUSB_RXCSR_H_REQPKT)) {
- 		/* REVISIT this happened for a while on some short reads...
- 		 * the cleanup still needs investigation... looks bad...
-@@ -1894,14 +1894,14 @@ void musb_host_rx(struct musb *musb, u8 epnum)
+@@ -1894,7 +1894,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  			| MUSB_RXCSR_RXPKTRDY);
  		musb_writew(hw_ep->regs, MUSB_RXCSR, val);
  
 -		if (musb_dma_inventra(musb) || musb_dma_ux500(musb) ||
 +		if (musb_dma_inventra(musb) || musb_dma_dmaengine(musb) ||
  		    musb_dma_cppi41(musb)) {
--			    done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
--			    musb_dbg(hw_ep->musb,
--				    "ep %d dma %s, rxcsr %04x, rxcount %d",
--				    epnum, done ? "off" : "reset",
--				    musb_readw(epio, MUSB_RXCSR),
--				    musb_readw(epio, MUSB_RXCOUNT));
-+			done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
-+			musb_dbg(hw_ep->musb,
-+				 "ep %d dma %s, rxcsr %04x, rxcount %d",
-+				 epnum, done ? "off" : "reset",
-+				 musb_readw(epio, MUSB_RXCSR),
-+				 musb_readw(epio, MUSB_RXCOUNT));
- 		} else {
- 			done = true;
- 		}
+ 			    done = musb_rx_dma_inventra_cppi41(c, hw_ep, qh, urb, xfer_len);
+ 			    musb_dbg(hw_ep->musb,
 @@ -1923,8 +1923,8 @@ void musb_host_rx(struct musb *musb, u8 epnum)
  		}
  

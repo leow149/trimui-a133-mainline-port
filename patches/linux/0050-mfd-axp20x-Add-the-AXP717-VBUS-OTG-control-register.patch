@@ -1,0 +1,40 @@
+From bad774c18de7f6b9d4a4ab517fdfb92b7f12ae89 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:13:10 +0100
+Subject: [PATCH 050/100] mfd: axp20x: Add the AXP717 VBUS OTG control register
+
+Register 0x13 of the AXP717 holds the switch that routes the boost
+converter's output to the VBUS pin (bit 0). Define it and make it
+writeable, for the regulator driver.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/mfd/axp20x.c       | 1 +
+ include/linux/mfd/axp20x.h | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/mfd/axp20x.c b/drivers/mfd/axp20x.c
+index 50df66de2..78375cb8f 100644
+--- a/drivers/mfd/axp20x.c
++++ b/drivers/mfd/axp20x.c
+@@ -220,6 +220,7 @@ static const struct regmap_access_table axp313a_volatile_table = {
+ 
+ static const struct regmap_range axp717_writeable_ranges[] = {
+ 	regmap_reg_range(AXP717_PMU_FAULT, AXP717_MODULE_EN_CONTROL_1),
++	regmap_reg_range(AXP717_VBUS_OTG_CONTROL, AXP717_VBUS_OTG_CONTROL),
+ 	regmap_reg_range(AXP717_MIN_SYS_V_CONTROL, AXP717_BOOST_CONTROL),
+ 	regmap_reg_range(AXP717_VSYS_V_POWEROFF, AXP717_VSYS_V_POWEROFF),
+ 	regmap_reg_range(AXP717_IRQ0_EN, AXP717_IRQ4_EN),
+diff --git a/include/linux/mfd/axp20x.h b/include/linux/mfd/axp20x.h
+index b352661d9..13b3d7dbe 100644
+--- a/include/linux/mfd/axp20x.h
++++ b/include/linux/mfd/axp20x.h
+@@ -121,6 +121,7 @@ enum axp20x_variants {
+ #define AXP717_BC_DETECT		0x05
+ #define AXP717_PMU_FAULT		0x08
+ #define AXP717_MODULE_EN_CONTROL_1	0x0b
++#define AXP717_VBUS_OTG_CONTROL		0x13
+ #define AXP717_MIN_SYS_V_CONTROL	0x15
+ #define AXP717_INPUT_VOL_LIMIT_CTRL	0x16
+ #define AXP717_INPUT_CUR_LIMIT_CTRL	0x17

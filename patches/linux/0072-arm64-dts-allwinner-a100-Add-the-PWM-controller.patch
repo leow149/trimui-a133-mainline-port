@@ -1,0 +1,47 @@
+From 199b9cdffe7108917267bd5222ac6a66707383ce Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:41 +0100
+Subject: [PATCH 072/100] arm64: dts: allwinner: a100: Add the PWM controller
+
+Add the PWM controller, disabled by default, and the PWM0 pin on PD23.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 483105b76..76ad1e86a 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -237,6 +237,16 @@ watchdog@30090a0 {
+ 			clocks = <&dcxo24M>;
+ 		};
+ 
++		pwm: pwm@300a000 {
++			compatible = "allwinner,sun50i-a100-pwm";
++			reg = <0x0300a000 0x400>;
++			clocks = <&ccu CLK_BUS_PWM>, <&dcxo24M>;
++			clock-names = "bus", "hosc";
++			resets = <&ccu RST_BUS_PWM>;
++			#pwm-cells = <3>;
++			status = "disabled";
++		};
++
+ 		pio: pinctrl@300b000 {
+ 			compatible = "allwinner,sun50i-a100-pinctrl";
+ 			reg = <0x0300b000 0x400>;
+@@ -285,6 +295,12 @@ mmc2_pins: mmc2-pins {
+ 				bias-pull-up;
+ 			};
+ 
++			/omit-if-no-ref/
++			pwm0_pd_pin: pwm0-pd-pin {
++				pins = "PD23";
++				function = "pwm0";
++			};
++
+ 			rgmii0_pins: rgmii0-pins {
+ 				pins = "PH0", "PH1", "PH2", "PH3", "PH4",
+ 				       "PH5", "PH6", "PH7", "PH9", "PH10",

@@ -1,0 +1,29 @@
+From a517528258c58dbce84447331017de887f49713d Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:19:00 +0100
+Subject: [PATCH 100/100] MAINTAINERS: Add an entry for the xradio driver
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ MAINTAINERS | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index fa4fb256d..8e7fbc805 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -30078,6 +30078,13 @@ S:	Supported
+ W:	http://www.marvell.com
+ F:	drivers/i2c/busses/i2c-xlp9xx.c
+ 
++XRADIO XR819/XR829 WIRELESS DRIVER
++M:	leow149 <leow149@lucidmail.xyz>
++L:	linux-wireless@vger.kernel.org
++S:	Odd Fixes
++F:	Documentation/devicetree/bindings/net/wireless/xradio,xr819.yaml
++F:	drivers/net/wireless/xradio/
++
+ XTENSA XTFPGA PLATFORM SUPPORT
+ M:	Max Filippov <jcmvbkbc@gmail.com>
+ S:	Maintained

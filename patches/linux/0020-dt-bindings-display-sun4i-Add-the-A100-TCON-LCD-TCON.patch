@@ -1,0 +1,123 @@
+From cdd717bdeb5b2eb2300f9143b59f47af086171c9 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:26 +0100
+Subject: [PATCH 020/100] dt-bindings: display: sun4i: Add the A100 TCON LCD,
+ TCON TOP and DE2 mixer
+
+Add A100 compatibles for the LCD TCON, the TCON TOP (no TV/HDMI path, but
+a gated MIPI DSI clock) and the first DE2 mixer. As for the rest of the
+SoC, the A100 name covers the A133, which is a package of the same die.
+
+The TCON TOP ports 4 and 5 (the TV and HDMI paths) move from the global
+required list into the per-SoC blocks, as the A100 has neither; the other
+SoCs still require them as before. Only mixer 0 is described: the second
+mixer of the display engine is not supported yet.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../display/allwinner,sun4i-a10-tcon.yaml     |  1 +
+ .../allwinner,sun8i-a83t-de2-mixer.yaml       |  1 +
+ .../display/allwinner,sun8i-r40-tcon-top.yaml | 37 ++++++++++++++++++-
+ 3 files changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+index 724d93b91..f9738b426 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-tcon.yaml
+@@ -45,6 +45,7 @@ properties:
+       - items:
+           - enum:
+               - allwinner,sun50i-a64-tcon-lcd
++              - allwinner,sun50i-a100-tcon-lcd
+           - const: allwinner,sun8i-a83t-tcon-lcd
+ 
+       - items:
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
+index cbd18fd83..e32853088 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun8i-a83t-de2-mixer.yaml
+@@ -23,6 +23,7 @@ properties:
+       - allwinner,sun20i-d1-de2-mixer-1
+       - allwinner,sun50i-a64-de2-mixer-0
+       - allwinner,sun50i-a64-de2-mixer-1
++      - allwinner,sun50i-a100-de2-mixer-0
+       - allwinner,sun50i-h6-de3-mixer-0
+       - allwinner,sun50i-h616-de33-mixer-0
+ 
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
+index 7d849c409..96c8adfc2 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun8i-r40-tcon-top.yaml
+@@ -42,6 +42,7 @@ properties:
+     enum:
+       - allwinner,sun8i-r40-tcon-top
+       - allwinner,sun20i-d1-tcon-top
++      - allwinner,sun50i-a100-tcon-top
+       - allwinner,sun50i-h6-tcon-top
+ 
+   reg:
+@@ -99,8 +100,6 @@ properties:
+     required:
+       - port@0
+       - port@1
+-      - port@4
+-      - port@5
+ 
+ required:
+   - "#clock-cells"
+@@ -151,6 +150,8 @@ allOf:
+           required:
+             - port@2
+             - port@3
++            - port@4
++            - port@5
+ 
+   - if:
+       properties:
+@@ -179,6 +180,11 @@ allOf:
+             - description: TCON TV0 output clock name
+             - description: DSI output clock name
+ 
++        ports:
++          required:
++            - port@4
++            - port@5
++
+   - if:
+       properties:
+         compatible:
+@@ -201,6 +207,33 @@ allOf:
+           items:
+             - description: TCON TV0 output clock name
+ 
++        ports:
++          required:
++            - port@4
++            - port@5
++
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: allwinner,sun50i-a100-tcon-top
++
++    then:
++      properties:
++        clocks:
++          items:
++            - description: The TCON TOP interface clock
++            - description: The TCON TOP MIPI DSI clock
++
++        clock-names:
++          items:
++            - const: bus
++            - const: dsi
++
++        clock-output-names:
++          items:
++            - description: DSI output clock name
++
+ examples:
+   - |
+     #include <dt-bindings/interrupt-controller/arm-gic.h>

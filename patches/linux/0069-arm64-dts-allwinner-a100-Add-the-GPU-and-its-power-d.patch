@@ -1,0 +1,53 @@
+From 6ce9db4c53d3036570819738748225c26d257e30 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:39 +0100
+Subject: [PATCH 069/100] arm64: dts: allwinner: a100: Add the GPU and its
+ power domain
+
+PowerVR GE8300 (Rogue, BVNC 22.102.54.38) at 0x01800000 behind the R_PPU
+power domain, disabled by default.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 49149e143..6a2f9034d 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -96,6 +96,18 @@ soc {
+ 		#size-cells = <1>;
+ 		ranges = <0 0 0 0x3fffffff>;
+ 
++		gpu: gpu@1800000 {
++			compatible = "allwinner,sun50i-a100-gpu", "img,img-ge8300",
++				     "img,img-rogue";
++			reg = <0x01800000 0x80000>;
++			interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_GPU>, <&ccu CLK_BUS_GPU>;
++			clock-names = "core", "sys";
++			resets = <&ccu RST_BUS_GPU>;
++			power-domains = <&gpu_ppu>;
++			status = "disabled";
++		};
++
+ 		syscon: syscon@3000000 {
+ 			compatible = "allwinner,sun50i-a100-system-control",
+ 				     "allwinner,sun50i-a64-system-control";
+@@ -624,6 +636,14 @@ rtc: rtc@7000000 {
+ 			#clock-cells = <1>;
+ 		};
+ 
++		gpu_ppu: power-controller@7001000 {
++			compatible = "allwinner,sun50i-a100-gpu-ppu";
++			reg = <0x07001000 0x40>;
++			clocks = <&r_ccu CLK_R_APB1_PPU>;
++			resets = <&r_ccu RST_R_APB1_PPU>;
++			#power-domain-cells = <0>;
++		};
++
+ 		r_ccu: clock@7010000 {
+ 			compatible = "allwinner,sun50i-a100-r-ccu";
+ 			reg = <0x07010000 0x300>;

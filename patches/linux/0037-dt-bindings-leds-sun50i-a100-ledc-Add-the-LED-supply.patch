@@ -1,0 +1,30 @@
+From eb66feb6a52fc041b0f6f2ea198ff835ee9eb959 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:14:45 +0100
+Subject: [PATCH 037/100] dt-bindings: leds: sun50i-a100-ledc: Add the LED
+ supply
+
+The LEDs of a chain are powered from a board regulator, which the
+controller itself does not need. Describe it, so that the driver can
+switch it.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml   | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml b/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
+index c53991838..8d68805b0 100644
+--- a/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
++++ b/Documentation/devicetree/bindings/leds/allwinner,sun50i-a100-ledc.yaml
+@@ -56,6 +56,9 @@ properties:
+   dma-names:
+     const: tx
+ 
++  vled-supply:
++    description: Regulator powering the LED chain.
++
+   allwinner,pixel-format:
+     description: Pixel format (subpixel transmission order), default is "grb"
+     enum:

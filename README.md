@@ -209,4 +209,4 @@ This builds on the work of the linux-sunxi community, in particular the `sun4i` 
 family, the `sunxi-ng` clock drivers and Cedrus, on Imagination's open-source `powervr` kernel
 driver and Mesa PowerVR driver, on fifteenhex's [xradio](https://github.com/fifteenhex/xradio) driver for the XR819 (imported in
 `0042` and extended for the XR829), and on Paul Kocialkowski's U-Boot series for the A133 NSI arbiter,
-which `patches/u-boot/0002` ports.
+which `patches/u-boot/0003` ports.

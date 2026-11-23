@@ -1,0 +1,147 @@
+From 3eada12e4773526ca8d737c120bf466b32af6cff Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 21 Nov 2026 21:21:17 +0100
+Subject: [PATCH 096/100] wifi: xradio: Handle block ack on MFP (WPA3) links
+
+The XR829 firmware negotiates block ack sessions itself and the driver
+drops mac80211's BACK frames. With MFP the AP's ADDBA requests are
+protected, and the firmware never answers those:
+
+- With the protected management policy off (the old behaviour) it drops
+  them silently. The AP retries about once a second and holds downlink
+  frames meanwhile: ping from the LAN averaged 35-116 ms, up to 400 ms.
+- With the policy on it decrypts them and passes them to mac80211, but
+  still does not set up the session. A session accepted by mac80211 is
+  unknown to the firmware, which then drops all A-MPDU data (A-MPDU
+  counters keep rising, no unicast data reaches the host).
+
+So, on MFP links:
+- Set the protected management policy at association, so protected
+  management frames reach mac80211 (BIP stays in mac80211). It is
+  cleared again on non-MFP links.
+- Decline RX block ack sessions in ampdu_action. mac80211's decline is
+  protected and must reach the AP, so only drop unprotected BACK frames,
+  and read the category after the CCMP IV, not at the fixed offset.
+- Do not enable firmware TX block ack: the AP's ADDBA response is
+  protected as well, the firmware never aggregates (no aggregated TX
+  confirms) and only adds latency.
+
+Result on a WPA3 (SAE, MFP required) HT40 network: downlink ping
+10-13 ms average, max under 100 ms. TX 12-14 Mbit/s (6/6 runs), RX
+17-18 Mbit/s, no stalls across reconnects. Without aggregation
+throughput stays below WPA2 (about 30/35 Mbit/s); that needs firmware
+support for block ack on protected links.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/ap.c | 54 ++++++++++++++++++++++++++++----
+ drivers/net/wireless/xradio/tx.c | 19 +++++++----
+ 2 files changed, 61 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/ap.c b/drivers/net/wireless/xradio/ap.c
+index 2292c5aa5..aab275fc1 100644
+--- a/drivers/net/wireless/xradio/ap.c
++++ b/drivers/net/wireless/xradio/ap.c
+@@ -604,12 +604,45 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
+ #else
+ 			WARN_ON(wsm_set_beacon_wakeup_period(hw_priv, priv->join_dtim_period, 0, priv->if_id));
+ #endif
+-			if (priv->htcap) {
+-				wsm_lock_tx(hw_priv);
+-				/* Statically enabling block ack for TX/RX */
+-				WARN_ON(wsm_set_block_ack_policy(hw_priv, hw_priv->ba_tid_mask,
+-				                                  hw_priv->ba_tid_mask, priv->if_id));
+-				wsm_unlock_tx(hw_priv);
++			{
++				struct wsm_protected_mgmt_policy mgmt_policy = { };
++				struct ieee80211_sta *ap_sta;
++				bool mfp = false;
++
++				rcu_read_lock();
++				ap_sta = ieee80211_find_sta(priv->vif, priv->vif->bss_conf.bssid);
++				if (ap_sta)
++					mfp = ap_sta->mfp;
++				rcu_read_unlock();
++
++				/*
++				 * With the policy off the firmware silently drops
++				 * protected management frames (ADDBA, SA Query);
++				 * with it on it decrypts them and passes them up.
++				 * Unprotected ones still go up so mac80211 can
++				 * drop them itself; BIP stays in mac80211.
++				 */
++				if (mfp) {
++					mgmt_policy.protectedMgmtEnable = 1;
++					mgmt_policy.unprotectedMgmtFramesAllowed = 1;
++					mgmt_policy.encryptionForAuthFrame = 1;
++				}
++				WARN_ON(wsm_set_protected_mgmt_policy(hw_priv, &mgmt_policy,
++								      priv->if_id));
++
++				if (priv->htcap) {
++					wsm_lock_tx(hw_priv);
++					/*
++					 * Statically enabling block ack for TX/RX. The
++					 * firmware cannot set up a TX session on an
++					 * MFP link (the AP's ADDBA response is
++					 * protected), so do not let it try.
++					 */
++					WARN_ON(wsm_set_block_ack_policy(hw_priv,
++							mfp ? 0 : hw_priv->ba_tid_mask,
++							hw_priv->ba_tid_mask, priv->if_id));
++					wsm_unlock_tx(hw_priv);
++				}
+ 			}
+ 
+ 			if (priv->vif->p2p) {
+@@ -920,6 +953,15 @@ int xradio_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+ 
+ 	switch (params->action) {
+ 	case IEEE80211_AMPDU_RX_START:
++		/*
++		 * Only sessions the firmware negotiated itself deliver
++		 * A-MPDU data. With MFP the ADDBA request is protected and
++		 * the firmware leaves it to mac80211; a session accepted
++		 * here is unknown to the firmware, which then drops all
++		 * aggregated data. Decline it.
++		 */
++		ret = (params->sta && params->sta->mfp) ? -EOPNOTSUPP : 0;
++		break;
+ 	case IEEE80211_AMPDU_RX_STOP:
+ 		/* Just return OK to mac80211 */
+ 		ret = 0;
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index 90578e00a..cd08084e3 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -659,16 +659,23 @@ xradio_tx_h_align(struct xradio_vif *priv, struct xradio_txinfo *t,
+ 	return 0;
+ }
+ 
++/*
++ * The firmware negotiates block ack sessions itself, so mac80211's
++ * (unprotected) BACK frames are dropped. On an MFP link the AP's ADDBA
++ * requests are protected; the firmware does not process those and hands
++ * them to mac80211, whose answer (a decline, see xradio_ampdu_action())
++ * must reach the AP or it keeps asking and delays downlink traffic.
++ * A protected frame carries the CCMP IV before the action category.
++ */
+ static int
+ xradio_tx_h_action(struct xradio_vif *priv, struct xradio_txinfo *t)
+ {
+-	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)t->hdr;
+-
+-	if (ieee80211_is_action(t->hdr->frame_control) &&
+-			mgmt->u.action.category == WLAN_CATEGORY_BACK)
+-		return 1;
+-	else
++	if (!ieee80211_is_action(t->hdr->frame_control) ||
++	    ieee80211_has_protected(t->hdr->frame_control))
++		return 0;
++	if (t->skb->len <= t->hdrlen)
+ 		return 0;
++	return t->skb->data[t->hdrlen] == WLAN_CATEGORY_BACK;
+ }
+ 
+ /* Add WSM header */

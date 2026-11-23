@@ -1,0 +1,44 @@
+dc_sunxi                6447  0 
+ipt_REJECT              1646  0 
+iptable_filter          1514  0 
+ov5648_mipi             8328  0 
+pvrsrvkm             1282534  3 dc_sunxi
+videobuf2_dma_contig   10195  1 vin_v4l2
+vin_io                 41344  2 vin_v4l2
+vin_v4l2              208108  0 
+xradio_core           525801  1 xradio_wlan
+xradio_mac            193983  1 xradio_core
+xradio_wlan             1050  0 
+xt_LOG                  1467  0 
+xt_TCPMSS               2753  0 
+xt_comment              1116  0 
+xt_limit                2265  0 
+xt_mac                  1236  0 
+xt_mark                 1398  0 
+xt_multiport            1847  0 
+xt_time                 2307  0 
+/sys/module/xradio_core/parameters/macaddr=(null)
+/sys/module/xradio_mac/parameters/ieee80211_default_rc_algo=minstrel_ht
+/sys/module/xradio_mac/parameters/max_nullfunc_tries=2
+/sys/module/xradio_mac/parameters/max_probe_tries=5
+/sys/module/xradio_mac/parameters/probe_wait_ms=500
+console=ttyS0,115200 root=/dev/mmcblk0p5 rootwait init=/sbin/init rdinit=/rdinit loglevel=8 earlyprintk=sunxi-uart,0x05000000 initcall_debug=0 loglevel=8 partitions=bootloader@mmcblk0p1:env@mmcblk0p2:env-redund@mmcblk0p3:boot@mmcblk0p4:rootfs@mmcblk0p5:rootfs_data@mmcblk0p6:private@mmcblk0p7:recovery@mmcblk0p8:pstore@mmcblk0p9:UDISK@mmcblk0p10 cma=64M gpt=1 rotpk_status=0 pstore_blk.blkdev=/dev/mmcblk0p9 pstore.update_ms=1000 androidboot.mode=normal androidboot.serialno=1c000c66050407823dd androidboot.hardware=sun50iw10p1 boot_type=2 androidboot.boot_type=2 androidboot.secure_os_exist=0 gpt=1 uboot_message=2018.05(09/26/2025-14:28:35) disp_reserve=3686400,0x7b81d480 androidboot.dramsize=1024 lcd=er68576 
+/lib/firmware/:
+drwxr-xr-x    2 root     root          4096 Nov 28  2025 .
+drwxr-xr-x   12 root     root          4096 Nov 28  2025 ..
+-rw-r--r--    1 root     root          2184 Nov 28  2025 boot_xr829.bin
+-rw-r--r--    1 root     root         77812 Nov 28  2025 etf_xr829.bin
+-rw-r--r--    1 root     root        175384 Nov 28  2025 fw_xr829.bin
+-rw-r--r--    1 root     root        319920 Nov 28  2025 fw_xr829_bt.bin
+-rwxrwxr-x    1 root     root        118784 Nov 28  2025 rgx.fw.22.102.54.38
+-rwxr-xr-x    1 root     root        404192 Nov 28  2025 rgx.sh.22.102.54.38
+-rw-r--r--    1 root     root           744 Nov 28  2025 sdd_xr829.bin
+clock:		0 Hz
+vdd:		0 (invalid)
+bus mode:	2 (push-pull)
+chip select:	0 (don't care)
+power mode:	0 (off)
+bus width:	0 (1 bits)
+timing spec:	0 (legacy)
+signal voltage:	0 (3.30 V)
+driver type:	0 (driver type B)

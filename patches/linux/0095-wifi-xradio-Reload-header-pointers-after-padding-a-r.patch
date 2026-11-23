@@ -1,0 +1,103 @@
+From ff83cf6482b1ede26bd5df19219b09472bf24ec3 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sat, 21 Nov 2026 21:15:21 +0100
+Subject: [PATCH 095/100] wifi: xradio: Reload header pointers after padding a
+ reallocated skb
+
+xradio_tx_h_skb_pad() pads the frame with skb_padto(). For a frame without
+enough tailroom for the SDIO pad, which is what TCP segments come with,
+this moves the data to a new buffer, but xradio_tx() keeps using the WSM
+and 802.11 header pointers it took before. The HT40 API conversion that
+follows then rewrites the old buffer, and the firmware gets the legacy TX
+header instead. It rejects such frames with status 1 without sending them,
+on every retransmission, so a TCP flow stalls on one segment until it
+times out. UDP and ping frames had enough tailroom, which is why only TCP
+uplink stalled.
+
+Pad in place, reallocating with pskb_expand_head() when needed, and
+reload the pointers afterwards. The drop path logs the reloaded header,
+not the stale one. This also stops the double free on the error path:
+skb_padto() frees the skb on failure and the drop path freed it again.
+mac80211 only hands linear frames to a driver without NETIF_F_SG, so a
+non-linear one is rejected with a warning.
+
+Seen as about 1 in 10 TX runs stalling on WPA2 and nearly every run
+with WPA3. After the fix, 8/8 20 MB TX runs complete.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/tx.c | 40 +++++++++++++++++++++++++-------
+ 1 file changed, 32 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index fa740cb94..90578e00a 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -882,18 +882,41 @@ xradio_tx_h_ht40(struct xradio_common *hw_priv, struct xradio_txinfo *t,
+ 		ht->TxRateEntry = entries[0];
+ }
+ 
++/*
++ * Pad the frame to the SDIO block size. A frame without enough tailroom for
++ * the pad (TCP segments come without spare tailroom) gets a new data buffer,
++ * so every pointer into it (WSM header, 802.11 header, DA) is reloaded;
++ * otherwise later header rewrites such as the HT40 API conversion land in the
++ * old buffer and the firmware rejects the frame (status 1) on every retry.
++ * skb_padto() is not used because it frees the skb on failure, which the
++ * caller's drop path does again.
++ */
+ static int
+-xradio_tx_h_skb_pad(struct xradio_common *priv,
+-		    struct wsm_tx *wsm,
+-		    struct sk_buff *skb)
++xradio_tx_h_skb_pad(struct xradio_common *priv, struct xradio_txinfo *t,
++		    struct wsm_tx **wsm)
+ {
+-	size_t len = __le16_to_cpu(wsm->hdr.len);
+-	size_t padded_len = sdio_align_len(priv, len);
++	struct sk_buff *skb = t->skb;
++	size_t padded_len = sdio_align_len(priv, __le16_to_cpu((*wsm)->hdr.len));
++	unsigned int pad;
+ 
++	if (padded_len <= skb->len)
++		return 0;
++	pad = padded_len - skb->len;
+ 
+-	if (WARN_ON(skb_padto(skb, padded_len) != 0)) {
++	/* No NETIF_F_SG: mac80211 only hands linear frames to the driver. */
++	if (WARN_ON_ONCE(skb_is_nonlinear(skb)))
+ 		return -EINVAL;
++
++	if (skb_cloned(skb) || skb_tailroom(skb) < pad) {
++		int ntail = max_t(int, pad - skb_tailroom(skb), 0);
++
++		if (pskb_expand_head(skb, 0, ntail, GFP_ATOMIC))
++			return -ENOMEM;
++		*wsm = (struct wsm_tx *)skb->data;
++		t->hdr = (struct ieee80211_hdr *)(skb->data + t->txpriv.offset);
++		t->da = ieee80211_get_DA(t->hdr);
+ 	}
++	memset(skb->data + skb->len, 0, pad);
+ 	return 0;
+ }
+ 
+@@ -1054,7 +1077,7 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
+ 		goto drop;
+ 	}
+ 
+-	ret = xradio_tx_h_skb_pad(hw_priv, wsm, skb);
++	ret = xradio_tx_h_skb_pad(hw_priv, &t, &wsm);
+ 	if (ret) {
+ 		ret = __LINE__;
+ 		goto drop;
+@@ -1092,7 +1115,8 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
+ 	return;
+ 
+ drop:
+-	dev_dbg(hw_priv->pdev, "dropped tx at line %d, fctl=0x%04x.\n", ret, frame->frame_control);
++	/* t.hdr, not frame: the head may have been reallocated. */
++	dev_dbg(hw_priv->pdev, "dropped tx at line %d, fctl=0x%04x.\n", ret, t.hdr->frame_control);
+ 	xradio_skb_dtor(hw_priv, skb, &t.txpriv);
+ 	return;
+ }

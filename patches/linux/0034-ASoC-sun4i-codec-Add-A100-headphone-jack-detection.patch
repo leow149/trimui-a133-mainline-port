@@ -1,7 +1,7 @@
-From 2780bc986837862488477aed03a555da16adb891 Mon Sep 17 00:00:00 2001
+From a51ef8a9d9352867ccf967d0b5ba60a16ce5398f Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 10:42:38 +0100
-Subject: [PATCH 034/106] ASoC: sun4i-codec: Add A100 headphone jack detection
+Subject: [PATCH 034/100] ASoC: sun4i-codec: Add A100 headphone jack detection
 
 The A100/A133 codec detects the headphone jack itself (HMIC block): with
 JACKDETEN set it raises plug-in and removal interrupts on the codec
@@ -15,14 +15,18 @@ platform_get_irq_optional(). The jack starts out unplugged (speaker on);
 a jack that is already plugged in is reported by the plug-in event the
 detector raises once enabled.
 
+A board that has a detection GPIO (allwinner,hp-det-gpios) keeps using
+it, and the codec detection is then not set up: both would create the
+same "Headphone Jack" control.
+
 Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
 ---
- sound/soc/sunxi/sun4i-codec.c | 128 ++++++++++++++++++++++++++++++++++
- 1 file changed, 128 insertions(+)
+ sound/soc/sunxi/sun4i-codec.c | 129 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 129 insertions(+)
 
 diff --git a/sound/soc/sunxi/sun4i-codec.c b/sound/soc/sunxi/sun4i-codec.c
-index f1205f52e..62e5cf6fc 100644
+index f1205f52e..5da289062 100644
 --- a/sound/soc/sunxi/sun4i-codec.c
 +++ b/sound/soc/sunxi/sun4i-codec.c
 @@ -16,7 +16,9 @@
@@ -202,11 +206,12 @@ index f1205f52e..62e5cf6fc 100644
  	.dma_max_burst	= SUN4I_DMA_MAX_BURST,
  };
  
-@@ -2492,6 +2602,24 @@ static int sun4i_codec_probe(struct platform_device *pdev)
- 				     "Failed to get pa gpio\n");
+@@ -2497,6 +2607,25 @@ static int sun4i_codec_probe(struct platform_device *pdev)
+ 		return dev_err_probe(&pdev->dev, PTR_ERR(scodec->gpio_hp),
+ 				     "Failed to get hp-det gpio\n");
  
- 
-+	if (quirks->has_jack_detect) {
++	/* A detection GPIO, if the board has one, takes precedence. */
++	if (quirks->has_jack_detect && !scodec->gpio_hp) {
 +		ret = platform_get_irq_optional(pdev, 0);
 +		if (ret > 0) {
 +			scodec->jack_irq = ret;
@@ -224,6 +229,6 @@ index f1205f52e..62e5cf6fc 100644
 +		}
 +	}
 +
- 	scodec->gpio_hp = devm_gpiod_get_optional(&pdev->dev, "hp-det", GPIOD_IN);
- 	if (IS_ERR(scodec->gpio_hp))
- 		return dev_err_probe(&pdev->dev, PTR_ERR(scodec->gpio_hp),
+ 	/* reg_field setup */
+ 	scodec->reg_adc_fifoc = devm_regmap_field_alloc(&pdev->dev,
+ 							scodec->regmap,

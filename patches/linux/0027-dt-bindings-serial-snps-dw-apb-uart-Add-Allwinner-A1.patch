@@ -1,0 +1,28 @@
+From d38c930ab1f2d49a4be4a688b0602b8cdd40e7d5 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 8 Nov 2026 12:58:37 +0100
+Subject: [PATCH 027/100] dt-bindings: serial: snps-dw-apb-uart: Add Allwinner
+ A100
+
+The A100/A133 UARTs are DesignWare 8250s with an Allwinner UART_HALT
+register that allows changing the line settings while the line is busy.
+Add a SoC-specific compatible with the snps,dw-apb-uart fallback.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml b/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
+index 664305de4..537311f8c 100644
+--- a/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
++++ b/Documentation/devicetree/bindings/serial/snps-dw-apb-uart.yaml
+@@ -51,6 +51,7 @@ properties:
+           - const: renesas,rzn1-uart
+       - items:
+           - enum:
++              - allwinner,sun50i-a100-uart
+               - anlogic,dr1v90-uart
+               - brcm,bcm11351-dw-apb-uart
+               - brcm,bcm21664-dw-apb-uart

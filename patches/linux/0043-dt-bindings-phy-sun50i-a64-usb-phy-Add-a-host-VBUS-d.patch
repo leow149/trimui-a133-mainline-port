@@ -1,0 +1,41 @@
+From 1e9ddfbc69c2ab3c607efbf8cf35f352d9378d9f Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:14:12 +0100
+Subject: [PATCH 043/100] dt-bindings: phy: sun50i-a64-usb-phy: Add a host VBUS
+ delay
+
+On some boards the USB OTG ID pin is not wired to a micro-AB receptacle
+but derived from the USB-C CC lines. It then also reports host mode when a
+USB-C power source is attached, and the source only switches its VBUS on
+after tCCDebounce plus tVBUSON, up to about 475 ms. Driving VBUS as soon as
+the ID pin says host back-feeds the source in that window.
+
+Add a property for the time to wait before the PHY drives VBUS in host
+mode.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../bindings/phy/allwinner,sun50i-a64-usb-phy.yaml       | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml b/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
+index 5103eef0d..93ecaf3cb 100644
+--- a/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/allwinner,sun50i-a64-usb-phy.yaml
+@@ -67,6 +67,15 @@ properties:
+     maxItems: 1
+     description: GPIO to the USB OTG ID pin
+ 
++  allwinner,host-vbus-delay-ms:
++    description:
++      Time from the ID pin reporting host mode until the PHY drives the USB
++      OTG VBUS. Needed on boards whose ID pin is derived from the USB-C CC
++      lines, where it also reports host mode for a USB-C power source, which
++      only switches its own VBUS on after up to about 475 ms.
++    default: 0
++    maximum: 5000
++
+   usb0_vbus_det-gpios:
+     maxItems: 1
+     description: GPIO to the USB OTG VBUS detect pin

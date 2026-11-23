@@ -1,0 +1,59 @@
+From cec25a84b30cc3cc0ba0b5eb0d678bc86f8daa1e Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:27 +0100
+Subject: [PATCH 025/100] drm/sun4i: mixer: Add the A100 mixer
+
+The A100 display engine is DE2-style. The configuration of mixer 0 comes
+from the vendor BSP's de_feat.c: 2 VI and 2 UI channels, all with scalers.
+The stock firmware runs the mixers at 300 MHz.
+
+The display engine has a second mixer (1 VI and 2 UI channels), which is
+left out until something drives and tests it.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/gpu/drm/sun4i/sun8i_mixer.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/drivers/gpu/drm/sun4i/sun8i_mixer.c b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+index b6cd7352e..66179d262 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_mixer.c
++++ b/drivers/gpu/drm/sun4i/sun8i_mixer.c
+@@ -853,6 +853,25 @@ static const struct sun8i_mixer_cfg sun50i_a64_mixer1_cfg = {
+ 	.vi_num		= 1,
+ };
+ 
++/*
++ * A100 DE2.0 mixer 0, from the vendor BSP's de_feat.c: 2 VI + 2 UI channels,
++ * all with scalers. The stock firmware runs the DE at 300 MHz.
++ */
++static const struct sun8i_mixer_cfg sun50i_a100_mixer0_cfg = {
++	.lay_cfg = {
++		.ccsc		= CCSC_MIXER0_LAYOUT,
++		.de_type	= SUN8I_MIXER_DE2,
++		.vi_scaler_num	= 2,
++		.scaler_mask	= 0xf,
++		.scanline_yuv	= 2560,
++		.de2_fcc_alpha	= 1,
++	},
++	.de_type	= SUN8I_MIXER_DE2,
++	.mod_rate	= 300000000,
++	.ui_num		= 2,
++	.vi_num		= 2,
++};
++
+ static const struct sun8i_mixer_cfg sun50i_h6_mixer0_cfg = {
+ 	.lay_cfg = {
+ 		.de_type	= SUN8I_MIXER_DE3,
+@@ -920,6 +939,10 @@ static const struct of_device_id sun8i_mixer_of_table[] = {
+ 		.compatible = "allwinner,sun50i-a64-de2-mixer-1",
+ 		.data = &sun50i_a64_mixer1_cfg,
+ 	},
++	{
++		.compatible = "allwinner,sun50i-a100-de2-mixer-0",
++		.data = &sun50i_a100_mixer0_cfg,
++	},
+ 	{
+ 		.compatible = "allwinner,sun50i-h6-de3-mixer-0",
+ 		.data = &sun50i_h6_mixer0_cfg,

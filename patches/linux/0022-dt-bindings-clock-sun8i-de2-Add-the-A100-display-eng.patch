@@ -1,0 +1,31 @@
+From bb3ef6de8c3c28ceb054bd7b67c505518a18791b Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:10:45 +0100
+Subject: [PATCH 022/100] dt-bindings: clock: sun8i-de2: Add the A100 display
+ engine clocks
+
+The display engine clock unit of the Allwinner A100/A133 has the same
+layout as the H6 one: the bus and module gates and resets of two mixers,
+and the write-back gate. Add an A100 compatible with the H6 one as the
+fallback, which the driver already handles.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../bindings/clock/allwinner,sun8i-a83t-de2-clk.yaml           | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/clock/allwinner,sun8i-a83t-de2-clk.yaml b/Documentation/devicetree/bindings/clock/allwinner,sun8i-a83t-de2-clk.yaml
+index 7fcd55d46..818463f97 100644
+--- a/Documentation/devicetree/bindings/clock/allwinner,sun8i-a83t-de2-clk.yaml
++++ b/Documentation/devicetree/bindings/clock/allwinner,sun8i-a83t-de2-clk.yaml
+@@ -32,6 +32,9 @@ properties:
+       - items:
+           - const: allwinner,sun20i-d1-de2-clk
+           - const: allwinner,sun50i-h5-de2-clk
++      - items:
++          - const: allwinner,sun50i-a100-de2-clk
++          - const: allwinner,sun50i-h6-de3-clk
+ 
+   reg:
+     maxItems: 1

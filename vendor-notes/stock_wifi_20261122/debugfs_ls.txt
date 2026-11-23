@@ -1,0 +1,73 @@
+[1;34masoc[0m                [1;34mieee80211[0m           [0;0mpwm[0m
+[1;34mbdi[0m                 [1;34miommu[0m               [1;34mregmap[0m
+[1;34mbluetooth[0m           [1;34mion[0m                 [1;34mregulator[0m
+[1;34mclk[0m                 [1;34mmemblock[0m            [0;0msleep_time[0m
+[0;0mcpufreq_table[0m       [1;34mmmc0[0m                [1;34msunxi_gpu[0m
+[0;0mdebug_enabled[0m       [1;34mmmc1[0m                [1;34msunxi_leds[0m
+[1;34mdispdbg[0m             [1;34mmmc2[0m                [1;34msunxi_pinctrl[0m
+[1;34mdma_buf[0m             [1;34mmpp[0m                 [0;0msuspend_stats[0m
+[1;34mdri[0m                 [1;34mopp[0m                 [1;34musb[0m
+[1;34mextfrag[0m             [1;34mpinctrl[0m             [0;0mwakeup_sources[0m
+[0;0mfault_around_bytes[0m  [1;34mpm_genpd[0m            [1;34mxradio_bt_dbg[0m
+[0;0mgpio[0m                [1;34mpm_qos[0m              [1;34mxradio_fw_dbg[0m
+[1;34mhid[0m                 [1;34mpvr[0m                 [1;34mxradio_host_dbg[0m
+/sys/kernel/debug/ieee80211/phy0/xradio:
+11n
+ampdu
+backoff
+backoff_ctrl
+bh_stat
+ce_test
+counters
+dbgstats
+epta_stat
+epta_stat_ctrl
+low_pwr_disable
+parse_flags
+policy_info
+ps_disable
+ratemap
+rates_ctrl
+retry_ctrl
+rw_fwreg
+rw_fwreg_direct
+set_ampdu_len
+set_fwdbg
+set_measure_type
+set_rts_threshold
+status
+tala_ctrl
+temperature
+tpa_ctrl
+tpa_debug
+tx_delay
+tx_pwr_ctrl
+txconfirm
+txpipe
+version
+vif_0
+wsm_dump_size
+wsm_dumps
+
+/sys/kernel/debug/ieee80211/phy0/xradio/vif_0:
+hang
+htcompat_disable
+status
+
+/sys/kernel/debug/xradio_bt_dbg:
+dbg_acl_val
+dbg_ctl_val
+dbg_hci_val
+dbg_ker_val
+dbg_lmp_val
+dbg_log_val
+
+/sys/kernel/debug/xradio_bt_dbg/dbg_acl_val:
+
+/sys/kernel/debug/xradio_bt_dbg/dbg_ctl_val:
+enm_val
+enm_val_rsp
+ker_val
+ker_val_rsp
+pkt_val
+pkt_val_rsp

@@ -1,0 +1,93 @@
+From 8a599ec5d3ce6cce7527949b520c76b785c381aa Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:05:47 +0100
+Subject: [PATCH 097/100] wifi: xradio: Report TX status in process context,
+ free dropped frames
+
+xradio_skb_dtor() reports every frame with ieee80211_tx_status_skb(),
+which expects to be called with bottom halves disabled. Its callers are
+the bh thread (TX confirm) and queue flushes from work items, both process
+context with BHs enabled. Use ieee80211_tx_status_ni(), and drop the
+LINUX_VERSION_CODE alternative around it.
+
+Frames that xradio_tx() drops before they are queued (no vif, bad link ID,
+blocked block-ack action frames, allocation failures) were reported as
+transmitted-but-not-acked, which feeds rate control a failed attempt that
+never happened. Release them with ieee80211_free_txskb() instead.
+
+Both issues are inherited from the imported driver.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/tx.c | 33 ++++++++++++++++++++++----------
+ 1 file changed, 23 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/wireless/xradio/tx.c b/drivers/net/wireless/xradio/tx.c
+index cd08084e3..e02ba6eff 100644
+--- a/drivers/net/wireless/xradio/tx.c
++++ b/drivers/net/wireless/xradio/tx.c
+@@ -927,6 +927,10 @@ xradio_tx_h_skb_pad(struct xradio_common *priv, struct xradio_txinfo *t,
+ 	return 0;
+ }
+ 
++static void xradio_skb_release(struct xradio_common *hw_priv,
++			       struct sk_buff *skb,
++			       const struct xradio_txpriv *txpriv);
++
+ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, struct sk_buff *skb)
+ {
+ 	struct xradio_common *hw_priv = dev->priv;
+@@ -1124,7 +1128,9 @@ void xradio_tx(struct ieee80211_hw *dev, struct ieee80211_tx_control *control, s
+ drop:
+ 	/* t.hdr, not frame: the head may have been reallocated. */
+ 	dev_dbg(hw_priv->pdev, "dropped tx at line %d, fctl=0x%04x.\n", ret, t.hdr->frame_control);
+-	xradio_skb_dtor(hw_priv, skb, &t.txpriv);
++	/* Never sent: free it rather than report a TX status for it. */
++	xradio_skb_release(hw_priv, skb, &t.txpriv);
++	ieee80211_free_txskb(hw_priv->hw, skb);
+ 	return;
+ }
+ 
+@@ -1422,25 +1428,32 @@ static void xradio_notify_buffered_tx(struct xradio_vif *priv,
+ #endif /* CONFIG_XRADIO_USE_EXTENSIONS */
+ }
+ 
+-void xradio_skb_dtor(struct xradio_common *hw_priv,
+-		     struct sk_buff *skb,
+-		     const struct xradio_txpriv *txpriv)
++static void xradio_skb_release(struct xradio_common *hw_priv,
++			       struct sk_buff *skb,
++			       const struct xradio_txpriv *txpriv)
+ {
+ 	struct xradio_vif *priv =
+ 		__xrwl_hwpriv_to_vifpriv(hw_priv, txpriv->if_id);
+ 
+-
+ 	skb_pull(skb, txpriv->offset);
+ 	if (priv && txpriv->rate_id != XRADIO_INVALID_RATE_ID) {
+ 		xradio_notify_buffered_tx(priv, skb,
+ 				txpriv->raw_link_id, txpriv->tid);
+ 		tx_policy_put(hw_priv, txpriv->rate_id);
+ 	}
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0))
+-	ieee80211_tx_status_skb(hw_priv->hw, skb);
+-#else
+-	ieee80211_tx_status(hw_priv->hw, skb);
+-#endif
++}
++
++/*
++ * Report a queued frame to mac80211. This runs from the bh thread (TX
++ * confirm) and from queue flushes, i.e. in process context, hence the _ni
++ * variant.
++ */
++void xradio_skb_dtor(struct xradio_common *hw_priv,
++		     struct sk_buff *skb,
++		     const struct xradio_txpriv *txpriv)
++{
++	xradio_skb_release(hw_priv, skb, txpriv);
++	ieee80211_tx_status_ni(hw_priv->hw, skb);
+ }
+ 
+ #if defined(CONFIG_XRADIO_USE_EXTENSIONS)

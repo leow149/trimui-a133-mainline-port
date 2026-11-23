@@ -1,0 +1,207 @@
+From 9a4e8a30a152999826b4bb3b4282a6b0d1deda89 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:42 +0100
+Subject: [PATCH 073/100] arm64: dts: allwinner: a100: Add the display pipeline
+
+The display engine with its DE2 bus and mixer 0 (behind the IOMMU), the
+DPSS TOP, the TCON LCD, and the MIPI DSI controller with its D-PHY.
+DSI and D-PHY are disabled by default. This SoC has no TCON TV, so the
+DPSS TOP has no TV clock input.
+
+The display engine clock unit has the H6 layout, so it uses the H6
+compatible as a fallback.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../arm64/boot/dts/allwinner/sun50i-a100.dtsi | 161 ++++++++++++++++++
+ 1 file changed, 161 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 76ad1e86a..fe14840bf 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -7,8 +7,11 @@
+ #include <dt-bindings/clock/sun50i-a100-ccu.h>
+ #include <dt-bindings/clock/sun50i-a100-r-ccu.h>
+ #include <dt-bindings/clock/sun6i-rtc.h>
++#include <dt-bindings/clock/sun8i-de2.h>
++#include <dt-bindings/clock/sun8i-tcon-top.h>
+ #include <dt-bindings/reset/sun50i-a100-ccu.h>
+ #include <dt-bindings/reset/sun50i-a100-r-ccu.h>
++#include <dt-bindings/reset/sun8i-de2.h>
+ #include <dt-bindings/thermal/thermal.h>
+ 
+ / {
+@@ -71,6 +74,13 @@ psci {
+ 		method = "smc";
+ 	};
+ 
++	de: display-engine {
++		compatible = "allwinner,sun50i-a100-display-engine",
++			     "allwinner,sun50i-a64-display-engine";
++		allwinner,pipelines = <&mixer0>;
++		status = "disabled";
++	};
++
+ 	dcxo24M: dcxo24M-clk {
+ 		compatible = "fixed-clock";
+ 		clock-frequency = <24000000>;
+@@ -678,6 +688,157 @@ ohci1: usb@5200400 {
+ 			status = "disabled";
+ 		};
+ 
++		/*
++		 * Display engine. As on A64, SRAM C has to be claimed for the
++		 * DE, otherwise this register space is shadowed by the SRAM.
++		 */
++		bus@6000000 {
++			compatible = "allwinner,sun50i-a100-de2",
++				     "allwinner,sun50i-a64-de2";
++			reg = <0x06000000 0x400000>;
++			allwinner,sram = <&de2_sram 1>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0 0x06000000 0x400000>;
++
++			display_clocks: clock@0 {
++				compatible = "allwinner,sun50i-a100-de2-clk",
++					     "allwinner,sun50i-h6-de3-clk";
++				reg = <0x0 0x10000>;
++				clocks = <&ccu CLK_BUS_DE>, <&ccu CLK_DE>;
++				clock-names = "bus", "mod";
++				resets = <&ccu RST_BUS_DE>;
++				#clock-cells = <1>;
++				#reset-cells = <1>;
++			};
++
++			mixer0: mixer@100000 {
++				compatible = "allwinner,sun50i-a100-de2-mixer-0";
++				reg = <0x100000 0x100000>;
++				clocks = <&display_clocks CLK_BUS_MIXER0>,
++					 <&display_clocks CLK_MIXER0>;
++				clock-names = "bus", "mod";
++				resets = <&display_clocks RST_MIXER0>;
++				iommus = <&iommu 0>;
++
++				ports {
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					mixer0_out: port@1 {
++						reg = <1>;
++
++						mixer0_out_dpss_top0: endpoint {
++							remote-endpoint = <&dpss_top0_in_mixer0>;
++						};
++					};
++				};
++			};
++		};
++
++		dsi0: dsi@6504000 {
++			compatible = "allwinner,sun50i-a100-mipi-dsi";
++			reg = <0x06504000 0x1000>;
++			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
++			/* "mod" goes through the DPSS TOP DSI gate, as on D1. */
++			clocks = <&ccu CLK_BUS_MIPI_DSI>,
++				 <&dpss_top0 CLK_TCON_TOP_DSI>;
++			clock-names = "bus", "mod";
++			resets = <&ccu RST_BUS_MIPI_DSI>;
++			phys = <&dphy0>;
++			phy-names = "dphy";
++			status = "disabled";
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port {
++				dsi0_in_tcon_lcd0: endpoint {
++					remote-endpoint = <&tcon_lcd0_out_dsi0>;
++				};
++			};
++		};
++
++		dphy0: phy@6505000 {
++			compatible = "allwinner,sun50i-a100-mipi-dphy";
++			reg = <0x06505000 0x1000>;
++			interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_MIPI_DSI>, <&ccu CLK_MIPI_DSI>;
++			clock-names = "bus", "mod";
++			resets = <&ccu RST_BUS_MIPI_DSI>;
++			status = "disabled";
++			#phy-cells = <0>;
++		};
++
++		/* DPSS TOP: routes mixer0 to TCON_LCD0 and gates the DSI clock. */
++		dpss_top0: dpss-top@6510000 {
++			compatible = "allwinner,sun50i-a100-tcon-top";
++			reg = <0x06510000 0x1000>;
++			clocks = <&ccu CLK_BUS_DPSS_TOP0>, <&ccu CLK_MIPI_DSI>;
++			clock-names = "bus", "dsi";
++			clock-output-names = "tcon-top-dsi";
++			resets = <&ccu RST_BUS_DPSS_TOP0>;
++			#clock-cells = <1>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				dpss_top0_mixer0_in: port@0 {
++					reg = <0>;
++
++					dpss_top0_in_mixer0: endpoint {
++						remote-endpoint = <&mixer0_out_dpss_top0>;
++					};
++				};
++
++				dpss_top0_mixer0_out: port@1 {
++					reg = <1>;
++
++					dpss_top0_out_tcon_lcd0: endpoint {
++						remote-endpoint = <&tcon_lcd0_in_dpss_top0>;
++					};
++				};
++			};
++		};
++
++		tcon_lcd0: lcd-controller@6511000 {
++			compatible = "allwinner,sun50i-a100-tcon-lcd",
++				     "allwinner,sun8i-a83t-tcon-lcd";
++			reg = <0x06511000 0x1000>;
++			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_TCON_LCD>, <&ccu CLK_TCON_LCD>;
++			clock-names = "ahb", "tcon-ch0";
++			clock-output-names = "tcon-pixel-clock";
++			resets = <&ccu RST_BUS_TCON_LCD>, <&ccu RST_BUS_LVDS>;
++			reset-names = "lcd", "lvds";
++			#clock-cells = <0>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				tcon_lcd0_in: port@0 {
++					reg = <0>;
++
++					tcon_lcd0_in_dpss_top0: endpoint {
++						remote-endpoint = <&dpss_top0_out_tcon_lcd0>;
++					};
++				};
++
++				tcon_lcd0_out: port@1 {
++					reg = <1>;
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					/* endpoint 0 would be taken as a directly attached panel */
++					tcon_lcd0_out_dsi0: endpoint@1 {
++						reg = <1>;
++						remote-endpoint = <&dsi0_in_tcon_lcd0>;
++					};
++				};
++			};
++		};
++
+ 		rtc: rtc@7000000 {
+ 			compatible = "allwinner,sun50i-a100-rtc",
+ 				     "allwinner,sun50i-r329-rtc";

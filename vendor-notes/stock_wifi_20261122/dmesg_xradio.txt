@@ -1,0 +1,28 @@
+[    3.027288] Bluetooth: XRadio Bluetooth LPM Mode Driver Ver 01.00.07
+[    3.456089] Netfilter messages via NETLINK v0.30.
+[    3.495598] ip_tables: (C) 2000-2006 Netfilter Core Team
+[    5.848293] ======== XRADIO WIFI OPEN ========
+[    5.853815] [XRADIO] Driver Label:XR_V02.16.93_HT40_01.40  Apr 13 2024 02:34:44
+[    5.862503] [XRADIO] Allocated hw_priv @ ffffffc02fa8d720
+[    5.869370] XRADIO MACADDR=xx:xx:xx:xx:xx:xx
+[    5.973250] [XRADIO] Detect SDIO card 1
+[    6.097163] [SBUS] XRadio Device:sdio clk=50000000
+[    6.104499] [XRADIO] XRADIO_HW_REV 1.0 detected.
+[    6.179392] [XRADIO] Bootloader complete
+[    6.295521] [XRADIO] Firmware completed.
+[    6.305115] [WSM] Firmware Label:XR_C09.08.52.73_DBG_02.122 2GHZ HT40 May 18 2021 13:36:09
+[    6.321335] [XRADIO] Firmware Startup Done.
+[    6.329309] [XRADIO_WRN] enable Multi-Rx!
+[    6.722477] [STA] !!!xradio_vif_setup: id=0, type=2, p2p=0, addr=xx:xx:xx:xx:xx:xx
+[    9.454430] [STA_WRN] !!! xradio_remove_interface: vif_id=0
+[    9.575211] [STA] !!!xradio_vif_setup: id=0, type=2, p2p=0, addr=xx:xx:xx:xx:xx:xx
+[   10.277732] PVR_K:  2373: RGX Firmware image 'rgx.fw.22.102.54.38' loaded
+[   11.255476] [STA_WRN] Freq 2412 (wsm ch: 1) prev: 3.
+[   11.274487] [STA_WRN] [HT40][xradio_join_work][bss_ht_info]:
+[   11.302565] [STA_WRN] [HT40][xradio_join_work][PhyModeCfg:0x0067]
+[   11.369551] [STA_WRN] Freq 2422 (wsm ch: 3) prev: 1.
+[   11.375324] [AP_WRN] xradio_bss_info_changed vif(type=3) is not enable!changed=0x200
+[   11.384211] [STA_WRN] Freq 2412 (wsm ch: 1) prev: 3.
+[   11.459865] [AP_WRN] [HT40][xradio_bss_info_changed][ht_prot:0x0000000a][HtProtMode:0x0002][Green:0x0004]
+[   11.459866] [AP_WRN] [HT40][xradio_bss_info_changed][PhyModeCfg:0x5067]
+[   11.462012] [AP_WRN] xradio_bss_info_changed vif(type=3) is not enable!changed=0x200

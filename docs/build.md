@@ -40,3 +40,19 @@ Config source of truth is `patches/linux/trimui-a133-smartpro_defconfig` (regene
 `make trimui-a133-smartpro_defconfig`). Firmware must live in `linux/firmware/{powervr,xr829}/`
 before building (PowerVR blob from Imagination's linux-firmware fork, XR829 blobs from
 `vendor_data/firmware/`).
+
+## clangd / LSP (local laptop tree, set up 2026-11-21)
+
+`linux/compile_commands.json` + `linux/.clangd` (both gitignored) let the clangd LSP resolve
+definitions/references across the tree. The DB is built from the *local* `.o.cmd` files (GCC 16,
+same flags as the real build), not the bodenserver container. `.clangd` strips GCC-only flags clang
+rejects (`-mabi=lp64` etc.). When adding a new `.c` file, compile it locally once, then regenerate:
+
+```sh
+cd linux
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache aarch64-linux-gnu-gcc" -j4 path/to/new.o
+python3 scripts/clang-tools/gen_compile_commands.py -d . -o compile_commands.json
+```
+
+`clangd --check=<file>` reports "SwapBinaryOperands ... FAIL" lines: that's clangd self-testing a
+refactoring tweak, not a code diagnostic; ignore them.

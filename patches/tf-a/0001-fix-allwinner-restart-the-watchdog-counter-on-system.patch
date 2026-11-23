@@ -1,4 +1,4 @@
-From 58b0fabcd85d2d362d12da3888ff5f3588dd49d0 Mon Sep 17 00:00:00 2001
+From 59b8f8369f05492cacdf659df453743caee7b533 Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Mon, 2 Nov 2026 08:49:38 +0100
 Subject: [PATCH] fix(allwinner): restart the watchdog counter on system reset
@@ -13,8 +13,11 @@ Seen on an A133 (TrimUI Smart Pro), and reproduced from Linux by writing
 the same configuration over a running 16 s watchdog: no reset until the
 counter was restarted.
 
+This applies to all platforms using the native PM code (H6, H616 and
+A133).
+
+Assisted-by: Claude Opus 5.5
 Signed-off-by: leow149 <leow149@lucidmail.xyz>
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ---
  plat/allwinner/common/sunxi_native_pm.c | 6 ++++++
  1 file changed, 6 insertions(+)
@@ -37,5 +40,5 @@ index 28abd3c..53e8248 100644
  	mdelay(1000);
  
 -- 
-2.56.0
+2.56.1
 

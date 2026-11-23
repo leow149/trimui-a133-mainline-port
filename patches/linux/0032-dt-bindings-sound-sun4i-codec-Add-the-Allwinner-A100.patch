@@ -1,0 +1,60 @@
+From 70192a94c482c85b91091660c20d35aa1e15a034 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:31:30 +0100
+Subject: [PATCH 032/100] dt-bindings: sound: sun4i-codec: Add the Allwinner
+ A100 codec
+
+The A100/A133 codec has playback DMA only, like the H616, and a HP output
+pin. Its card has headphone and speaker widgets, so those are the routing
+sinks it accepts besides the codec pins.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../sound/allwinner,sun4i-a10-codec.yaml      | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/allwinner,sun4i-a10-codec.yaml b/Documentation/devicetree/bindings/sound/allwinner,sun4i-a10-codec.yaml
+index b4eca702f..a00ea30ea 100644
+--- a/Documentation/devicetree/bindings/sound/allwinner,sun4i-a10-codec.yaml
++++ b/Documentation/devicetree/bindings/sound/allwinner,sun4i-a10-codec.yaml
+@@ -22,6 +22,7 @@ properties:
+       - allwinner,sun8i-a23-codec
+       - allwinner,sun8i-h3-codec
+       - allwinner,sun8i-v3s-codec
++      - allwinner,sun50i-a100-codec
+       - allwinner,sun50i-h616-codec
+       - allwinner,suniv-f1c100s-codec
+ 
+@@ -260,6 +261,31 @@ allOf:
+               - Line Out
+               - Speaker
+ 
++  - if:
++      properties:
++        compatible:
++          enum:
++            - allwinner,sun50i-a100-codec
++
++    then:
++      properties:
++        allwinner,audio-routing:
++          items:
++            enum:
++              - HP
++              - Headphone
++              - LINEOUT
++              - Speaker
++
++  - if:
++      properties:
++        compatible:
++          enum:
++            - allwinner,sun50i-a100-codec
++            - allwinner,sun50i-h616-codec
++
++    then:
++      properties:
+         dmas:
+           items:
+             - description: TX DMA Channel

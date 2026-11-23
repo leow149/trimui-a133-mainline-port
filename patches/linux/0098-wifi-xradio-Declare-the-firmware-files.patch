@@ -1,0 +1,40 @@
+From 3261a18e233d486f6782cd5aa539cfebe12fdbd4 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 19:06:19 +0100
+Subject: [PATCH 098/100] wifi: xradio: Declare the firmware files
+
+The driver loads a boot loader, a firmware and an SDD file for each chip
+but declares none of them, so initramfs generators and packaging do not
+know about them. Add MODULE_FIRMWARE() for the XR819 and XR829 files.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/net/wireless/xradio/fwio.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/net/wireless/xradio/fwio.c b/drivers/net/wireless/xradio/fwio.c
+index 409a321ed..788c2eb7a 100644
+--- a/drivers/net/wireless/xradio/fwio.c
++++ b/drivers/net/wireless/xradio/fwio.c
+@@ -16,12 +16,20 @@
+ 
+ #include "xradio.h"
+ #include <linux/mmc/sdio_func.h>
++#include <linux/module.h>
+ 
+ #include "fwio.h"
+ #include "hwio.h"
+ #include "bh.h"
+ #include "sdio.h"
+ 
++MODULE_FIRMWARE("xr819/boot_xr819.bin");
++MODULE_FIRMWARE("xr819/fw_xr819.bin");
++MODULE_FIRMWARE("xr819/sdd_xr819.bin");
++MODULE_FIRMWARE("xr829/boot_xr829.bin");
++MODULE_FIRMWARE("xr829/fw_xr829.bin");
++MODULE_FIRMWARE("xr829/sdd_xr829.bin");
++
+ /* Macroses are local. */
+ #define APB_WRITE(reg, val) \
+ 	do { \

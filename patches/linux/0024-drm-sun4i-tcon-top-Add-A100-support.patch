@@ -1,0 +1,66 @@
+From 9366df9495d91fb4a7554a50bacb1d026ff3b0cd Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 1 Nov 2026 00:21:26 +0100
+Subject: [PATCH 024/100] drm/sun4i: tcon-top: Add A100 support
+
+The A100 TCON TOP has no TV path and exposes the MIPI DSI clock gate. The
+A100 has no TCON TV, so no TV0 gate is registered for it.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ drivers/gpu/drm/sun4i/sun8i_tcon_top.c | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+index e254d5fc7..b2b023122 100644
+--- a/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
++++ b/drivers/gpu/drm/sun4i/sun8i_tcon_top.c
+@@ -16,6 +16,7 @@
+ #include "sun8i_tcon_top.h"
+ 
+ struct sun8i_tcon_top_quirks {
++	bool no_tcon_tv0;	/* A100: no TCON TV at all */
+ 	bool has_tcon_tv1;
+ 	bool has_dsi;
+ 	/* Clock consumers that need the clocks in their probe (DSI) */
+@@ -247,10 +248,11 @@ static int sun8i_tcon_top_init(struct platform_device *pdev)
+ 	 * to TVE clock parent.
+ 	 */
+ 	i = 0;
+-	clk_data->hws[CLK_TCON_TOP_TV0] =
+-		sun8i_tcon_top_register_gate(dev, "tcon-tv0", regs,
+-					     &tcon_top->reg_lock,
+-					     TCON_TOP_TCON_TV0_GATE, i++);
++	if (!quirks->no_tcon_tv0)
++		clk_data->hws[CLK_TCON_TOP_TV0] =
++			sun8i_tcon_top_register_gate(dev, "tcon-tv0", regs,
++						     &tcon_top->reg_lock,
++						     TCON_TOP_TCON_TV0_GATE, i++);
+ 
+ 	if (quirks->has_tcon_tv1)
+ 		clk_data->hws[CLK_TCON_TOP_TV1] =
+@@ -367,6 +369,12 @@ static const struct sun8i_tcon_top_quirks sun20i_d1_tcon_top_quirks = {
+ 	.has_dsi	= true,
+ };
+ 
++static const struct sun8i_tcon_top_quirks sun50i_a100_tcon_top_quirks = {
++	.no_tcon_tv0	= true,
++	.has_dsi	= true,
++	.init_at_probe	= true,
++};
++
+ static const struct sun8i_tcon_top_quirks sun50i_h6_tcon_top_quirks = {
+ 	/* Nothing special */
+ };
+@@ -381,6 +389,10 @@ const struct of_device_id sun8i_tcon_top_of_table[] = {
+ 		.compatible = "allwinner,sun20i-d1-tcon-top",
+ 		.data = &sun20i_d1_tcon_top_quirks
+ 	},
++	{
++		.compatible = "allwinner,sun50i-a100-tcon-top",
++		.data = &sun50i_a100_tcon_top_quirks
++	},
+ 	{
+ 		.compatible = "allwinner,sun50i-h6-tcon-top",
+ 		.data = &sun50i_h6_tcon_top_quirks

@@ -1,0 +1,33 @@
+From 9fd398a1008c9e7202ca5ff00631028464e2f55e Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:40 +0100
+Subject: [PATCH 070/100] arm64: dts: allwinner: a100: Add the IOMMU
+
+The A100 IOMMU sits in front of the display engine and the video engine
+(masters 0 and 2).
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 6a2f9034d..92c8c84a1 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -294,6 +294,14 @@ uart4_pd_pins: uart4-pd-pins {
+ 			};
+ 		};
+ 
++		iommu: iommu@30f0000 {
++			compatible = "allwinner,sun50i-a100-iommu";
++			reg = <0x030f0000 0x10000>;
++			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_IOMMU>;
++			#iommu-cells = <1>;
++		};
++
+ 		mmc0: mmc@4020000 {
+ 			compatible = "allwinner,sun50i-a100-mmc";
+ 			reg = <0x04020000 0x1000>;

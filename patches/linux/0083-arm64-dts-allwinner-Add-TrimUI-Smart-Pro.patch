@@ -1,0 +1,807 @@
+From 3add7e1a2600d5084164baa2a1ee7785371b22cd Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:44 +0100
+Subject: [PATCH 083/100] arm64: dts: allwinner: Add TrimUI Smart Pro
+
+TrimUI Smart Pro handheld (Allwinner A133, AXP717). The board compatible
+ends in "allwinner,sun50i-a100" like the other A133 boards, as the A133
+is a package of the A100 die.
+
+Working: MIPI DSI panel and backlight, GPU, video engine, audio (speaker
+and headphones, with jack detection), buttons and sticks with their RGB
+LEDs, slider switch, power and volume keys, battery and charger (2.5 A in,
+1.92 A charge), cpufreq with thermal throttling, SD card and eMMC, both
+USB-C ports (the data port with OTG role switching and VBUS from the PMIC
+boost), the XR829 Bluetooth on UART1, and suspend to idle.
+
+The XR829 WiFi sits on MMC1 (PG0-PG5), powered by BLDO1 with I/O on
+ALDO3, enabled through PL5 and clocked by the RTC's 32 kHz fanout. Its
+SDIO function is described separately, with its driver.
+
+The ID pin of the USB-C data port follows the CC lines and also goes low
+for a USB-C charger, so the PHY waits for a charger to switch its VBUS on
+before driving VBUS itself (allwinner,host-vbus-delay-ms).
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/Makefile        |   1 +
+ .../allwinner/sun50i-a133-trimui-smartpro.dts | 757 ++++++++++++++++++
+ 2 files changed, 758 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+
+diff --git a/arch/arm64/boot/dts/allwinner/Makefile b/arch/arm64/boot/dts/allwinner/Makefile
+index aa21f58a4..6132fda32 100644
+--- a/arch/arm64/boot/dts/allwinner/Makefile
++++ b/arch/arm64/boot/dts/allwinner/Makefile
+@@ -26,6 +26,7 @@ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h64-remix-mini-pc.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a100-allwinner-perf1.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a133-helperboard.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a133-liontron-h-a133l.dtb
++dtb-$(CONFIG_ARCH_SUNXI) += sun50i-a133-trimui-smartpro.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h5-bananapi-m2-plus.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h5-bananapi-m2-plus-v1.2.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h5-emlid-neutis-n5-devboard.dtb
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+new file mode 100644
+index 000000000..3b6050116
+--- /dev/null
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a133-trimui-smartpro.dts
+@@ -0,0 +1,757 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * TrimUI Smart Pro handheld (Allwinner A133).
++ *
++ * Values not documented elsewhere (regulator voltages, panel timings and
++ * GPIOs, PWM setup) come from the stock firmware's device tree and its boot
++ * logs.
++ */
++
++/dts-v1/;
++
++#include "sun50i-a100.dtsi"
++#include "sun50i-a100-cpu-opp.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/linux-event-codes.h>
++#include <dt-bindings/leds/common.h>
++
++/ {
++	model = "TrimUI Smart Pro";
++	chassis-type = "handset";
++	compatible = "trimui,smart-pro", "allwinner,sun50i-a100";
++
++	aliases {
++		serial0 = &uart0;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	reserved-memory {
++		#address-cells = <2>;
++		#size-cells = <2>;
++		ranges;
++
++		/*
++		 * TF-A BL31 runs from the start of DRAM on this board. This
++		 * belongs to the firmware, but TF-A only adds the reservation
++		 * to U-Boot's own copy of the DT, and U-Boot does not pass it
++		 * on to the kernel's (booti, no EFI). Without this, Linux
++		 * reuses the memory and later PSCI calls hang.
++		 */
++		bl31@40000000 {
++			reg = <0x0 0x40000000 0x0 0x40000>;
++			no-map;
++		};
++	};
++
++	/* PWM channel 0, 50 kHz, normal polarity. */
++	backlight: backlight {
++		compatible = "pwm-backlight";
++		pwms = <&pwm 0 20000 0>;
++		power-supply = <&reg_cldo4>;
++	};
++
++	battery: battery {
++		compatible = "simple-battery";
++		charge-full-design-microamp-hours = <5000000>;
++		/*
++		 * Stock charges at 1.95 A when suspended or off (1 A while
++		 * running); 1.92 A is the nearest AXP717 step. Used all the
++		 * time: the PMIC's own thermal regulation backs off under load.
++		 */
++		constant-charge-current-max-microamp = <1920000>;
++		voltage-max-design-microvolt = <4200000>;
++	};
++
++	ext_osc32k: ext-osc32k-clk {
++		compatible = "fixed-clock";
++		clock-frequency = <32768>;
++		clock-output-names = "ext-osc32k";
++		#clock-cells = <0>;
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		/* Two-position slider; stock reports it as a tablet-mode switch. */
++		switch-slider {
++			label = "Slider";
++			gpios = <&pio 7 19 GPIO_ACTIVE_HIGH>; /* PH19 */
++			linux,input-type = <EV_SW>;
++			linux,code = <SW_TABLET_MODE>;
++		};
++	};
++
++	/* XR829 WiFi: enable on PL5, 32 kHz from the RTC. */
++	wifi_pwrseq: pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		clocks = <&rtc CLK_OSC32K_FANOUT>;
++		clock-names = "ext_clock";
++		reset-gpios = <&r_pio 0 5 GPIO_ACTIVE_LOW>; /* PL5 */
++		post-power-on-delay-ms = <200>;
++	};
++
++	/* 5 V switch for the second USB-C port (host only) */
++	reg_usb1_vbus: regulator-usb1-vbus {
++		compatible = "regulator-fixed";
++		regulator-name = "usb1-vbus";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&r_pio 0 8 GPIO_ACTIVE_HIGH>; /* PL8 */
++		enable-active-high;
++		vin-supply = <&reg_vcc5v>;
++	};
++
++	/* 5 V for the stick boards: button MCUs and stick LEDs ("led_5v" on stock). */
++	reg_vcc_pad: regulator-vcc-pad {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc-pad";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&pio 3 11 GPIO_ACTIVE_HIGH>; /* PD11 */
++		enable-active-high;
++		vin-supply = <&reg_vcc5v>;
++	};
++
++	reg_vcc5v: regulator-vcc5v {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc-5v";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		regulator-always-on;
++	};
++
++	/* XR829 Bluetooth power/reset: BT_RST_N on PL2, active low. */
++	rfkill-bt {
++		compatible = "rfkill-gpio";
++		label = "rfkill-xr829-bt";
++		radio-type = "bluetooth";
++		shutdown-gpios = <&r_pio 0 2 GPIO_ACTIVE_HIGH>; /* PL2 */
++	};
++
++	/*
++	 * Passively cooled handheld: under combined CPU+GPU load the single
++	 * 80 C passive trip let step_wise settle at 1.2 GHz while the die kept
++	 * heating (CPU 88 C, GPU 86 C after 5 min, still rising). Add trips
++	 * that force deeper CPU throttling, and give the GPU zone trips too;
++	 * the GPU has no cooling device, but CPU and GPU share the die.
++	 * cpufreq cooling states: 0..6 = 1464/1320/1200/1080/816/600/408 MHz.
++	 */
++	thermal-zones {
++		cpu-thermal {
++			trips {
++				cpu_hot: cpu-hot {
++					temperature = <88000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				cpu_very_hot: cpu-very-hot {
++					temperature = <95000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					cooling-device = <&cpu0 THERMAL_NO_LIMIT 2>,
++							 <&cpu1 THERMAL_NO_LIMIT 2>,
++							 <&cpu2 THERMAL_NO_LIMIT 2>,
++							 <&cpu3 THERMAL_NO_LIMIT 2>;
++				};
++
++				map1 {
++					trip = <&cpu_hot>;
++					cooling-device = <&cpu0 3 4>, <&cpu1 3 4>,
++							 <&cpu2 3 4>, <&cpu3 3 4>;
++				};
++
++				map2 {
++					trip = <&cpu_very_hot>;
++					cooling-device = <&cpu0 5 THERMAL_NO_LIMIT>,
++							 <&cpu1 5 THERMAL_NO_LIMIT>,
++							 <&cpu2 5 THERMAL_NO_LIMIT>,
++							 <&cpu3 5 THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++
++		gpu-thermal {
++			polling-delay-passive = <500>;
++			polling-delay = <1000>;
++
++			trips {
++				gpu_hot: gpu-hot {
++					temperature = <88000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++
++				gpu-crit {
++					temperature = <110000>;
++					hysteresis = <2000>;
++					type = "critical";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					trip = <&gpu_hot>;
++					cooling-device = <&cpu0 3 THERMAL_NO_LIMIT>,
++							 <&cpu1 3 THERMAL_NO_LIMIT>,
++							 <&cpu2 3 THERMAL_NO_LIMIT>,
++							 <&cpu3 3 THERMAL_NO_LIMIT>;
++				};
++			};
++		};
++	};
++};
++
++/*
++ * The speaker amplifier (enabled by PH6) and the 3.5 mm jack both hang off the
++ * headphone output; the line out is not used.
++ */
++&codec {
++	allwinner,audio-routing = "Speaker", "HP",
++				  "Headphone", "HP";
++	allwinner,pa-gpios = <&pio 7 6 GPIO_ACTIVE_HIGH>; /* PH6 */
++	status = "okay";
++};
++
++&cpu0 {
++	cpu-supply = <&reg_dcdc1>;
++};
++
++&de {
++	status = "okay";
++};
++
++&dphy0 {
++	status = "okay";
++};
++
++&dsi0 {
++	status = "okay";
++
++	panel@0 {
++		compatible = "orisetech,otm1289a";
++		reg = <0>;
++		reset-gpios = <&pio 3 22 GPIO_ACTIVE_LOW>; /* PD22 */
++		/* Portrait panel, top edge at the left of the landscape device. */
++		rotation = <270>;
++		power-supply = <&reg_cldo1>;
++		backlight = <&backlight>;
++	};
++};
++
++/*
++ * USB-C data port in host (OTG) mode: the dual-route PHY hands the port to
++ * EHCI0/OHCI0 when PH8 (ID) is low; VBUS comes from the AXP717 boost.
++ */
++&ehci0 {
++	status = "okay";
++};
++
++/* Second USB-C port: host only */
++&ehci1 {
++	status = "okay";
++};
++
++&gpu {
++	/*
++	 * The stock firmware runs the GPU at 700 MHz with vdd-gpu-sys at
++	 * 0.9 V; the PLL steps in 24 MHz.
++	 */
++	assigned-clocks = <&ccu CLK_GPU>;
++	assigned-clock-rates = <696000000>;
++	status = "okay";
++};
++
++/*
++ * Chain of 23 RGB LEDs: 0 is the logo, 1-11 the left stick ring, 12-22 the
++ * right one. The rings are GRB, the logo LED is RGB. Timings from the stock
++ * firmware. They are powered from vcc-pad, shared with the gamepad MCUs; it
++ * goes off in suspend.
++ */
++&ledc {
++	pinctrl-names = "default";
++	pinctrl-0 = <&ledc_pe5_pin>;
++	vled-supply = <&reg_vcc_pad>;
++	allwinner,t0h-ns = <400>;
++	allwinner,t0l-ns = <850>;
++	allwinner,t1h-ns = <800>;
++	allwinner,t1l-ns = <450>;
++	status = "okay";
++
++	/* Logo */
++	multi-led@0 {
++		reg = <0x0>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <0>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		led@0 {
++			reg = <0>;
++			color = <LED_COLOR_ID_GREEN>;
++		};
++
++		led@1 {
++			reg = <1>;
++			color = <LED_COLOR_ID_RED>;
++		};
++
++		led@2 {
++			reg = <2>;
++			color = <LED_COLOR_ID_BLUE>;
++		};
++	};
++
++	multi-led@1 {
++		reg = <0x1>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <1>;
++	};
++
++	multi-led@2 {
++		reg = <0x2>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <2>;
++	};
++
++	multi-led@3 {
++		reg = <0x3>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <3>;
++	};
++
++	multi-led@4 {
++		reg = <0x4>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <4>;
++	};
++
++	multi-led@5 {
++		reg = <0x5>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <5>;
++	};
++
++	multi-led@6 {
++		reg = <0x6>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <6>;
++	};
++
++	multi-led@7 {
++		reg = <0x7>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <7>;
++	};
++
++	multi-led@8 {
++		reg = <0x8>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <8>;
++	};
++
++	multi-led@9 {
++		reg = <0x9>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <9>;
++	};
++
++	multi-led@a {
++		reg = <0xa>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <10>;
++	};
++
++	multi-led@b {
++		reg = <0xb>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <11>;
++	};
++
++	multi-led@c {
++		reg = <0xc>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <12>;
++	};
++
++	multi-led@d {
++		reg = <0xd>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <13>;
++	};
++
++	multi-led@e {
++		reg = <0xe>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <14>;
++	};
++
++	multi-led@f {
++		reg = <0xf>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <15>;
++	};
++
++	multi-led@10 {
++		reg = <0x10>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <16>;
++	};
++
++	multi-led@11 {
++		reg = <0x11>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <17>;
++	};
++
++	multi-led@12 {
++		reg = <0x12>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <18>;
++	};
++
++	multi-led@13 {
++		reg = <0x13>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <19>;
++	};
++
++	multi-led@14 {
++		reg = <0x14>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <20>;
++	};
++
++	multi-led@15 {
++		reg = <0x15>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <21>;
++	};
++
++	multi-led@16 {
++		reg = <0x16>;
++		color = <LED_COLOR_ID_RGB>;
++		function = LED_FUNCTION_INDICATOR;
++		function-enumerator = <22>;
++	};
++};
++
++/*
++ * Volume keys on the LRADC, voltages as measured. Both pressed together
++ * reads about 471 mV and reports Volume Up.
++ */
++&lradc {
++	vref-supply = <&reg_aldo4>;
++	wakeup-source;
++	status = "okay";
++
++	button-643 {
++		label = "Volume Up";
++		linux,code = <KEY_VOLUMEUP>;
++		channel = <0>;
++		voltage = <643000>;
++	};
++
++	button-879 {
++		label = "Volume Down";
++		linux,code = <KEY_VOLUMEDOWN>;
++		channel = <0>;
++		voltage = <879000>;
++	};
++};
++
++/* SD card slot */
++&mmc0 {
++	bus-width = <4>;
++	vmmc-supply = <&reg_cldo3>;
++	status = "okay";
++};
++
++/* XR829 WiFi (SDIO) */
++&mmc1 {
++	bus-width = <4>;
++	non-removable;
++	keep-power-in-suspend;
++	mmc-pwrseq = <&wifi_pwrseq>;
++	vmmc-supply = <&reg_bldo1>;
++	vqmmc-supply = <&reg_aldo3>;
++	status = "okay";
++};
++
++/* eMMC; the stock firmware also runs it at DDR52, not HS200/HS400. */
++&mmc2 {
++	bus-width = <8>;
++	non-removable;
++	cap-mmc-hw-reset;
++	mmc-ddr-1_8v;
++	vmmc-supply = <&reg_cldo3>;
++	status = "okay";
++};
++
++&ohci0 {
++	status = "okay";
++};
++
++&ohci1 {
++	status = "okay";
++};
++
++&pwm {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pwm0_pd_pin>;
++	status = "okay";
++};
++
++&r_i2c0 {
++	status = "okay";
++
++	axp717: pmic@34 {
++		compatible = "x-powers,axp717";
++		reg = <0x34>;
++		interrupt-controller;
++		#interrupt-cells = <1>;
++		interrupt-parent = <&r_intc>;
++		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
++
++		vin1-supply = <&reg_vcc5v>;
++		vin2-supply = <&reg_vcc5v>;
++		vin3-supply = <&reg_vcc5v>;
++		vin4-supply = <&reg_vcc5v>;
++
++		axp_adc: adc {
++			compatible = "x-powers,axp717-adc";
++			#io-channel-cells = <1>;
++		};
++
++		battery_power: battery-power {
++			compatible = "x-powers,axp717-battery-power-supply";
++			monitored-battery = <&battery>;
++		};
++
++		usb_power: usb-power {
++			compatible = "x-powers,axp717-usb-power-supply";
++			/* Stock: 2.5 A from a charger, 500 mA from a PC. */
++			input-current-limit-microamp = <2500000>;
++		};
++
++		/*
++		 * Rails the stock boot loader leaves on are kept always-on, at
++		 * the voltages it programs: most have no consumer described
++		 * here yet, and switching any of them off has hung the board.
++		 */
++		regulators {
++			/*
++			 * 5 V boost, switched to the VBUS pin (AXP717 reg 0x13
++			 * bit 0, see axp717_boost_ops): VBUS for the USB-C data
++			 * port in host (OTG) mode. phy-sun4i-usb only enables it
++			 * while the ID pin (PH8) says host and no external VBUS
++			 * is present.
++			 */
++			reg_boost: boost {
++				regulator-min-microvolt = <5000000>;
++				regulator-max-microvolt = <5200000>;
++				regulator-name = "boost";
++			};
++
++			reg_dcdc1: dcdc1 {
++				regulator-always-on;
++				regulator-min-microvolt = <810000>;
++				regulator-max-microvolt = <1200000>;
++				regulator-name = "vdd-cpu";
++			};
++			reg_dcdc2: dcdc2 {
++				regulator-always-on;
++				regulator-name = "vdd-gpu-sys";
++			};
++			reg_dcdc3: dcdc3 {
++				regulator-always-on;
++				regulator-min-microvolt = <1100000>;
++				regulator-max-microvolt = <1100000>;
++				regulator-name = "vdd-dram";
++			};
++			reg_aldo1: aldo1 {
++				regulator-always-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++			};
++			reg_aldo2: aldo2 {
++				regulator-always-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++			};
++			reg_aldo3: aldo3 {
++				regulator-always-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcc-wifi-io";
++			};
++			reg_aldo4: aldo4 {
++				regulator-always-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++			};
++			/* Off at boot on stock, switched by the WiFi/BT driver. */
++			reg_bldo1: bldo1 {
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcc-wifi";
++			};
++			reg_bldo2: bldo2 {
++				regulator-always-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++			};
++			reg_bldo3: bldo3 {
++				regulator-always-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++			};
++			reg_bldo4: bldo4 {
++				regulator-always-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++			};
++			/*
++			 * The panel supplies must stay always-on: with them
++			 * switchable the panel stays dark (cause unknown).
++			 */
++			reg_cldo1: cldo1 {
++				regulator-always-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-name = "vcc-lcd-1";
++			};
++			reg_cldo2: cldo2 { };
++			reg_cldo3: cldo3 {
++				regulator-always-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcc-io";
++			};
++			reg_cldo4: cldo4 {
++				regulator-always-on;
++				regulator-min-microvolt = <3300000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-name = "vcc-lcd-2";
++			};
++			reg_cpusldo: cpusldo {
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <900000>;
++				regulator-max-microvolt = <900000>;
++			};
++		};
++	};
++};
++
++&rtc {
++	clocks = <&r_ccu CLK_R_AHB_BUS_RTC>, <&dcxo24M>, <&ext_osc32k>;
++	clock-names = "bus", "hosc", "ext-osc32k";
++	assigned-clocks = <&rtc CLK_OSC32K>;
++	assigned-clock-rates = <32768>;
++};
++
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart0_pb_pins>;
++	status = "okay";
++};
++
++/*
++ * XR829 Bluetooth, HCI over UART1. The firmware is downloaded by userspace,
++ * which then attaches the UART as an H4 line discipline. BT_RST_N (PL2) is
++ * driven through rfkill-gpio. BT_WAKE (PL4) and BT_HOSTWAKE (PL3) are not
++ * described: there is no binding or driver for XR829 low-power mode, the
++ * userspace tool keeps BT_WAKE high while the HCI is attached.
++ */
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart1_pg_pins>;
++	status = "okay";
++};
++
++/* Buttons and sticks: one microcontroller per side, each on its own UART. */
++&uart3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart3_pd_pins>;
++	status = "okay";
++
++	pad_right: mcu {
++		compatible = "trimui,smart-pro-pad-right";
++		power-supply = <&reg_vcc_pad>;
++	};
++};
++
++&uart3_pd_pins {
++	bias-pull-up;
++};
++
++&uart4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart4_pd_pins>;
++	status = "okay";
++
++	mcu {
++		compatible = "trimui,smart-pro-pad-left";
++		power-supply = <&reg_vcc_pad>;
++		trimui,right-pad = <&pad_right>;
++	};
++};
++
++&uart4_pd_pins {
++	bias-pull-up;
++};
++
++/*
++ * Charging/data USB-C port, OTG: the ID pin is PH8 (pulled up on the board,
++ * low when an OTG adapter is plugged in) and VBUS presence comes from the
++ * AXP717. In host mode VBUS comes from the AXP717 boost (see &usbphy).
++ */
++&usb_otg {
++	dr_mode = "otg";
++	status = "okay";
++};
++
++&usbphy {
++	/*
++	 * PH8 (ID) follows the USB-C CC lines and also goes low for a USB-C
++	 * charger: give it time to switch its VBUS on before driving ours.
++	 */
++	allwinner,host-vbus-delay-ms = <1000>;
++	usb0_id_det-gpios = <&pio 7 8 GPIO_ACTIVE_HIGH>; /* PH8 */
++	usb0_vbus_power-supply = <&usb_power>;
++	usb0_vbus-supply = <&reg_boost>;
++	usb1_vbus-supply = <&reg_usb1_vbus>;
++	status = "okay";
++};

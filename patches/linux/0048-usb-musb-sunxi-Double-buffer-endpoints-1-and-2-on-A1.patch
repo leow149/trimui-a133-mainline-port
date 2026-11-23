@@ -1,7 +1,7 @@
-From 7005985de87964f055380d18f3b53849f131006a Mon Sep 17 00:00:00 2001
+From 9801dc954b59b0a79fb8cb4a2635698662a64c3a Mon Sep 17 00:00:00 2001
 From: leow149 <leow149@lucidmail.xyz>
 Date: Sun, 1 Nov 2026 13:46:50 +0100
-Subject: [PATCH 048/106] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on
+Subject: [PATCH 048/100] usb: musb: sunxi: Double-buffer endpoints 1 and 2 on
  A100
 
 With single-buffered FIFOs the controller waits for the host to take each
@@ -17,7 +17,7 @@ Signed-off-by: leow149 <leow149@lucidmail.xyz>
  1 file changed, 36 insertions(+)
 
 diff --git a/drivers/usb/musb/sunxi.c b/drivers/usb/musb/sunxi.c
-index 6c0ce89d1..a7562f198 100644
+index f7f11c400..972cb9861 100644
 --- a/drivers/usb/musb/sunxi.c
 +++ b/drivers/usb/musb/sunxi.c
 @@ -979,6 +979,34 @@ static const struct musb_hdrc_config sunxi_musb_hdrc_config_4eps = {
@@ -52,10 +52,10 @@ index 6c0ce89d1..a7562f198 100644
 +	.ram_bits	= SUNXI_MUSB_RAM_BITS,
 +};
 +
- static int sunxi_musb_probe(struct platform_device *pdev)
+ static void sunxi_musb_unregister_usb_phy(void *data)
  {
- 	struct musb_hdrc_platform_data	pdata;
-@@ -1138,6 +1166,12 @@ static const struct sunxi_musb_cfg sun8i_h3_musb_cfg = {
+ 	usb_phy_generic_unregister(data);
+@@ -1148,6 +1176,12 @@ static const struct sunxi_musb_cfg sun8i_h3_musb_cfg = {
  	.no_configdata = true,
  };
  
@@ -68,7 +68,7 @@ index 6c0ce89d1..a7562f198 100644
  static const struct sunxi_musb_cfg suniv_f1c100s_musb_cfg = {
  	.hdrc_config = &sunxi_musb_hdrc_config_5eps,
  	.has_sram = true,
-@@ -1154,6 +1188,8 @@ static const struct of_device_id sunxi_musb_match[] = {
+@@ -1164,6 +1198,8 @@ static const struct of_device_id sunxi_musb_match[] = {
  	  .data = &sun8i_a33_musb_cfg, },
  	{ .compatible = "allwinner,sun8i-h3-musb",
  	  .data = &sun8i_h3_musb_cfg, },

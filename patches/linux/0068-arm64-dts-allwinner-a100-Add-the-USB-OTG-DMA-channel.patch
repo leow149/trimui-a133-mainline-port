@@ -1,0 +1,33 @@
+From 70bb62e9b0fe0642051c8fc85b02d80f826e7d6b Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:38 +0100
+Subject: [PATCH 068/100] arm64: dts: allwinner: a100: Add the USB OTG DMA
+ channels
+
+DMA request lines 30-34 are the OTG endpoints 1-5, in both directions.
+
+Only the TX channels are listed: the driver moves RX data by PIO, so RX
+request lines would only be requested to stay unused. The binding still
+allows them, as the hardware has them.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 040fba03e..49149e143 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -526,6 +526,10 @@ usb_otg: usb@5100000 {
+ 			phys = <&usbphy 0>;
+ 			phy-names = "usb";
+ 			extcon = <&usbphy 0>;
++			/* TX only: the driver moves RX data by PIO. */
++			dmas = <&dma 30>, <&dma 31>, <&dma 32>, <&dma 33>,
++			       <&dma 34>;
++			dma-names = "ep1tx", "ep2tx", "ep3tx", "ep4tx", "ep5tx";
+ 			status = "disabled";
+ 		};
+ 

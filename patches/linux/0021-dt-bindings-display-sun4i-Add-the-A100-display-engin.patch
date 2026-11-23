@@ -1,0 +1,92 @@
+From b251534b9c553a1d139e52dd5eb24dbdf35e9ba9 Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 15 Nov 2026 16:31:30 +0100
+Subject: [PATCH 021/100] dt-bindings: display: sun4i: Add the A100 display
+ engine and DE2 bus
+
+The A100 display engine and DE2 bus are compatible with the A64 ones. Only
+mixer 0 is supported so far, so the A100 display engine takes a single
+pipeline, unlike the A64 one.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ .../bus/allwinner,sun50i-a64-de2.yaml         |  4 +-
+ .../allwinner,sun4i-a10-display-engine.yaml   | 42 +++++++++++--------
+ 2 files changed, 28 insertions(+), 18 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/bus/allwinner,sun50i-a64-de2.yaml b/Documentation/devicetree/bindings/bus/allwinner,sun50i-a64-de2.yaml
+index 232252e88..9b141c350 100644
+--- a/Documentation/devicetree/bindings/bus/allwinner,sun50i-a64-de2.yaml
++++ b/Documentation/devicetree/bindings/bus/allwinner,sun50i-a64-de2.yaml
+@@ -24,7 +24,9 @@ properties:
+     oneOf:
+       - const: allwinner,sun50i-a64-de2
+       - items:
+-          - const: allwinner,sun50i-h6-de3
++          - enum:
++              - allwinner,sun50i-a100-de2
++              - allwinner,sun50i-h6-de3
+           - const: allwinner,sun50i-a64-de2
+ 
+   reg:
+diff --git a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml
+index e6088f379..323002ca1 100644
+--- a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml
++++ b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml
+@@ -48,23 +48,27 @@ description: |
+ 
+ properties:
+   compatible:
+-    enum:
+-      - allwinner,sun4i-a10-display-engine
+-      - allwinner,sun5i-a10s-display-engine
+-      - allwinner,sun5i-a13-display-engine
+-      - allwinner,sun6i-a31-display-engine
+-      - allwinner,sun6i-a31s-display-engine
+-      - allwinner,sun7i-a20-display-engine
+-      - allwinner,sun8i-a23-display-engine
+-      - allwinner,sun8i-a33-display-engine
+-      - allwinner,sun8i-a83t-display-engine
+-      - allwinner,sun8i-h3-display-engine
+-      - allwinner,sun8i-r40-display-engine
+-      - allwinner,sun8i-v3s-display-engine
+-      - allwinner,sun9i-a80-display-engine
+-      - allwinner,sun20i-d1-display-engine
+-      - allwinner,sun50i-a64-display-engine
+-      - allwinner,sun50i-h6-display-engine
++    oneOf:
++      - enum:
++          - allwinner,sun4i-a10-display-engine
++          - allwinner,sun5i-a10s-display-engine
++          - allwinner,sun5i-a13-display-engine
++          - allwinner,sun6i-a31-display-engine
++          - allwinner,sun6i-a31s-display-engine
++          - allwinner,sun7i-a20-display-engine
++          - allwinner,sun8i-a23-display-engine
++          - allwinner,sun8i-a33-display-engine
++          - allwinner,sun8i-a83t-display-engine
++          - allwinner,sun8i-h3-display-engine
++          - allwinner,sun8i-r40-display-engine
++          - allwinner,sun8i-v3s-display-engine
++          - allwinner,sun9i-a80-display-engine
++          - allwinner,sun20i-d1-display-engine
++          - allwinner,sun50i-a64-display-engine
++          - allwinner,sun50i-h6-display-engine
++      - items:
++          - const: allwinner,sun50i-a100-display-engine
++          - const: allwinner,sun50i-a64-display-engine
+ 
+   allwinner,pipelines:
+     $ref: /schemas/types.yaml#/definitions/phandle-array
+@@ -96,6 +100,10 @@ if:
+           - allwinner,sun9i-a80-display-engine
+           - allwinner,sun20i-d1-display-engine
+           - allwinner,sun50i-a64-display-engine
++      # Only mixer 0 of the A100 is supported so far
++      not:
++        contains:
++          const: allwinner,sun50i-a100-display-engine
+ 
+ then:
+   properties:

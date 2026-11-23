@@ -1,0 +1,35 @@
+From dae43c9ead38a0b2e292794de5aac9996af003bb Mon Sep 17 00:00:00 2001
+From: leow149 <leow149@lucidmail.xyz>
+Date: Sun, 22 Nov 2026 20:15:38 +0100
+Subject: [PATCH 067/100] arm64: dts: allwinner: a100: Add the USB PHY PMU
+ clocks
+
+The SIDDQ bits of PHY0 and PHY1 sit in the EHCI0/EHCI1 register blocks,
+which are only writable with their bus clocks running.
+
+Assisted-by: Claude Opus 5.5
+Signed-off-by: leow149 <leow149@lucidmail.xyz>
+---
+ arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+index 3ca9a81e5..040fba03e 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-a100.dtsi
+@@ -539,9 +539,13 @@ usbphy: phy@5100400 {
+ 				    "pmu0",
+ 				    "pmu1";
+ 			clocks = <&ccu CLK_USB_PHY0>,
+-				 <&ccu CLK_USB_PHY1>;
++				 <&ccu CLK_USB_PHY1>,
++				 <&ccu CLK_BUS_EHCI0>,
++				 <&ccu CLK_BUS_EHCI1>;
+ 			clock-names = "usb0_phy",
+-				      "usb1_phy";
++				      "usb1_phy",
++				      "pmu0_clk",
++				      "pmu1_clk";
+ 			resets = <&ccu RST_USB_PHY0>,
+ 				 <&ccu RST_USB_PHY1>;
+ 			reset-names = "usb0_reset",
